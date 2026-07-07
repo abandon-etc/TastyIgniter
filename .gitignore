@@ -5,6 +5,7 @@
 .phpunit.result.cache
 phpunit.dusk.xml
 auth.json
+.local/
 
 # Ignore all vendor files included by composer and the lock file
 /vendor

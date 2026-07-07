@@ -66,16 +66,16 @@
 
 | 配置项 | 目标值 | 后台实际选项 | 是否已完成 | 遇到的问题 | 截图文件名，可选，不要包含敏感信息 |
 | --- | --- | --- | --- | --- | --- |
-| 法语是否可添加 | Yes | 待填写 | No | 待确认 |  |
-| 英语是否可添加 | Yes | 待填写 | No | 待确认 |  |
-| 法语 locale | `fr_CA` 优先；不支持则记录实际可用值 | 待填写 | No | 待确认 |  |
-| 英语 locale | `en_CA` 优先；不支持则记录实际可用值 | 待填写 | No | 待确认 |  |
-| 默认语言是否设为法语 | Yes | 待填写 | No | 待确认 |  |
-| 前台是否能看到语言切换 | Yes | 待填写 | No | 待确认 |  |
+| 法语是否可添加 | Yes | Yes, `Français` | Yes | Q-001：翻译导入失败，翻译数量为 `0/2992`。 |  |
+| 英语是否可添加 | Yes | Yes, `English` | Yes |  |  |
+| 法语 locale | `fr_CA` 优先；不支持则记录实际可用值 | `fr_CA` | Yes | Q-001：需要 Carté Key 或本地翻译方案。 |  |
+| 英语 locale | `en_CA` 优先；不支持则记录实际可用值 | `en_CA` | Yes |  |  |
+| 默认语言是否设为法语 | Yes | Yes, `fr_CA` is default | Yes |  |  |
+| 前台是否能看到语言切换 | Yes | No | No | Q-002：Orange theme 当前未显示语言切换入口。 |  |
 | 语言切换是否影响首页 | Yes | 待填写 | No | 待确认 |  |
 | 语言切换是否影响菜单页 | Yes | 待填写 | No | 待确认 |  |
 | 语言切换是否影响预约页 | Yes | 待填写 | No | 待确认 |  |
-| 是否需要后续主题改造 | Unknown | 待填写 | No | 待确认 |  |
+| 是否需要后续主题改造 | Unknown | Yes, likely needed | No | Q-002：需要后续主题改造或主题覆盖确认。 |  |
 
 填写提示：
 
@@ -87,28 +87,28 @@
 
 | 配置项 | 目标值 | 后台实际字段名 | 是否已完成 | 遇到的问题 | 备注 |
 | --- | --- | --- | --- | --- | --- |
-| 店铺名称 | 待填写 | 待填写 | No |  | 可使用公开店名。 |
-| 地址 | 待填写 | 待填写 | No |  | 公开地址可记录。 |
-| 城市 | 待填写 | 待填写 | No |  |  |
-| 省份 | Quebec | 待填写 | No |  |  |
-| 邮编 | 待填写 | 待填写 | No |  | 如果不想公开，可写“已配置”。 |
-| 电话 | 待填写 | 待填写 | No |  | 公开电话可记录。 |
-| 邮箱 | 待填写 | 待填写 | No |  | 公开邮箱可记录。 |
-| 时区 | 待确认 | 待填写 | No |  | 按店铺所在地选择。 |
-| 货币 | CAD | 待填写 | No |  | 税费上线前再确认。 |
-| 默认语言 | French | 待填写 | No |  | 第一版必须法语默认。 |
+| 店铺名称 | 已配置 | `locations.location_name` | Yes |  | 已写入本地开发数据库；文档不记录完整值。 |
+| 地址 | 已配置 | `locations.location_address_1` | Yes |  | 已写入本地开发数据库；文档不记录完整值。 |
+| 城市 | 已配置 | `locations.location_city` | Yes |  | 已写入本地开发数据库。 |
+| 省份 | Quebec | `locations.location_state` | Yes |  | 已写入本地开发数据库。 |
+| 邮编 | 已配置 | `locations.location_postcode` | Yes |  | 已写入本地开发数据库；文档不记录完整值。 |
+| 电话 | 已配置 | `locations.location_telephone` | Yes |  | 已写入本地开发数据库；文档不记录完整值。 |
+| 邮箱 | 已配置 | `locations.location_email` / `settings.site_email` | Yes |  | 已写入本地开发数据库；文档不记录完整值。 |
+| 时区 | `America/Toronto` | `settings.timezone` | Yes |  | 已写入本地开发数据库。 |
+| 货币 | CAD | CAD | Yes | Q-003：CAD rate 已修复为 `1.00000000`。 | 税费上线前再确认。 |
+| 默认语言 | French | `fr_CA` | Yes |  | 第一版必须法语默认。 |
 
 ## 营业时间记录表
 
 | 星期 | 是否营业 | 开门时间 | 关门时间 | 是否已配置 | 备注 |
 | --- | --- | --- | --- | --- | --- |
-| Monday | 待填写 | 待填写 | 待填写 | No |  |
-| Tuesday | 待填写 | 待填写 | 待填写 | No |  |
-| Wednesday | 待填写 | 待填写 | 待填写 | No |  |
-| Thursday | 待填写 | 待填写 | 待填写 | No |  |
-| Friday | 待填写 | 待填写 | 待填写 | No |  |
-| Saturday | 待填写 | 待填写 | 待填写 | No |  |
-| Sunday | 待填写 | 待填写 | 待填写 | No |  |
+| Monday | Yes | 12:00 | 22:00 | Yes | 已写入 `opening` 和 `collection` 时间。 |
+| Tuesday | Yes | 12:00 | 22:00 | Yes | 已写入 `opening` 和 `collection` 时间。 |
+| Wednesday | Yes | 12:00 | 22:00 | Yes | 已写入 `opening` 和 `collection` 时间。 |
+| Thursday | Yes | 12:00 | 22:00 | Yes | 已写入 `opening` 和 `collection` 时间。 |
+| Friday | Yes | 12:00 | 22:00 | Yes | 已写入 `opening` 和 `collection` 时间。 |
+| Saturday | Yes | 12:00 | 22:00 | Yes | 已写入 `opening` 和 `collection` 时间。 |
+| Sunday | Yes | 12:00 | 22:00 | Yes | 已写入 `opening` 和 `collection` 时间。 |
 
 ### 节假日/特殊营业时间问题记录表
 
@@ -127,27 +127,28 @@
 
 | 配置项 | 目标值 | 后台实际字段名 | 是否已完成 | 遇到的问题 | 备注 |
 | --- | --- | --- | --- | --- | --- |
-| Pickup 是否启用 | Yes | 待填写 | No | 待确认 | 第一版建议启用自取。 |
-| Delivery 是否关闭或后置 | Closed / Later | 待填写 | No | 待确认 | 第一版建议不启用配送。 |
-| 普通订单提前准备时间 | 待填写 | 待填写 | No | 待确认 | 由店主决定。 |
-| 冰淇淋蛋糕提前准备时间 | 24 或 48 小时，待店主决定 | 待填写 | No | 待确认 | 第一批可先记录，不一定配置到商品。 |
-| 前台是否显示自取说明 | Yes | 待填写 | No | 待确认 | 需要前台检查。 |
-| 前台是否误显示配送 | No | 待填写 | No | 待确认 | 如果误显示，记录问题。 |
-| 是否需要后续主题改造 | Unknown | 待填写 | No | 待确认 | 如果后台不能改自取说明，可能需要主题改造。 |
+| Pickup 是否启用 | Yes | `location_settings.collection.is_enabled` | Yes |  | 已写入本地开发数据库。 |
+| Delivery 是否关闭或后置 | Closed / Later | `location_settings.delivery.is_enabled` | Yes |  | 已写入本地开发数据库，第一版不启用配送。 |
+| 普通订单提前准备时间 | 30 minutes | `location_settings.collection.lead_time` | Yes |  | 已写入本地开发数据库。 |
+| 冰淇淋蛋糕提前准备时间 | Not configured in first batch | 不写入 | Deferred |  | 第一版暂不做冰淇淋蛋糕预订，仅保留后续规划。 |
+| 前台是否显示自取说明 | Yes | 待确认 | No | 待确认 | 需要店主登录后台或前台下单流程继续检查。 |
+| 前台是否误显示配送 | No | 待确认 | No | 待确认 | 需要店主登录后台或前台下单流程继续检查。 |
+| 是否需要后续主题改造 | Unknown | 待确认 | No | 待确认 | 如果后台不能改自取说明，可能需要主题改造。 |
 
 ## 问题跟踪表
 
-| 问题编号 | 发现位置 | 问题描述 | 是否影响上线 | 分类：后台配置 / 主题改造 / 扩展开发 / 待确认 | 建议下一步 | 状态：Open / Resolved / Deferred |
+| 问题编号 | 发现位置 | 问题描述 | 是否影响上线 | 分类：后台配置 / 翻译配置 / 主题改造 / 扩展开发 / 待确认 | 建议下一步 | 状态：Open / Resolved / Deferred |
 | --- | --- | --- | --- | --- | --- | --- |
-| Q-001 | 待填写 | 待填写 | 待确认 | 待确认 | 待填写 | Open |
-| Q-002 | 待填写 | 待填写 | 待确认 | 待确认 | 待填写 | Open |
-| Q-003 | 待填写 | 待填写 | 待确认 | 待确认 | 待填写 | Open |
+| Q-001 | Settings → Languages → `fr_CA` → Import translations | `fr_CA` 已创建、启用并设为默认，但翻译数量为 `0/2992`；导入翻译时报错：`A carte key is required to install/update from the TastyIgniter marketplace.` | Yes | 翻译配置 | 安全配置 TastyIgniter Carté Key 后重试导入；如果暂时没有 Carté Key，后续可评估本地 `lang/` 或 `lang/vendor/` 翻译文件方案。不要把 Carté Key 写入聊天、GitHub 或文档。 | Open |
+| Q-002 | 前台首页 | `fr_CA` 和 `en_CA` 都已启用，但前台没有可见语言切换入口。代码检查未发现 Orange theme 内置可见语言切换组件。 | Yes | 主题改造 | 先记录为后续主题改造任务；优先通过自定义主题或主题覆盖添加语言切换入口，不改 core、不改 `vendor/`。 | Open |
+| Q-003 | Settings / Currencies | 删除币种后 Currency / Currencies 页面报错。数据库中 CAD 仍存在且为默认币种，但 `currency_rate` 为 `0.00000000`；日志还显示 Currency 列表页渲染 `currency_rate` 浮点值时触发 TastyIgniter core 类型错误。 | Yes | 后台配置 / 待确认 | 已在本地开发数据库将 CAD 设为唯一默认币种、启用状态，并将 rate 修复为 `1.00000000`。未登录状态访问 Currencies 页面会跳转到登录页；店主刷新已登录后台后如仍报错，再记录为 core 兼容风险，先不要修改 core。 | Resolved |
 | Q-004 | 待填写 | 待填写 | 待确认 | 待确认 | 待填写 | Open |
 | Q-005 | 待填写 | 待填写 | 待确认 | 待确认 | 待填写 | Open |
 
 分类说明：
 
 - 后台配置：后台可以直接解决。
+- 翻译配置：语言包导入、本地翻译文件、翻译数量或 Marketplace Carté Key 相关问题。
 - 主题改造：后台不能改，但属于前台显示、文案、按钮、布局或语言切换问题。
 - 扩展开发：需要新字段、复杂规则、自动化流程或系统行为变化。
 - 待确认：现在还不知道原因，需要先截图和描述。
@@ -163,17 +164,17 @@
 | 检查项 | 是否完成 | 备注 |
 | --- | --- | --- |
 | 后台可以登录 | No | 不记录账号和密码。 |
-| 法语已启用 | No | 记录实际 locale。 |
-| 英语已启用 | No | 记录实际 locale。 |
-| 法语为默认语言 | No | 第一版必须完成。 |
-| 前台可访问 | No | 检查 `http://127.0.0.1:8000`。 |
-| 前台语言切换情况已记录 | No | 有或没有都要记录。 |
-| 店铺基础信息已配置 | No | 只记录公开信息。 |
-| 营业时间已配置 | No | 包括每周营业日和时间。 |
-| Pickup 设置已检查 | No | 第一版建议启用。 |
-| Delivery 是否后置已确认 | No | 第一版建议后置。 |
-| 没有录入密码、密钥、真实顾客信息或真实支付信息 | No | 完成后改为 Yes。 |
-| 遇到的问题已记录到问题跟踪表 | No | 至少记录待确认问题。 |
+| 法语已启用 | Yes | 实际 locale：`fr_CA`；翻译数量仍为 `0/2992`，见 Q-001。 |
+| 英语已启用 | Yes | 实际 locale：`en_CA`。 |
+| 法语为默认语言 | Yes | `fr_CA` 已设为默认语言。 |
+| 前台可访问 | Yes | `http://127.0.0.1:8000` 返回 `200`。 |
+| 前台语言切换情况已记录 | Yes | 前台没有可见语言切换入口，见 Q-002。 |
+| 店铺基础信息已配置 | Yes | 店铺名称、地址、城市、省份、邮编、电话、邮箱、时区、CAD 已写入本地开发数据库；不在文档记录完整联系方式。 |
+| 营业时间已配置 | Yes | 每天 12:00-22:00，已写入 `opening` 和 `collection` 时间。 |
+| Pickup 设置已检查 | Yes | Pickup 已启用，普通订单准备时间为 30 minutes。 |
+| Delivery 是否后置已确认 | Yes | Delivery 已关闭或后置，第一版不启用配送。 |
+| 没有录入密码、密钥、真实顾客信息或真实支付信息 | Yes | 本次只写入公开店铺信息和本地开发配置。 |
+| 遇到的问题已记录到问题跟踪表 | Yes | 已记录 Q-001、Q-002、Q-003。 |
 
 ## 配置完成后反馈给 Codex 的内容
 
