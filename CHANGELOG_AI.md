@@ -1,4 +1,4 @@
-# CHANGELOG_AI
+﻿# CHANGELOG_AI
 
 本文件记录 AI 对 `abandon-etc/TastyIgniter` fork 做过的修改。
 
@@ -7,7 +7,7 @@
 ### 仓库访问
 
 - 已成功访问 GitHub fork：`https://github.com/abandon-etc/TastyIgniter`
-- 已克隆到本地：`C:\Users\xinra\Documents\Codex\2026-07-07\laravel-tastyigniter-fork-tastyigniter-1-tastyigniter\work\TastyIgniter`
+- 已克隆到本地：`<local-workspace>\work\TastyIgniter`
 - 已确认进入正确项目根目录。
 - 已从 `4.x` 新建并切换到分支：`project-audit-and-docker-setup`
 
@@ -59,3 +59,49 @@
 - `.env.docker.example` 只适合本地开发，不能作为正式上线配置。
 - 当前 Docker 配置是最小开发方案，不等同于正式生产部署方案。
 - 后台初始设置页面需要用户自己填写管理员账号和店铺信息，AI 未编造账号密码。
+
+## 2026-07-07 安装后验证
+
+### 验证内容
+
+- 确认 Docker Desktop 正在运行。
+- 确认 `app` 和 `mysql` containers 正常运行。
+- 确认 MariaDB 数据库可连接。
+- 确认 `php artisan` 可用。
+- 确认 Composer dependencies 可用。
+- 确认 npm dependencies 可用。
+- 确认 `npm run dev` 可以成功构建 Laravel Mix 资源。
+- 确认 frontend `/` 返回 `200`。
+- 确认 admin login `/admin/login` 返回 `200`。
+- 确认后台功能入口存在，并且未登录时跳转到 `/admin/login`。
+- 确认 `igniter-orange` theme 已安装并设为默认主题。
+- 确认 `igniter.reservation` addon 已被发现，预约相关数据表存在。
+- 确认菜单、订单、支付、邮件、主题、扩展相关后台路由存在。
+- 执行语言规范检查，确认 Docker/code/config 文件没有中文代码注释、中文变量名、中文配置名或拼音命名。
+
+### 修改文件
+
+- 修改 `PROJECT_NOTES.md`：新增 `## 安装后验证`，记录可运行基线、后台入口、风险、`webpack@^5.94.0` 锁定原因和后续语言规范。
+- 修改 `CHANGELOG_AI.md`：记录本次安装后验证和语言规范整理。
+- 修改 `docker-compose.yml`：改为从本机 `.env` 读取 `DB_PASSWORD`，并使用随机 MariaDB root password，避免仓库文件保存数据库密码。
+- 修改 `.env.docker.example`：移除示例数据库密码值，只保留空占位。
+
+### 未修改内容
+
+- 未修改 TastyIgniter core。
+- 未修改 `vendor/`。
+- 未修改订单逻辑。
+- 未修改支付逻辑。
+- 未修改预约冲突检测逻辑。
+- 未修改登录认证逻辑。
+- 未修改安全相关逻辑。
+- 未提交任何管理员账号、密码、token、密钥或个人敏感信息。
+- Docker 本地数据库密码保存在本机 `.env`，不写入仓库文件。
+
+### 风险说明
+
+- Dashboard 登录后页面未由 AI 直接验证，因为需要管理员账号密码。
+- 真实下单、真实支付、真实邮件发送和预约冲突检测尚未做端到端测试。
+- `working_hours` 当前为空，需要下一阶段在后台配置营业时间。
+- `mail_templates` 当前为空，邮件模板需要继续通过后台或 TastyIgniter 推荐流程确认。
+- `webpack@^5.94.0` 是本地 Laravel Mix 构建兼容锁定，未来升级 TastyIgniter 时应重新评估。
