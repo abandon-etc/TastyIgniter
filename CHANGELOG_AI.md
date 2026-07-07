@@ -105,3 +105,40 @@
 - `working_hours` 当前为空，需要下一阶段在后台配置营业时间。
 - `mail_templates` 当前为空，邮件模板需要继续通过后台或 TastyIgniter 推荐流程确认。
 - `webpack@^5.94.0` 是本地 Laravel Mix 构建兼容锁定，未来升级 TastyIgniter 时应重新评估。
+
+## 2026-07-07 业务配置和本地化规划
+
+### 验证内容
+
+- 已同步最新 `4.x` 分支。
+- 已新建 `business-configuration-and-localization-plan` 分支。
+- 已确认 Docker baseline 仍可启动。
+- 已确认 frontend `http://127.0.0.1:8000` 返回 `200`。
+- 已确认 admin login `http://127.0.0.1:8000/admin/login` 返回 `200`。
+- 已检查 TastyIgniter Languages、`lang/`、`lang/vendor/`、Orange theme、mail layout/template 和 localization middleware 的现有能力。
+
+### 修改文件
+
+- 新增 `BUSINESS_CONFIGURATION_PLAN.md`：记录冰淇淋店第一版业务配置、生日派对预约映射、自取/配送建议、邮件和支付配置建议，以及魁北克英法双语本地化原则。
+- 新增 `LOCALIZATION_CHECKLIST.md`：记录英法双语上线前检查清单。
+- 更新 `CHANGELOG_AI.md`：记录本次规划文档工作。
+
+### 未修改内容
+
+- 未修改 TastyIgniter core。
+- 未修改 `vendor/`。
+- 未修改 `PROJECT_NOTES.md`。
+- 未修改订单逻辑。
+- 未修改支付逻辑。
+- 未修改预约冲突检测逻辑。
+- 未修改登录认证逻辑。
+- 未修改安全相关逻辑。
+- 未开发业务功能。
+- 未提交 `.env`、管理员密码、数据库真实密码、API key、token 或真实顾客信息。
+
+### 风险说明
+
+- 前台是否已有可直接使用的语言切换按钮仍需登录后台和前台页面实际确认；当前代码检查未发现明确的 Orange theme language switch component。
+- 菜单商品、分类和商品选项是否能按语言分别填写，需要在后台界面实际确认；如果不能，第一版可临时使用双语名称，后续再考虑主题或扩展方案。
+- 邮件模板和邮件布局支持语言相关配置，但是否能按顾客选择语言自动发送不同语言邮件需要后续端到端验证。
+- TastyIgniter 语言安装命令示例使用完整 locale code，例如 `fr_FR`；魁北克第一版建议优先尝试 `fr_CA` / `en_CA`，但需确认当前 TastyIgniter marketplace 或后台是否支持。
