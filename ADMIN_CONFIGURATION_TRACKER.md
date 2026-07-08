@@ -131,8 +131,8 @@
 | Delivery 是否关闭或后置 | Closed / Later | `location_settings.delivery.is_enabled` | Yes |  | 已写入本地开发数据库，第一版不启用配送。 |
 | 普通订单提前准备时间 | 30 minutes | `location_settings.collection.lead_time` | Yes |  | 已写入本地开发数据库。 |
 | 冰淇淋蛋糕提前准备时间 | Not configured in first batch | 不写入 | Deferred |  | 第一版暂不做冰淇淋蛋糕预订，仅保留后续规划。 |
-| 前台是否显示自取说明 | Yes | 待确认 | No | 待确认 | 需要店主登录后台或前台下单流程继续检查。 |
-| 前台是否误显示配送 | No | 待确认 | No | 待确认 | 需要店主登录后台或前台下单流程继续检查。 |
+| 前台是否显示自取说明 | Yes | 菜单页显示 `Pick-up · in 30 min` | Yes |  | 非登录前台只读检查已确认。 |
+| 前台是否误显示配送 | No | 首页仍显示 delivery address 搜索 | No | Q-004：首页仍可能误导顾客以为支持配送。 | 菜单页未显示 Delivery，但首页搜索文案需要后续处理。 |
 | 是否需要后续主题改造 | Unknown | 待确认 | No | 待确认 | 如果后台不能改自取说明，可能需要主题改造。 |
 
 ## 问题跟踪表
@@ -141,9 +141,9 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | Q-001 | Settings → Languages → `fr_CA` → Import translations | `fr_CA` 已创建、启用并设为默认，但翻译数量为 `0/2992`；导入翻译时报错：`A carte key is required to install/update from the TastyIgniter marketplace.` | Yes | 翻译配置 | 安全配置 TastyIgniter Carté Key 后重试导入；如果暂时没有 Carté Key，后续可评估本地 `lang/` 或 `lang/vendor/` 翻译文件方案。不要把 Carté Key 写入聊天、GitHub 或文档。 | Open |
 | Q-002 | 前台首页 | `fr_CA` 和 `en_CA` 都已启用，但前台没有可见语言切换入口。代码检查未发现 Orange theme 内置可见语言切换组件。 | Yes | 主题改造 | 先记录为后续主题改造任务；优先通过自定义主题或主题覆盖添加语言切换入口，不改 core、不改 `vendor/`。 | Open |
-| Q-003 | Settings / Currencies | 删除币种后 Currency / Currencies 页面报错。数据库中 CAD 仍存在且为默认币种，但 `currency_rate` 为 `0.00000000`；日志还显示 Currency 列表页渲染 `currency_rate` 浮点值时触发 TastyIgniter core 类型错误。 | Yes | 后台配置 / 待确认 | 已在本地开发数据库将 CAD 设为唯一默认币种、启用状态，并将 rate 修复为 `1.00000000`。未登录状态访问 Currencies 页面会跳转到登录页；店主刷新已登录后台后如仍报错，再记录为 core 兼容风险，先不要修改 core。 | Resolved |
-| Q-004 | 待填写 | 待填写 | 待确认 | 待确认 | 待填写 | Open |
-| Q-005 | 待填写 | 待填写 | 待确认 | 待确认 | 待填写 | Open |
+| Q-003 | Settings / Currencies | 删除币种后 Currency / Currencies 页面报错。数据库中 CAD 仍存在且为默认币种，但 `currency_rate` 为 `0.00000000`；日志还显示 Currency 列表页渲染 `currency_rate` 浮点值时触发 TastyIgniter core 类型错误。 | Yes | 后台配置 / 待确认 | 已在本地开发数据库将 CAD 设为唯一默认币种、启用状态，并将 rate 修复为 `1.00000000`。店主已在后台确认 Currencies 页面恢复，CAD 存在、为默认币种且 rate 为 1。 | Resolved |
+| Q-004 | 前台首页 | 第一批已关闭或后置 Delivery，但首页仍显示 delivery address 搜索入口；菜单页显示 Pickup，不显示 Delivery。 | Yes | 主题改造 / 后台配置 / 待确认 | 先检查后台是否能把首页搜索模式改为 Pickup / Collection；如果不能，应通过主题改造隐藏或改写首页 Delivery 文案，不改 core、不改 `vendor/`。 | Open |
+| Q-005 | 前台首页、菜单页、预约页、购物车入口 | `<html lang>` 已是 `fr_CA`，但前台可见文字仍大量为英文，例如导航、首页搜索、菜单页、预约页、购物车和 cookie 文案。 | Yes | 翻译配置 / 主题改造 | 先解决 Q-001 的法语翻译导入或本地翻译方案；仍无法翻译的主题文字再进入后续主题改造。 | Open |
 
 分类说明：
 
@@ -174,7 +174,33 @@
 | Pickup 设置已检查 | Yes | Pickup 已启用，普通订单准备时间为 30 minutes。 |
 | Delivery 是否后置已确认 | Yes | Delivery 已关闭或后置，第一版不启用配送。 |
 | 没有录入密码、密钥、真实顾客信息或真实支付信息 | Yes | 本次只写入公开店铺信息和本地开发配置。 |
-| 遇到的问题已记录到问题跟踪表 | Yes | 已记录 Q-001、Q-002、Q-003。 |
+| 遇到的问题已记录到问题跟踪表 | Yes | 已记录 Q-001、Q-002、Q-003、Q-004、Q-005。 |
+
+## 非登录前台只读检查记录
+
+检查日期：2026-07-07
+
+检查方式：只读 HTTP 检查和浏览器检查。未登录后台，未提交订单，未提交预约，未输入真实顾客信息，未测试真实支付。
+
+| 检查项 | 结果 | 备注 |
+| --- | --- | --- |
+| 首页是否返回 200 | Yes | `http://127.0.0.1:8000` 返回 `200`。 |
+| 首页是否正常显示 | Yes | 未发现系统错误或异常页面。 |
+| 首页是否显示店铺信息 | Yes | 店铺名称可见；文档不记录完整地址、电话或邮箱。 |
+| 首页是否有语言切换入口 | No | 未看到 `Français | English`、语言下拉框、国旗或 globe 图标，见 Q-002。 |
+| `<html lang>` 是否为法语 locale | Yes | 当前为 `fr_CA`。 |
+| 首页是否明显英文-only | Yes | 首页导航、搜索和 cookie 文案仍为英文，见 Q-005。 |
+| 菜单页是否能打开 | Yes | 浏览器可打开 `http://127.0.0.1:8000/default/menus`；HTTP 直访会先重定向。 |
+| 菜单页是否出现系统错误 | No | 未发现系统错误。 |
+| 菜单页内容状态 | Demo content | 菜单仍是示例内容；第一批配置未包含菜单和商品，所以暂不作为新问题。 |
+| 预约页是否能打开 | Yes | `http://127.0.0.1:8000/default/reservation` 可打开，未提交预约。 |
+| 预约页是否出现系统错误 | No | 未发现系统错误。 |
+| 购物车入口是否能打开 | Yes | `http://127.0.0.1:8000/cart` 可打开，空购物车状态未提交订单。 |
+| 结账入口是否能访问 | Partial | 空购物车访问 `http://127.0.0.1:8000/checkout` 会跳回菜单页；未提交订单。 |
+| Pickup / Collection 是否显示 | Yes | 菜单页显示 `Pick-up · in 30 min`。 |
+| Delivery 是否仍显示 | Yes, on homepage | 首页仍显示 delivery address 搜索入口，可能误导顾客，见 Q-004。菜单页未显示 Delivery。 |
+| 移动端导航是否明显破损 | No | 390px 宽度下未发现明显横向溢出；导航可见。 |
+| 移动端是否有语言切换入口 | No | 390px 宽度下也未看到语言切换入口，见 Q-002。 |
 
 ## 配置完成后反馈给 Codex 的内容
 
