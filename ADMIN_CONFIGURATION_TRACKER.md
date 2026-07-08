@@ -427,6 +427,7 @@
 | 低风险修复 | Applied | MySQL 连接新增 `DB_CONNECT_TIMEOUT` 环境变量支持，默认 5 秒，避免数据库不可达时一直等待到 Render 504。 |
 | 启动缓存默认值 | Adjusted | Render 启动脚本中 `RUN_CONFIG_CACHE` 默认值改为 `false`，避免 staging 数据库未确认时卡在 `php artisan package:discover` / `config:cache`。 |
 | PHP socket 超时 | Adjusted | 生产 PHP 配置中 `default_socket_timeout` 设为 10 秒，作为外部服务网络等待的辅助保护；本地黑洞型数据库地址模拟中动态请求仍可能超过 20 秒。 |
+| 健康检查端点 | Added | Nginx 新增 `/healthz` 静态健康检查端点，并让根路径 `HEAD /` 直接返回 200，避免 Render 健康探测占满 Laravel / PHP-FPM worker。 |
 | 仍需确认 | Pending | Render Environment Variables 中的 `DB_*` 配置、外部 MySQL / MariaDB 防火墙和数据库初始化状态仍需在 Render / 数据库服务商后台确认。 |
 | 生产数据 | Not touched | 未读取、连接或写入真实数据库，未提交密钥或真实业务数据。 |
 
