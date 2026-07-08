@@ -990,6 +990,8 @@
 - 在 `config/database.php` 的 MySQL 配置中新增 `DB_CONNECT_TIMEOUT` 支持，默认 5 秒。
 - 将 Render 启动脚本中 `RUN_CONFIG_CACHE` 的默认值改为 `false`，避免 staging 数据库未确认时卡在 `php artisan package:discover` / `config:cache`。
 - 在 `docker/render/php-production.ini` 中将 `default_socket_timeout` 设置为 10 秒，作为外部服务网络等待的辅助保护。
+- 在 `docker/render/nginx.conf.template` 中新增 `/healthz` 静态健康检查端点。
+- 让 Nginx 对根路径 `HEAD /` 直接返回 200，避免 Render 默认健康探测进入 Laravel 动态首页并占满 PHP-FPM worker。
 - 更新 `RENDER_RUNTIME_READINESS.md`，记录线上访问诊断、`DB_CONNECT_TIMEOUT` 和仍需确认的 Render 数据库环境变量。
 - 更新 `ADMIN_CONFIGURATION_TRACKER.md`，记录 Render staging 访问问题排查结果。
 
@@ -1011,5 +1013,6 @@
 - `DB_CONNECT_TIMEOUT` 只能让数据库不可达时更快暴露错误，不能替代正确配置外部 MySQL / MariaDB。
 - `RUN_CONFIG_CACHE=false` 是 staging 首次部署的保守默认值；数据库和动态页面确认正常后，可以再单独评估是否在 Render 环境变量中改为 `true`。
 - `default_socket_timeout=10` 是运行时辅助保护；本地黑洞型数据库地址模拟中动态请求仍可能超过 20 秒，因此不能替代正确配置外部 MySQL / MariaDB。
+- `/healthz` 和 `HEAD /` 处理只能保护 Render 健康检查，不代表 Laravel 首页已经能在数据库不可用时正常显示。
 - Render 仍需要确认 `DB_CONNECTION`、`DB_HOST`、`DB_PORT`、`DB_DATABASE`、`DB_USERNAME`、`DB_PASSWORD`、`DB_PREFIX` 和数据库防火墙设置。
 - 如果数据库尚未安装 / 迁移，动态页面仍会显示数据库相关错误，需要在备份和人工确认后处理。

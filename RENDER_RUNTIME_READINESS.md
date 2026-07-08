@@ -89,6 +89,7 @@ COPY composer.json composer.lock ./
 | Runtime / Language | Docker |
 | Dockerfile Path | `Dockerfile.render` |
 | Persistent Disk Mount Path | `/var/www/html/storage` |
+| Health Check Path | `/healthz` |
 | Database | 外部托管 MySQL / MariaDB |
 
 不要选择 Render PostgreSQL 作为第一版生产数据库。不要在 Render Persistent Disk 上自托管 MySQL / MariaDB。
@@ -206,6 +207,8 @@ https://le-chateau-des-enfants.onrender.com
 - 默认连接超时为 5 秒。
 - Render 启动脚本中 `RUN_CONFIG_CACHE` 的默认值改为 `false`，避免 staging 数据库未确认时卡在 `php artisan package:discover` / `config:cache`。
 - 生产 PHP 配置中 `default_socket_timeout` 设置为 10 秒，作为外部服务网络等待的辅助保护。
+- Nginx 新增 `/healthz` 静态健康检查端点，返回 `200 ok`，不进入 Laravel。
+- Nginx 对根路径 `HEAD /` 健康探测直接返回 200，避免 Render 默认探测打到 Laravel 动态首页并占满 PHP-FPM worker。
 - 该修复不写入数据库，不修改订单、支付、预约、认证或安全逻辑。
 - 本地黑洞型数据库地址模拟中，静态资源可返回 200，但动态请求仍可能超过 20 秒；因此根本修复仍是正确配置 Render 的外部 MySQL / MariaDB 连接和数据库防火墙。
 
