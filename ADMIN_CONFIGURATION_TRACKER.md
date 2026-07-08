@@ -144,6 +144,7 @@
 | Q-003 | Settings / Currencies | 删除币种后 Currency / Currencies 页面报错。数据库中 CAD 仍存在且为默认币种，但 `currency_rate` 为 `0.00000000`；日志还显示 Currency 列表页渲染 `currency_rate` 浮点值时触发 TastyIgniter core 类型错误。 | Yes | 后台配置 / 待确认 | 已在本地开发数据库将 CAD 设为唯一默认币种、启用状态，并将 rate 修复为 `1.00000000`。店主已在后台确认 Currencies 页面恢复，CAD 存在、为默认币种且 rate 为 1。 | Resolved |
 | Q-004 | 前台首页 | 第一批已关闭或后置 Delivery，但首页仍显示 delivery address 搜索入口；菜单页显示 Pickup，不显示 Delivery。 | Yes | 主题改造 | 已通过项目级 Orange 视图覆盖隐藏首页 local search / delivery address 搜索区域，并替换为按当前语言显示的点单和预约入口按钮；未修改 core、`vendor/` 或数据库。 | Resolved |
 | Q-005 | 前台首页、菜单页、预约页、购物车入口 | `<html lang>` 已可在 `fr_CA` / `en_CA` 间切换，但前台仍有未完整本地化内容。 | Yes | 翻译配置 / 主题改造 | 已新增少量 `lang/vendor` 覆盖并将首页 CTA 改为语言 key：`fr_CA` 显示法语单语，`en_CA` 显示英语单语；已部分覆盖导航、Pickup、预约和购物车关键文案。完整站点翻译、后台 demo content 和未覆盖主题文案仍需后续处理。 | Open |
+| Q-006 | 菜单页 / 购物车 / 结账入口 | 初次验证时当前本地时间不在营业时间内，前台显示 `CLOSED`，导致无法完成加入购物车和 checkout 验证。临时打开本地营业时间后，测试商品可加入购物车，数量可增加 / 减少，可移除商品，并可进入 checkout 表单。 | No | 前台流程 / 后台配置 | 已确认原因是测试时段不在营业时间内；测试后已从 `.local/backups/q006-before-temp-open-20260708-102353.json` 恢复原始营业时间和 collection 配置。未提交订单，未提交预约，未配置真实支付。 | Resolved |
 
 分类说明：
 
@@ -349,3 +350,41 @@
 | 真实菜单数据保护 | Pending | 部署前必须确认生产数据库不会被重建，`storage` / uploads 会持久化并备份。 |
 | 生产配置保护 | Pending | 生产 `.env`、Carté Key、邮件配置和支付密钥不得进入 GitHub，也不能被本地配置覆盖。 |
 | 备份流程 | Pending | 真实菜单录入前后都需要数据库和上传目录备份。 |
+
+## 前台流程低风险验证记录
+
+记录日期：2026-07-08
+
+| 项目 | 状态 | 备注 |
+| --- | --- | --- |
+| 基础访问 | Pass | 首页、菜单页、预约页、购物车页和后台登录页均返回 200。 |
+| 语言切换 | Pass | `Français | English` 可见，`fr_CA` / `en_CA` 可切换。 |
+| 首页 CTA | Pass | 点单按钮打开菜单页，预约按钮打开预约页。 |
+| 菜单展示 | Pass | 当前 demo 商品和商品卡片正常显示，Pickup / Cueillette 正常。 |
+| 商品图片 | Not applicable | 当前本地 demo 数据未渲染 `.menu-item-image` 商品图片元素；未发现图片破损。 |
+| 购物车加入商品 | Pass | Q-006 复测中临时打开本地营业时间后，测试商品可加入购物车。 |
+| 数量修改和移除商品 | Pass | Q-006 复测中已验证数量可增加、减少，并可移除商品；空购物车状态可恢复。 |
+| 结账入口 | Pass | Q-006 复测中有测试商品时可进入 checkout 表单，显示顾客信息、Pickup 和 payment area；未点击最终 `Confirm`。 |
+| 预约入口 | Pass | 预约页显示日期、人数和时间选择；未提交预约。 |
+| 移动端 390px | Pass | 首页、菜单页、购物车页、预约页和语言切换无明显破版。 |
+
+### Q-006 临时营业时间复测记录
+
+记录日期：2026-07-08
+
+| 项目 | 状态 | 备注 |
+| --- | --- | --- |
+| 备份是否创建 | Yes | 备份文件为 `.local/backups/q006-before-temp-open-20260708-102353.json`，不提交 GitHub。 |
+| 临时修改范围 | Done | 仅临时修改本地开发数据库中的当前星期 `opening` / `collection` 时间，并确认 Pickup 启用、Delivery 关闭。 |
+| 商品加入购物车 | Pass | 临时营业状态下，当前 demo 商品可加入购物车。 |
+| 购物车商品显示 | Pass | 可显示商品名称、数量、价格、小计和订单总计。 |
+| 数量修改 | Pass | 已验证数量可增加和减少。 |
+| 移除商品 | Pass | 已验证商品可移除，空购物车状态可恢复。 |
+| checkout 表单入口 | Pass | 有商品时可进入 checkout，显示顾客信息、Pickup 和 payment area。 |
+| 是否提交订单 | No | 未点击最终 `Confirm` / `Place Order` / `Pay`。 |
+| 是否提交预约 | No | 未提交预约。 |
+| 是否配置真实支付 | No | 未配置真实支付，未测试真实支付。 |
+| 是否恢复原配置 | Yes | 已按备份恢复原始营业时间和相关配置；当前星期 `opening` / `collection` 恢复为 `12:00-22:00`，Delivery 仍关闭。 |
+| Q-006 状态 | Resolved | 原因确认为测试时段不在营业时间内。 |
+
+详细检查见 `FRONTEND_FLOW_READINESS_CHECK.md`。
