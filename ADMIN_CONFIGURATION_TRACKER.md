@@ -323,3 +323,18 @@
 | Q-002 状态 | Resolved | 语言切换入口仍正常。 |
 | Q-004 状态 | Resolved | 首页 Delivery / Find Location 搜索入口仍隐藏。 |
 | Q-005 状态 | Open | 本次只统一视觉，不完成全站翻译；关键本地化仍保持前一阶段部分覆盖状态。 |
+
+## 菜单真实数据录入决策记录
+
+记录日期：2026-07-08
+
+| 项目 | 状态 | 备注 |
+| --- | --- | --- |
+| 大量真实菜单数据录入 | Deferred | 本地 Docker 后台响应慢，暂时不在本地大量录入真实菜品。 |
+| 本地测试菜单数据 | Keep minimal | 本地只保留少量测试分类、测试商品、测试价格和可选测试图片。 |
+| 菜单真实数据录入位置 | Later | 等正式或准生产环境准备好后，再通过管理员后台录入真实菜单。 |
+| 性能判断 | Local-only concern | 当前慢主要来自 Windows bind mount、Laravel / TastyIgniter 小文件读取、`php artisan serve`、CLI OPcache 未生效、`APP_DEBUG=true` 和缓存未启用。 |
+| 生产环境判断 | Pending validation | Linux + Nginx / PHP-FPM + OPcache + `APP_DEBUG=false` + Laravel 缓存后，后台性能预计会明显改善，但仍需准生产验证。 |
+| 数据保护 | Required | 部署后录入真实菜单前，必须确认生产数据库、`storage` / uploads 和 `.env` 不会被本地配置或部署脚本覆盖。 |
+
+详细计划见 `MENU_DATA_ENTRY_PLAN.md`。
