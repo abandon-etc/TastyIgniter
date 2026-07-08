@@ -24,6 +24,54 @@
 - [Environment Variables and Secrets](https://render.com/docs/configure-environment-variables)
 - [Deploy a PHP Web App with Laravel and Docker](https://render.com/docs/deploy-php-laravel-docker)
 
+## 已选择的部署架构：方案 A
+
+记录日期：2026-07-08
+
+当前已正式选择方案 A：
+
+- Render Docker Web Service 跑 TastyIgniter / Laravel 应用。
+- 数据库使用外部托管 MySQL / MariaDB。
+- 不使用 Render PostgreSQL 作为第一版生产数据库。
+- 不在 Render Persistent Disk 上自托管 MySQL / MariaDB。
+- Render Persistent Disk 只用于持久化 `storage`、uploads / media、菜品图片和必要运行时文件。
+- 域名已在 Cloudflare 购买，后续通过 Cloudflare DNS 指向 Render custom domain。
+
+选择方案 A 的原因：
+
+- 当前项目、本地 Docker 基线、第一批后台配置写入、Q-006 购物车 / checkout 低风险验证，都基于 MySQL / MariaDB。
+- 第一版不应同时更换部署平台和数据库类型。
+- TastyIgniter core、扩展迁移和查询是否完全兼容 PostgreSQL 仍未验证。
+- Render Persistent Disk 更适合保存运行时上传文件，不适合作为第一版生产数据库托管方案。
+- 外部托管 MySQL / MariaDB 更容易获得数据库级备份、监控和恢复能力。
+
+Cloudflare 域名后续步骤：
+
+1. 在 Render 创建 Web Service。
+2. 在 Render 添加 custom domain。
+3. 按 Render 提示到 Cloudflare DNS 添加对应记录。
+4. 等待 DNS 和 TLS 生效。
+5. 在 Render Environment Variables 中设置正确的 `APP_URL`。
+
+安全边界：
+
+- 不在 GitHub 提交真实域名私密配置。
+- 不提交 Cloudflare API token。
+- 不提交 Render secret。
+- 不提交数据库密码。
+- 不提交 Carté Key。
+- 不提交支付密钥或邮件密码。
+
+下一阶段建议：
+
+- 创建 Render production runtime PR。
+- 准备 Nginx + PHP-FPM + OPcache。
+- 支持 Render `$PORT`。
+- 准备 Persistent Disk symlink / directory setup。
+- 新增 `.dockerignore`。
+- 准备 safe startup script。
+- 继续保持数据库初始化、迁移、真实菜单录入和上传目录迁移必须人工确认。
+
 ## 当前项目是否适合 Render Docker Web Service
 
 当前项目适合走 Render Docker Web Service 路线，但当前仓库里的 Docker 配置仍是“本地开发基线”，不应直接当作生产部署方案。
@@ -47,7 +95,7 @@
 
 结论：
 
-- 第一版推荐使用 Render Docker Web Service。
+- 第一版已选择使用 Render Docker Web Service。
 - 需要后续单独做一个“生产 Docker PR”，准备 Nginx + PHP-FPM + OPcache + Laravel cache + Render `$PORT` 支持。
 - 本 PR 只记录方案，不修改 Dockerfile。
 
@@ -63,7 +111,7 @@
 - 项目此前已围绕 MySQL / MariaDB 做过本地 Docker 基线和第一批配置验证。
 - 为了降低部署风险，第一版不要同时更换部署平台和数据库类型。
 
-推荐方案：
+已选择方案：
 
 - Render Web Service 跑应用。
 - 数据库使用外部托管 MySQL / MariaDB。
@@ -88,11 +136,12 @@ Render 服务默认文件系统是临时的。没有 Persistent Disk 时，服�
 - 日志：`storage/logs`
 - 缓存 / session / views：`storage/framework`
 
-推荐第一版 Render Persistent Disk 设计：
+已选择的第一版 Render Persistent Disk 设计：
 
 - Disk mount path：`/var/www/html/storage`
 - 因为当前 Dockerfile 的 `WORKDIR` 是 `/var/www/html`，Render Docker disk mount path 应使用容器内绝对路径。
 - `storage` 目录整体放到 Persistent Disk。
+- Persistent Disk 不用于自托管 MySQL / MariaDB。
 - 在生产启动脚本中确保以下目录存在：
   - `/var/www/html/storage/app`
   - `/var/www/html/storage/app/public`
