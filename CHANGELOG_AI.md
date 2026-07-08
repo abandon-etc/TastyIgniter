@@ -548,3 +548,81 @@
 - Q-002 已解决：前台现在有可见语言切换入口。
 - Q-001 仍为 Open：法语翻译导入仍需要 Carté Key 或本地翻译方案。
 - Q-005 仍为 Open：切换到 `fr_CA` 后仍有大量英文-only 文案，因为完整翻译尚未处理。
+
+## 2026-07-08 关键前台文案本地化覆盖
+
+### 验证内容
+
+- 已同步最新 `4.x` 分支，其中包含已合并的 PR #9。
+- 已新建 `frontend-critical-localization` 分支。
+- 已确认 Docker baseline 可启动。
+- 已确认 frontend `http://127.0.0.1:8000` 返回 `200`。
+- 已确认 admin login `http://127.0.0.1:8000/admin/login` 返回 `200`。
+- 已调查关键前台文案来源，确认本次优先覆盖：
+  - `igniter-orange`
+  - `igniter-local`
+  - `igniter-cart`
+  - `igniter-reservation`
+- 已确认主导航部分文字可能来自后台菜单内容或 demo content，本次不写入数据库，不处理后台内容。
+
+### 修改内容
+
+- 新增少量 `lang/vendor` 本地翻译覆盖：
+  - `lang/vendor/igniter-orange/fr_CA/default.php`
+  - `lang/vendor/igniter-orange/en_CA/default.php`
+  - `lang/vendor/igniter-local/fr_CA/default.php`
+  - `lang/vendor/igniter-local/en_CA/default.php`
+  - `lang/vendor/igniter-cart/fr_CA/default.php`
+  - `lang/vendor/igniter-cart/en_CA/default.php`
+  - `lang/vendor/igniter-reservation/fr_CA/default.php`
+  - `lang/vendor/igniter-reservation/en_CA/default.php`
+- 修改 `resources/views/vendor/igniter-orange/livewire/local-search.blade.php`：
+  - 将首页 CTA 从临时双语硬编码改为 `igniter.orange::default` language key。
+  - `fr_CA` 显示法语单语 CTA。
+  - `en_CA` 显示英语单语 CTA。
+- 更新 `ADMIN_CONFIGURATION_TRACKER.md`：记录 Q-005 关键文案部分覆盖，状态仍为 Open。
+- 更新 `CHANGELOG_AI.md`：记录本次实施。
+
+### 验收结果
+
+- 首页可访问。
+- 菜单页可访问。
+- 预约页可访问。
+- 购物车页可访问。
+- 后台登录页可访问。
+- `fr_CA` 下首页 CTA 为法语单语，不再显示 `Order Now` 或 `Book a Party`。
+- `en_CA` 下首页 CTA 为英语单语。
+- 语言切换仍正常。
+- 首页 CTA 仍正常跳转。
+- 首页仍不显示 Delivery address / Find Location 搜索框。
+- 菜单页 Pickup 关键文案已部分覆盖。
+- 预约页关键文案已部分覆盖。
+- 购物车空状态关键文案已部分覆盖。
+- 本地 Chrome 只读工具不能可靠切换到 390px 视口；本次未修改 CTA 的 Bootstrap 响应式布局类，沿用前一阶段已验证的按钮结构。
+
+### 未修改内容
+
+- 未处理 Q-001 Carté Key。
+- 未导入 Marketplace 完整语言包。
+- 未一次性翻译所有前台文案。
+- 未修改 TastyIgniter core。
+- 未修改 `vendor/`。
+- 未直接修改 Orange vendor theme。
+- 未修改订单逻辑。
+- 未修改支付逻辑。
+- 未修改预约冲突检测逻辑。
+- 未修改登录认证逻辑。
+- 未修改安全相关逻辑。
+- 未写入数据库。
+- 未登录后台。
+- 未提交订单。
+- 未提交预约。
+- 未配置真实菜单、商品或支付。
+- 未提交 `.env`、`.local`、数据库备份、本地配置 JSON、管理员密码、数据库真实密码、API key、token、Carté Key、真实顾客信息或真实支付信息。
+
+### 风险说明
+
+- Q-001 仍为 Open：完整 Marketplace 法语翻译导入仍需要安全配置 Carté Key，或后续继续扩展本地翻译覆盖。
+- Q-002 保持 Resolved：语言切换入口仍存在。
+- Q-004 保持 Resolved：首页地址搜索入口仍隐藏。
+- Q-005 保持 Open：关键文案已部分覆盖，但完整站点翻译、后台 demo content 和剩余英文文案仍需后续处理。

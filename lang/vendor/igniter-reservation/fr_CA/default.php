@@ -1,0 +1,36 @@
+<?php
+
+return [
+    'text_title' => 'Réservations',
+    'text_form_name' => 'Réservation',
+    'text_booking_title' => 'Réserver',
+    'text_success_heading' => 'Confirmation de réservation',
+    'text_time_heading' => 'Sélectionner une heure',
+    'text_reservation' => 'Ma réservation',
+    'text_find_msg' => 'Utilisez le formulaire ci-dessous pour trouver une disponibilité.',
+    'text_time_msg' => 'Heures disponibles le %s pour %s invités',
+    'text_person' => 'personne',
+    'text_people' => 'personnes',
+
+    'label_guest_num' => 'Nombre d’invités',
+    'label_date' => 'Date',
+    'label_time' => 'Heure',
+    'label_occasion' => 'Occasion',
+    'label_select' => '- veuillez sélectionner -',
+    'label_customer_name' => 'Nom du client',
+    'label_first_name' => 'Prénom',
+    'label_last_name' => 'Nom',
+    'label_email' => 'Courriel',
+    'label_confirm_email' => 'Confirmer le courriel',
+    'label_telephone' => 'Téléphone',
+    'label_comment' => 'Demandes spéciales',
+
+    'button_reserve' => 'Réserver',
+    'button_back' => 'Retour',
+    'button_find_table' => 'Trouver une disponibilité',
+    'button_select_time' => 'Sélectionner l’heure',
+    'button_change' => 'Modifier les détails',
+    'button_reset' => 'Réinitialiser',
+    'button_find_again' => 'Chercher à nouveau',
+    'button_reservation' => 'Terminer la réservation',
+];
