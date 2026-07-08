@@ -368,3 +368,53 @@
 - Q-004 和 Q-005 都会影响上线前顾客体验。
 - Q-004 优先检查后台是否能改首页搜索模式；如果不能，后续应通过主题改造处理。
 - Q-005 优先处理翻译配置；仍无法翻译的主题文字再进入主题改造。
+
+## 2026-07-08 前台问题修复方案设计
+
+### 验证内容
+
+- 已同步最新 `4.x` 分支。
+- 已新建 `frontend-remediation-plan` 分支。
+- 已确认 Docker baseline 可启动。
+- 已确认 frontend `http://127.0.0.1:8000` 返回 `200`。
+- 已确认 admin login `http://127.0.0.1:8000/admin/login` 返回 `200`。
+- 已阅读 `ADMIN_CONFIGURATION_TRACKER.md`、`ADMIN_CONFIGURATION_GUIDE.md`、`BUSINESS_CONFIGURATION_PLAN.md`、`LOCALIZATION_CHECKLIST.md`、`PROJECT_NOTES.md` 和 `CHANGELOG_AI.md`。
+
+### 调查内容
+
+- 已调查 Q-004：首页 Delivery address 搜索入口来自 Orange 主题首页的 `igniter-orange::local-search` Livewire 组件。
+- 已确认 `LocalSearch` 组件支持 `hideSearch` 属性，可隐藏搜索框并显示菜单入口。
+- 已调查 Q-002：当前未发现 Orange 主题内置可见语言切换入口。
+- 已确认当前 localization 支持 request / browser / session locale，但本地直接访问 `/fr_CA`、`/en_CA`、`/fr_CA/default/menus` 和 `/en_CA/default/menus` 返回 `404`，因此第一版不建议直接使用 URL prefix 作为语言切换。
+- 已调查 Q-005：大量英文来自缺少 `fr_CA` 翻译包、Orange 主题语言 key、扩展语言 key、后台 demo content 和少量主题/菜单硬编码。
+- 已调查 Q-001：Carté Key 可通过 `.env` 的 `IGNITER_CARTE_KEY` 或后台 Updates / Marketplace Attach Carté Key 配置；本次未配置、未读取、未提交 Carté Key。
+
+### 修改文件
+
+- 新增 `FRONTEND_REMEDIATION_PLAN.md`：记录 Q-001、Q-002、Q-004、Q-005 的来源分析、风险、推荐修复方案、优先级和后续小 PR 拆分。
+- 更新 `CHANGELOG_AI.md`：记录本次前台问题修复方案设计。
+
+### 未修改内容
+
+- 未修改 TastyIgniter core。
+- 未修改 `vendor/`。
+- 未修改 Orange 主题源码。
+- 未修改订单逻辑。
+- 未修改支付逻辑。
+- 未修改预约冲突检测逻辑。
+- 未修改登录认证逻辑。
+- 未修改安全相关逻辑。
+- 未开发业务功能。
+- 未写入数据库。
+- 未登录后台。
+- 未提交订单。
+- 未提交预约。
+- 未测试真实支付。
+- 未提交 `.env`、管理员密码、数据库真实密码、API key、token、Carté Key、真实顾客信息或真实支付信息。
+
+### 风险说明
+
+- Q-004 是最高优先级，因为首页 Delivery address 搜索会误导顾客。
+- Q-002 需要后续主题改造或等价非侵入式前台展示改造。
+- Q-005 应先处理关键前台文案，不建议一次性翻译全部 2992 条。
+- Q-001 取决于是否安全配置 Carté Key；没有 Carté Key 时可以先用 `lang/vendor` 覆盖关键前台文案。
