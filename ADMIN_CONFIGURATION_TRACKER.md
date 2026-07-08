@@ -364,6 +364,20 @@
 | 生产环境变量 | Pending | Render Environment Variables 需要人工配置；`.env`、Carté Key、邮件密码和支付密钥不得进入 GitHub。 |
 | 自动初始化风险 | Blocked until confirmed | 生产环境不得自动运行会清空、重建或写入 demo 数据的命令；数据库迁移必须先备份并人工确认。 |
 
+## Render 方案 A 架构决策记录
+
+记录日期：2026-07-08
+
+| 项目 | 状态 | 备注 |
+| --- | --- | --- |
+| 部署架构 | Decided | 已正式选择方案 A：Render Docker Web Service 跑应用，外部托管 MySQL / MariaDB 跑数据库。 |
+| Render PostgreSQL | Deferred | 第一版暂不使用；当前项目、本地 Docker、配置验证和 Q-006 流程验证均基于 MySQL / MariaDB。 |
+| Render Persistent Disk 自托管数据库 | Rejected | 不在 Render Persistent Disk 上自托管 MySQL / MariaDB。 |
+| Render Persistent Disk 用途 | Required | 只用于 `storage`、uploads / media、菜品图片和必要运行时文件。 |
+| Cloudflare 域名 | Pending setup | 域名已购买；后续 Render 创建 Web Service 后，在 Render 添加 custom domain，再到 Cloudflare 配置 DNS。 |
+| 生产密钥保护 | Required | 不提交真实域名私密配置、Cloudflare API token、数据库密码、Render secret、Carté Key、支付密钥或邮件密码。 |
+| 下一阶段 | Recommended | 创建 Render production runtime PR，准备 Nginx + PHP-FPM + OPcache + Render `$PORT` + Persistent Disk symlink / directory setup + `.dockerignore` + safe startup script。 |
+
 ## 前台流程低风险验证记录
 
 记录日期：2026-07-08

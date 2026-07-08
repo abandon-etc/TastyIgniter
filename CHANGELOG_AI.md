@@ -879,3 +879,29 @@
 - 当前 Render 部署方案仍是规划，不代表可以立即上线。
 - 后续需要单独创建生产 Docker / Render runtime PR。
 - 正式录入真实菜单前必须确认生产数据库、`storage`、uploads / media 和备份流程已经稳定。
+
+## 2026-07-08 Render 方案 A 架构决策记录
+
+### 执行内容
+
+- 记录已正式选择方案 A：Render Docker Web Service 跑 TastyIgniter / Laravel 应用，数据库使用外部托管 MySQL / MariaDB。
+- 记录第一版不使用 Render PostgreSQL，原因是当前项目、本地 Docker、配置验证和 Q-006 流程验证均基于 MySQL / MariaDB。
+- 记录不在 Render Persistent Disk 上自托管 MySQL / MariaDB。
+- 记录 Render Persistent Disk 只用于 `storage`、uploads / media、菜品图片和必要运行时文件。
+- 记录 Cloudflare 域名已购买，后续通过 Render custom domain 和 Cloudflare DNS 接入。
+- 记录下一阶段建议创建 Render production runtime PR，准备 Nginx + PHP-FPM + OPcache + Render `$PORT` + Persistent Disk symlink / directory setup + `.dockerignore` + safe startup script。
+
+### 修改文件
+
+- 更新 `RENDER_DEPLOYMENT_PLAN.md`。
+- 更新 `ADMIN_CONFIGURATION_TRACKER.md`。
+- 更新 `CHANGELOG_AI.md`。
+
+### 未修改内容
+
+- 未修改业务代码。
+- 未修改 Docker 配置。
+- 未修改 TastyIgniter core。
+- 未修改 `vendor/`。
+- 未写入数据库。
+- 未提交 `.env`、`.local`、数据库备份、密码、密钥、token、Carté Key、Cloudflare token、Render secret、真实顾客信息或真实支付信息。
