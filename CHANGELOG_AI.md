@@ -208,3 +208,113 @@
 
 - 本文件是记录模板，不代表后台配置已经完成。
 - 第一批配置只覆盖语言设置、店铺基础信息、营业时间和自取设置；菜单、商品、生日派对预约和支付放到后续批次。
+
+## 2026-07-07 第一批后台配置问题诊断
+
+### 验证内容
+
+- 已新建 `admin-first-batch-configuration-issues` 分支。
+- 已诊断 Q-001：`fr_CA` 翻译导入失败的原因是缺少 TastyIgniter Marketplace Carté Key；项目代码读取 `IGNITER_CARTE_KEY`，后台 Updates 页面也提供 Attach Carté Key 入口。
+- 已诊断 Q-002：Orange theme 当前未发现可见语言切换组件；前台没有语言切换入口应记录为后续主题改造任务。
+- 已诊断 Q-003：本地数据库中 CAD 仍存在且为默认币种，但 `currency_rate` 为 `0.00000000`；日志还显示 Currency 列表页渲染 `currency_rate` 浮点值时触发 TastyIgniter core 类型错误。
+- 已确认 `fr_CA` 和 `en_CA` 均为 enabled，且 `fr_CA` 为默认语言。
+- 已确认 `fr_CA` 翻译数量仍为 `0`。
+- 已确认 frontend `http://127.0.0.1:8000` 返回 `200`。
+- 已确认 admin login `http://127.0.0.1:8000/admin/login` 返回 `200`。
+
+### 数据库修复
+
+- 已在本地开发数据库中将 CAD 设为唯一默认币种。
+- 已将 CAD 设置为 enabled。
+- 已将 CAD `currency_rate` 修复为 `1.00000000`。
+- 已清理本地货币缓存 `igniter.currency` 和 `igniter.currency.rates`。
+
+### 修改文件
+
+- 更新 `ADMIN_CONFIGURATION_TRACKER.md`：记录第一批语言设置结果、店铺基础信息配置进度、Q-001、Q-002、Q-003 和验收清单状态。
+- 更新 `CHANGELOG_AI.md`：记录本次问题诊断和本地数据库修复。
+
+### 未修改内容
+
+- 未修改 TastyIgniter core。
+- 未修改 `vendor/`。
+- 未修改订单逻辑。
+- 未修改支付逻辑。
+- 未修改预约冲突检测逻辑。
+- 未修改登录认证逻辑。
+- 未修改安全相关逻辑。
+- 未开发业务功能。
+- 未提交 `.env`、管理员密码、数据库真实密码、API key、token、真实顾客信息或真实支付信息。
+
+### 风险说明
+
+- Q-001 仍为 Open：没有 Carté Key 时，Marketplace 翻译导入不能完成；后续可安全配置 Carté Key 或评估本地翻译文件方案。
+- Q-002 仍为 Open：语言切换入口需要后续通过自定义主题或主题覆盖处理。
+- Q-003 数据层已修复：CAD 是唯一默认币种且 rate 为 `1.00000000`；后台 Currencies 页面是否恢复需要用户刷新后台确认。如果仍报错，应记录为 TastyIgniter core 兼容风险，先不要直接修改 core。
+
+## 2026-07-07 第一批后台配置写入
+
+### 执行内容
+
+- 已在本地开发数据库写入第一批后台配置。
+- 写入前已创建备份文件：`.local/backups/admin-first-batch-before-20260707-194406.json`。
+- 写入前已确认 `settings.supported_languages` 使用序列化数组格式。
+- 写入前已确认 `location_settings` 中 `collection` / `delivery` 配置使用 JSON 格式。
+- 写入前已确认 `working_hours` 使用 `weekday`、`type`、`opening_time`、`closing_time`、`status` 字段。
+- 写入时使用数据库事务；写入成功，没有触发回滚。
+
+### 修改的数据表
+
+- `locations`：写入默认门店基础信息，包括店铺名称、公开地址、城市、省份、邮编、公开电话、公开邮箱，并设为默认启用门店。
+- `settings`：写入 `site_name`、`site_email`、`timezone`、`supported_languages`。
+- `languages`：确认 `fr_CA` 启用并设为默认语言，确认 `en_CA` 启用。
+- `currencies`：确认 CAD 启用、设为默认币种，并将 `currency_rate` 设置为 `1.00000000`。
+- `working_hours`：写入每天 12:00-22:00 的 `opening` 和 `collection` 时间。
+- `location_settings`：启用 `collection` / Pickup，设置普通订单准备时间为 30 minutes；关闭或后置 `delivery`。
+
+### 未写入内容
+
+- 未写入冰淇淋蛋糕配置。
+- 未写入生日派对预约配置。
+- 未写入菜单、商品或商品选项。
+- 未写入真实邮件服务。
+- 未写入真实支付方式。
+- 未写入 Carté Key。
+- 未写入法语翻译内容。
+- 未做语言切换主题改造。
+
+### 验证结果
+
+- 已确认 frontend `http://127.0.0.1:8000` 返回 `200`。
+- 已确认 admin login `http://127.0.0.1:8000/admin/login` 返回 `200`。
+- 已确认 CAD 是默认币种且 rate 为 `1.00000000`。
+- 已确认 `fr_CA` 是默认语言。
+- 已确认 `en_CA` 为 enabled。
+- 已确认默认门店基础信息已更新；文档未记录完整地址、电话或邮箱。
+- 已确认每天 `opening` 和 `collection` 时间均为 12:00-22:00。
+- 已确认 Pickup 已启用，普通订单准备时间为 30 minutes。
+- 已确认 Delivery 已关闭或后置。
+- 未登录后台验证 Currencies 页面；未登录访问该页面会跳转到后台登录页。
+
+### 修改文件
+
+- 更新 `ADMIN_CONFIGURATION_TRACKER.md`：记录第一批配置已写入本地开发数据库，更新店铺基础信息、营业时间、自取设置、Q-003 和验收清单。
+- 更新 `CHANGELOG_AI.md`：记录本次数据库写入和验证。
+
+### 未修改内容
+
+- 未修改 TastyIgniter core。
+- 未修改 `vendor/`。
+- 未修改订单逻辑。
+- 未修改支付逻辑。
+- 未修改预约冲突检测逻辑。
+- 未修改登录认证逻辑。
+- 未修改安全相关逻辑。
+- 未开发业务功能。
+- 未提交 `.env`、管理员密码、数据库真实密码、API key、token、真实顾客信息或真实支付信息。
+
+### 风险说明
+
+- Q-001 仍为 Open：缺少 Carté Key 时，Marketplace 翻译导入仍不能完成。
+- Q-002 仍为 Open：前台仍没有可见语言切换入口，后续应通过主题改造或主题覆盖处理。
+- Q-003 数据层已恢复：CAD 是默认币种且 rate 为 `1.00000000`；Currencies 页面需要店主在已登录后台刷新确认。
