@@ -451,6 +451,23 @@
 | `show tables` | Not executed | 需要在 `select 1` 成功后执行，判断 staging 数据库是否为空或缺表。 |
 | 敏感信息 | Not touched | 未提交 `.env`、`.local`、密码、密钥、token、APP_KEY、Carté Key、Render secret、DigitalOcean token、数据库密码、真实顾客信息或真实支付信息。 |
 
+### DigitalOcean Managed MySQL primary key 限制记录
+
+记录日期：2026-07-08
+
+| 项目 | 状态 | 备注 |
+| --- | --- | --- |
+| Render Shell `mysql select 1` | Pass | 已由用户确认成功；未记录真实 host、用户名或密码。 |
+| `show tables` | Empty | 已由用户确认执行成功但没有返回业务表，当前数据库为 staging 空数据库。 |
+| 初始化失败原因 | Identified | TastyIgniter 初始化遇到 `sql_require_primary_key=ON`，MySQL 报错要求建表必须有 primary key。 |
+| DigitalOcean 全局设置 | Confirmed | DigitalOcean Managed MySQL 全局 `sql_require_primary_key=ON`。 |
+| `SET GLOBAL` | Not allowed | 普通数据库用户不能执行全局修改。 |
+| `SET SESSION` | Allowed | 普通数据库用户可以执行 `SET SESSION sql_require_primary_key = OFF`。 |
+| 应用配置支持 | Added | `config/database.php` 已新增 `MYSQL_ATTR_INIT_COMMAND` 支持，可通过 Render Environment Variable 设置 session 初始化命令。 |
+| 默认行为 | Preserved | 不设置 `MYSQL_ATTR_INIT_COMMAND` 时保持原行为，不默认关闭 primary key 要求。 |
+| 数据库写入 | Not performed | 本次未写入数据库，未运行 `igniter:install`、`migrate:fresh`、`migrate:refresh` 或 `db:seed`。 |
+| 敏感信息 | Not touched | 未提交 `.env`、`.local`、APP_KEY、DB_HOST、DB_USERNAME、DB_PASSWORD、Render secret、DigitalOcean token、Carté Key、支付密钥、真实顾客信息或真实支付信息。 |
+
 ## 前台流程低风险验证记录
 
 记录日期：2026-07-08
