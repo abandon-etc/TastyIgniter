@@ -4,20 +4,17 @@
 @endphp
 
 <div class="text-center">
-    <h2 class="mb-3">Commandez en ligne pour cueillette ou réservez votre fête d’anniversaire.</h2>
-    <p class="lead mb-4">
-        Order online for pickup or book your birthday party.
-    </p>
+    <h2 class="mb-4">@lang('igniter.orange::default.home_cta_title')</h2>
 
     <div class="d-grid gap-3 d-sm-flex justify-content-sm-center">
         <a
             class="btn btn-primary btn-lg fw-bold"
             href="{{ page_url('local.menus', $locationParams) }}"
-        >Commander / Order Now</a>
+        >@lang('igniter.orange::default.home_cta_order_button')</a>
 
         <a
             class="btn btn-outline-primary btn-lg fw-bold"
             href="{{ page_url('reservation.reservation', $locationParams) }}"
-        >Réserver une fête / Book a Party</a>
+        >@lang('igniter.orange::default.home_cta_party_button')</a>
     </div>
 </div>

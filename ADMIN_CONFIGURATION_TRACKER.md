@@ -142,8 +142,8 @@
 | Q-001 | Settings → Languages → `fr_CA` → Import translations | `fr_CA` 已创建、启用并设为默认，但翻译数量为 `0/2992`；导入翻译时报错：`A carte key is required to install/update from the TastyIgniter marketplace.` | Yes | 翻译配置 | 安全配置 TastyIgniter Carté Key 后重试导入；如果暂时没有 Carté Key，后续可评估本地 `lang/` 或 `lang/vendor/` 翻译文件方案。不要把 Carté Key 写入聊天、GitHub 或文档。 | Open |
 | Q-002 | 前台首页 | `fr_CA` 和 `en_CA` 都已启用，但前台没有可见语言切换入口。代码检查未发现 Orange theme 内置可见语言切换组件。 | Yes | 主题改造 | 已新增项目级 Orange header view override，前台显示 `Français | English`；点击后通过 `/language/fr_CA` 或 `/language/en_CA` 设置 session locale 并返回当前页面。未使用 `/fr_CA` 或 `/en_CA` URL prefix。 | Resolved |
 | Q-003 | Settings / Currencies | 删除币种后 Currency / Currencies 页面报错。数据库中 CAD 仍存在且为默认币种，但 `currency_rate` 为 `0.00000000`；日志还显示 Currency 列表页渲染 `currency_rate` 浮点值时触发 TastyIgniter core 类型错误。 | Yes | 后台配置 / 待确认 | 已在本地开发数据库将 CAD 设为唯一默认币种、启用状态，并将 rate 修复为 `1.00000000`。店主已在后台确认 Currencies 页面恢复，CAD 存在、为默认币种且 rate 为 1。 | Resolved |
-| Q-004 | 前台首页 | 第一批已关闭或后置 Delivery，但首页仍显示 delivery address 搜索入口；菜单页显示 Pickup，不显示 Delivery。 | Yes | 主题改造 | 已通过项目级 Orange 视图覆盖隐藏首页 local search / delivery address 搜索区域，并替换为 `Commander / Order Now` 和 `Réserver une fête / Book a Party` 两个入口按钮；未修改 core、`vendor/` 或数据库。 | Resolved |
-| Q-005 | 前台首页、菜单页、预约页、购物车入口 | `<html lang>` 已是 `fr_CA`，但前台可见文字仍大量为英文；本次首页 CTA 使用法语在前、英语辅助的临时双语文案。 | Yes | 翻译配置 / 主题改造 | 先解决 Q-001 的法语翻译导入或本地翻译方案；仍无法翻译的主题文字再进入后续主题改造。首页 CTA 的临时双语文案后续应改为语言 key 或本地翻译覆盖。 | Open |
+| Q-004 | 前台首页 | 第一批已关闭或后置 Delivery，但首页仍显示 delivery address 搜索入口；菜单页显示 Pickup，不显示 Delivery。 | Yes | 主题改造 | 已通过项目级 Orange 视图覆盖隐藏首页 local search / delivery address 搜索区域，并替换为按当前语言显示的点单和预约入口按钮；未修改 core、`vendor/` 或数据库。 | Resolved |
+| Q-005 | 前台首页、菜单页、预约页、购物车入口 | `<html lang>` 已可在 `fr_CA` / `en_CA` 间切换，但前台仍有未完整本地化内容。 | Yes | 翻译配置 / 主题改造 | 已新增少量 `lang/vendor` 覆盖并将首页 CTA 改为语言 key：`fr_CA` 显示法语单语，`en_CA` 显示英语单语；已部分覆盖导航、Pickup、预约和购物车关键文案。完整站点翻译、后台 demo content 和未覆盖主题文案仍需后续处理。 | Open |
 
 分类说明：
 
@@ -224,7 +224,7 @@
 | 移动端 390px 是否可见 | Yes | 两个按钮在 390px 宽度下可见并未超出屏幕。 |
 | Q-004 状态 | Resolved | 首页误导性的 Delivery / 地址搜索入口已隐藏。 |
 | Q-002 状态 | Resolved | 后续语言切换实施已显示 `Français | English`。 |
-| Q-005 状态 | Open | 首页 CTA 使用临时双语文案，完整法语翻译仍未完成。 |
+| Q-005 状态 | Open | 后续关键文案本地化已将首页 CTA 改为按当前语言显示；完整站点翻译仍未完成。 |
 
 ## 前台语言切换实施检查记录
 
@@ -247,6 +247,32 @@
 | Q-002 状态 | Resolved | 前台可见语言切换入口已完成。 |
 | Q-001 状态 | Open | Carté Key / 法语翻译导入仍未处理。 |
 | Q-005 状态 | Open | 完整法语翻译和英文-only 文案仍未处理。 |
+
+## 关键前台文案本地化检查记录
+
+检查日期：2026-07-08
+
+检查方式：只读 HTTP 检查、Docker 容器内 PHP 语法检查和页面内容检查。未登录后台，未提交订单，未提交预约，未写入数据库，未输入真实顾客信息，未测试真实支付。
+
+| 检查项 | 结果 | 备注 |
+| --- | --- | --- |
+| 首页是否返回 200 | Yes | `http://127.0.0.1:8000` 可访问。 |
+| 菜单页是否返回 200 | Yes | `http://127.0.0.1:8000/default/menus` 可访问。 |
+| 预约页是否返回 200 | Yes | `http://127.0.0.1:8000/default/reservation` 可访问。 |
+| 购物车页是否返回 200 | Yes | `http://127.0.0.1:8000/cart` 可访问，未提交订单。 |
+| 后台登录页是否返回 200 | Yes | `http://127.0.0.1:8000/admin/login` 可访问，未登录后台。 |
+| 语言切换入口是否仍显示 | Yes | `Français | English` 仍可见。 |
+| `fr_CA` 首页 CTA 是否为法语单语 | Yes | 显示 `Commandez en ligne pour cueillette...`、`Commander`、`Réserver une fête`；不再显示 `Order Now` 或 `Book a Party`。 |
+| `en_CA` 首页 CTA 是否为英语单语 | Yes | 显示 `Order online for pickup...`、`Order Now`、`Book a Party`。 |
+| 首页是否仍隐藏 Delivery / Find Location 搜索 | Yes | 未发现 `Enter delivery address` 或 `Find a restaurant near you`。 |
+| 菜单页 Pickup 文案是否部分本地化 | Yes | `fr_CA` 下可见 `Cueillette` / `dans 30 min` 相关文案。 |
+| 预约页关键文案是否部分本地化 | Yes | `fr_CA` 下可见预约标题、人数、日期、时间和操作按钮的法语覆盖。 |
+| 购物车空状态是否部分本地化 | Yes | `fr_CA` 下可见 `Panier` 或空购物车提示的法语覆盖。 |
+| 移动端布局风险 | Low | 本次未修改 CTA 的 Bootstrap 响应式布局类，沿用前一阶段已验证的按钮结构；本地 Chrome 只读工具不能可靠切换到 390px 视口。 |
+| Q-001 状态 | Open | 本次未处理 Carté Key，也未导入 Marketplace 完整语言包。 |
+| Q-002 状态 | Resolved | 前台语言切换入口仍可用。 |
+| Q-004 状态 | Resolved | 首页地址搜索入口仍保持隐藏。 |
+| Q-005 状态 | Open | 关键首页、Pickup、预约和购物车文案已部分覆盖；完整站点翻译、后台 demo content 和剩余英文文案仍需后续处理。 |
 
 ## 配置完成后反馈给 Codex 的内容
 
