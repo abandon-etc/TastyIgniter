@@ -50,6 +50,36 @@ docker build -f Dockerfile.render -t tastyigniter-render-test .
 - 未提交预约。
 - 未测试真实支付。
 
+## Render composer.lock 兼容修复
+
+记录日期：2026-07-08
+
+Render staging 已确认使用 `Dockerfile.render`，但 build 曾失败在：
+
+```text
+COPY composer.json composer.lock ./
+/composer.lock: not found
+```
+
+原因：
+
+- Render build 使用了正确的 `Dockerfile.render`。
+- GitHub 仓库当前没有可供 Docker build 复制的 `composer.lock`。
+- Dockerfile 原写法强制要求 `composer.lock` 存在，导致 build 在 Composer install 前就失败。
+
+修复：
+
+- `Dockerfile.render` 已改为 `COPY composer.* ./`。
+- 如果以后仓库包含 `composer.lock`，Docker 会一起复制。
+- 如果仓库暂时只有 `composer.json`，Docker build 不会在 COPY 阶段失败。
+- 后续 `composer install` 逻辑保持不变。
+
+注意：
+
+- 没有 `composer.lock` 时，Composer install 会根据 `composer.json` 解析依赖版本，生产可重复性不如锁文件稳定。
+- 后续如果项目决定提交 `composer.lock`，Render build 会自动使用它。
+- 本次修复仍未表示 Render staging 已完整部署成功，还需要继续观察下一次 Render build / deploy 日志。
+
 ## Render Web Service 设置
 
 在 Render 创建 Web Service 时：
