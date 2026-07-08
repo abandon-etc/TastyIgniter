@@ -290,3 +290,36 @@
 - Delivery 是否关闭或后置。
 - 第一批遇到的问题编号和描述。
 - 如果有截图，只提供不含敏感信息的截图文件名或截图内容描述。
+
+## 第一版前台视觉系统检查记录
+
+检查日期：2026-07-08
+
+检查方式：只读 HTTP 检查和浏览器渲染检查。未登录后台，未提交订单，未提交预约，未写入数据库，未输入真实顾客信息，未测试真实支付。
+
+| 检查项 | 结果 | 备注 |
+| --- | --- | --- |
+| 首页是否返回 200 | Yes | `http://127.0.0.1:8000` 可访问。 |
+| 首页是否隐藏 hero slider / 大图 / 装饰图 | Yes | `#slider-home-slider` 已隐藏，首页非菜单图片区域不显示。 |
+| 首页是否保留原图片区域空白 | No | Header 下方直接进入粉色背景和居中 CTA。 |
+| 首页背景是否为 solid `#FAC8D5` | Yes | 浏览器检查背景为 `rgb(250, 200, 213)`。 |
+| 首页 CTA 是否居中 | Yes | 桌面端和 390px 移动端均可见且居中。 |
+| 点单按钮是否仍打开菜单页 | Yes | 按钮仍跳转到 `http://127.0.0.1:8000/default/menus`。 |
+| 预约按钮是否仍打开预约页 | Yes | 按钮仍跳转到 `http://127.0.0.1:8000/default/reservation`。 |
+| 语言切换是否仍可见 | Yes | `Français | English` 仍可见。 |
+| `fr_CA` / `en_CA` 是否仍可切换 | Yes | `<html lang>` 可在 `fr_CA` 和 `en_CA` 间切换。 |
+| 菜单页是否返回 200 | Yes | `http://127.0.0.1:8000/default/menus` 可访问。 |
+| 菜单页商品图片是否保留 | Yes | 本次 CSS 未匹配或隐藏 `.menu-item-image`；当前本地 demo 数据未渲染商品缩略图元素。 |
+| 菜单页商品卡片布局是否正常 | Yes | 桌面端和 390px 移动端商品卡片均正常显示。 |
+| 菜单页 Pickup / Cueillette 是否正常 | Yes | `Cueillette` / Pickup 状态仍可见。 |
+| 预约页是否返回 200 | Yes | `http://127.0.0.1:8000/default/reservation` 可访问，表单卡片风格统一。 |
+| 购物车页是否返回 200 | Yes | `http://127.0.0.1:8000/cart` 可访问，空购物车状态正常。 |
+| 结账页是否可访问 | Yes | 空购物车状态访问 `http://127.0.0.1:8000/checkout` 会按系统现有流程跳回菜单页，未修改订单流程。 |
+| 登录页 / 注册页是否可访问 | Yes | `/login` 和 `/register` 可访问，表单卡片使用统一视觉风格。 |
+| 后台登录页是否返回 200 | Yes | `http://127.0.0.1:8000/admin/login` 可访问，未登录后台。 |
+| 是否使用渐变 | No | CSS 未使用 `linear-gradient`、`radial-gradient` 或 `background-image` 渐变。 |
+| 是否使用危险图片隐藏规则 | No | 未使用全局 `img { display: none; }`、`.carousel { display: none; }` 或 `.card img { display: none; }`。 |
+| Q-001 状态 | Open | 本次未处理 Carté Key 或 Marketplace 翻译导入。 |
+| Q-002 状态 | Resolved | 语言切换入口仍正常。 |
+| Q-004 状态 | Resolved | 首页 Delivery / Find Location 搜索入口仍隐藏。 |
+| Q-005 状态 | Open | 本次只统一视觉，不完成全站翻译；关键本地化仍保持前一阶段部分覆盖状态。 |
