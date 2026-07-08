@@ -431,6 +431,26 @@
 | 仍需确认 | Pending | Render Environment Variables 中的 `DB_*` 配置、外部 MySQL / MariaDB 防火墙和数据库初始化状态仍需在 Render / 数据库服务商后台确认。 |
 | 生产数据 | Not touched | 未读取、连接或写入真实数据库，未提交密钥或真实业务数据。 |
 
+### Render staging 数据库连接复查记录
+
+记录日期：2026-07-08
+
+| 项目 | 状态 | 备注 |
+| --- | --- | --- |
+| `/healthz` | Pass | 返回 200 和 `ok`。 |
+| 静态资源 | Pass | `/favicon.svg` 返回 200。 |
+| 首页 `/` | Database Error | 返回 200，但页面标题为 `Database Error Was Encountered`，首字节约 10 秒。 |
+| 后台登录页 `/admin/login` | Database Error | 返回 200，但页面标题为 `Database Error Was Encountered`，首字节约 10 秒。 |
+| 菜单页 `/default/menus` | Database Error | 返回 200，但页面标题为 `Database Error Was Encountered`，首字节约 10 秒。 |
+| 购物车 `/cart` | Database Error | 返回 200，但页面标题为 `Database Error Was Encountered`。 |
+| 预约页 `/default/reservation` | Database Error | 返回 200，但页面标题为 `Database Error Was Encountered`。 |
+| 当前判断 | Database configuration / initialization | Docker build、Nginx、PHP-FPM、静态资源和 health check 已基本正常；下一步应检查 Render `DB_*`、DigitalOcean Public host / port、Trusted Sources 和 staging 数据库是否初始化。 |
+| Render Environment Variables | Not verified | 无 Render 后台权限，未读取或记录真实值。 |
+| DigitalOcean Trusted Sources | Not verified | 无 DigitalOcean 后台权限，未读取或记录真实值。 |
+| Render Shell `mysql select 1` | Not executed | 需要在 Render Shell / Console / one-off command 中执行，不要把密码写入文档或聊天。 |
+| `show tables` | Not executed | 需要在 `select 1` 成功后执行，判断 staging 数据库是否为空或缺表。 |
+| 敏感信息 | Not touched | 未提交 `.env`、`.local`、密码、密钥、token、APP_KEY、Carté Key、Render secret、DigitalOcean token、数据库密码、真实顾客信息或真实支付信息。 |
+
 ## 前台流程低风险验证记录
 
 记录日期：2026-07-08

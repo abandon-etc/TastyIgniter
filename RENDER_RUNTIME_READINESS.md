@@ -334,6 +334,53 @@ Staging 环境验证步骤：
 
 不要通过公开页面输出 `phpinfo()`。如果需要检查 OPcache，应使用安全的临时 one-off command 或后台安全方式，并避免暴露到公网。
 
+## Render staging 数据库连接排查记录
+
+记录日期：2026-07-08
+
+测试地址：
+
+```text
+https://le-chateau-des-enfants.onrender.com
+```
+
+外部可验证结果：
+
+| 检查项 | 结果 | 说明 |
+| --- | --- | --- |
+| `/healthz` | Pass | 返回 200 和 `ok`，说明 Render Web Service、Nginx 和健康检查端点正常。 |
+| `/favicon.svg` | Pass | 静态资源返回 200。 |
+| `/` | Failing | 返回 200，但页面标题为 `Database Error Was Encountered`，首字节约 10 秒。 |
+| `/admin/login` | Failing | 返回 200，但页面标题为 `Database Error Was Encountered`，首字节约 10 秒。 |
+| `/default/menus` | Failing | 返回 200，但页面标题为 `Database Error Was Encountered`，首字节约 10 秒。 |
+| `/cart` | Failing | 返回 200，但页面标题为 `Database Error Was Encountered`，首字节约 10 秒。 |
+| `/default/reservation` | Failing | 返回 200，但页面标题为 `Database Error Was Encountered`，首字节约 10 秒。 |
+
+判断：
+
+- 当前已经不是 Docker build、Nginx 启动或 Render health check 问题。
+- 当前也不再表现为外部浏览器 504；动态页面已能返回 Laravel / TastyIgniter 的数据库错误页。
+- 首字节约 10 秒，符合当前 staging runtime 的数据库连接超时保护表现。
+- 主要嫌疑仍是外部 MySQL / MariaDB 连接配置、DigitalOcean Trusted Sources / Firewall、数据库名称或数据库初始化状态。
+
+仍需在 Render / DigitalOcean 后台确认，不要把真实值写入 GitHub：
+
+| 检查项 | 当前状态 | 说明 |
+| --- | --- | --- |
+| `DB_HOST` 是否为 DigitalOcean Public host | 未确认 | 需要在 Render Environment Variables 中检查，只记录是否正确，不记录真实值。 |
+| `DB_PORT` 是否与 DigitalOcean Connection Details 一致 | 未确认 | 不要假设是 3306；DigitalOcean Managed MySQL 常见端口可能不同。 |
+| DigitalOcean Trusted Sources 是否允许 Render 连接 | 未确认 | staging 排查阶段可临时允许 `0.0.0.0/0`，排查通过后再收紧。 |
+| Render Shell 中 `mysql select 1` 是否成功 | 未执行 | 需要在 Render Shell / Console / one-off command 中执行，不要把密码输出到文档或聊天。 |
+| `show tables` 是否为空 | 未执行 | 只有 `select 1` 成功后再检查。 |
+
+下一步：
+
+1. 在 Render Environment Variables 中确认 `DB_*` 配置是否完整且使用 DigitalOcean Public connection。
+2. 在 DigitalOcean Managed MySQL 中确认 Trusted Sources / Firewall 允许 Render 连接。
+3. 在 Render Shell / Console 中执行 `mysql ... -e "select 1;"`。
+4. 如果 `select 1` 成功，再执行 `show tables;` 判断 staging 数据库是否已经初始化。
+5. 如果数据库为空，先确认这是 staging 空库，再使用 TastyIgniter 推荐安装流程；不要运行 `migrate:fresh`、`migrate:refresh` 或未经确认的 seed。
+
 ## 前台功能验证
 
 Staging 至少验证：

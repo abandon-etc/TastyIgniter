@@ -1016,3 +1016,33 @@
 - `/healthz` 和 `HEAD /` 处理只能保护 Render 健康检查，不代表 Laravel 首页已经能在数据库不可用时正常显示。
 - Render 仍需要确认 `DB_CONNECTION`、`DB_HOST`、`DB_PORT`、`DB_DATABASE`、`DB_USERNAME`、`DB_PASSWORD`、`DB_PREFIX` 和数据库防火墙设置。
 - 如果数据库尚未安装 / 迁移，动态页面仍会显示数据库相关错误，需要在备份和人工确认后处理。
+
+## 2026-07-08 Render staging 数据库连接复查记录
+
+### 执行内容
+
+- 复查 `https://le-chateau-des-enfants.onrender.com/healthz`，确认返回 200 和 `ok`。
+- 复查静态资源 `/favicon.svg`，确认返回 200。
+- 复查首页 `/`、后台登录页 `/admin/login`、菜单页 `/default/menus`、购物车 `/cart` 和预约页 `/default/reservation`。
+- 已确认上述动态页面当前返回 200，但页面标题为 `Database Error Was Encountered`，不是正常前台或后台登录页。
+- 已确认动态页面首字节约 10 秒，符合当前数据库连接超时保护的表现。
+- 更新 `RENDER_RUNTIME_READINESS.md`，记录当前 staging 数据库连接排查结果和下一步。
+- 更新 `ADMIN_CONFIGURATION_TRACKER.md`，记录外部可验证结果。
+
+### 未修改内容
+
+- 未修改业务代码。
+- 未修改 Docker / Nginx / PHP runtime 文件。
+- 未修改 TastyIgniter core。
+- 未修改 `vendor/`。
+- 未写入数据库。
+- 未连接真实数据库。
+- 未读取或记录 Render / DigitalOcean 后台中的真实环境变量。
+- 未提交 `.env`、`.local`、密码、密钥、token、APP_KEY、Carté Key、Render secret、DigitalOcean token、数据库密码、真实顾客信息或真实支付信息。
+
+### 下一步
+
+- 在 Render Environment Variables 中确认 `DB_*` 是否完整且使用 DigitalOcean Public connection。
+- 在 DigitalOcean Managed MySQL 中确认 Trusted Sources / Firewall 是否允许 Render 连接。
+- 在 Render Shell / Console 中执行 `mysql ... -e "select 1;"`。
+- 如果 `select 1` 成功，再执行 `show tables;` 判断 staging 数据库是否为空或缺表。
