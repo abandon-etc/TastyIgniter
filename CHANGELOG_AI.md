@@ -844,3 +844,38 @@
 - Q-006 已在本地临时营业状态下验证通过，当前状态为 Resolved。
 - 本次没有完成真实订单提交、真实支付、真实邮件或真实预约提交。
 - 上线前仍需在准生产环境验证完整订单流程、支付配置、邮件配置和备份流程。
+
+## 2026-07-08 Render 部署方案设计
+
+### 执行内容
+
+- 新增 `RENDER_DEPLOYMENT_PLAN.md`，记录 Render 部署方案设计。
+- 推荐第一版使用 Render Docker Web Service，但明确当前 Dockerfile 仍是本地开发方案，后续需要单独准备生产 Docker / Nginx / PHP-FPM / OPcache。
+- 不建议第一版直接使用 Render 原生 PostgreSQL；推荐使用外部托管 MySQL / MariaDB，降低数据库兼容性风险。
+- 记录 Render Persistent Disk 对 `storage`、uploads / media 和菜品图片的持久化要求。
+- 记录生产 Render Environment Variables 字段清单，但不写真实值。
+- 区分可以自动运行的部署命令和必须人工确认的数据库相关命令。
+- 记录如何避免覆盖生产数据库和上传目录。
+- 补充 staging 验证 checklist、正式上线前 checklist、当前风险和推荐部署顺序。
+
+### 修改文件
+
+- 新增 `RENDER_DEPLOYMENT_PLAN.md`。
+- 更新 `ADMIN_CONFIGURATION_TRACKER.md`：记录 Render 部署方案状态和风险。
+- 更新 `CHANGELOG_AI.md`：记录本次文档规划。
+
+### 未修改内容
+
+- 未直接部署 Render。
+- 未修改业务代码。
+- 未修改 Docker 配置。
+- 未修改 TastyIgniter core。
+- 未修改 `vendor/`。
+- 未写入数据库。
+- 未提交 `.env`、`.local`、数据库备份、密码、密钥、token、Carté Key、真实顾客信息或真实支付信息。
+
+### 风险说明
+
+- 当前 Render 部署方案仍是规划，不代表可以立即上线。
+- 后续需要单独创建生产 Docker / Render runtime PR。
+- 正式录入真实菜单前必须确认生产数据库、`storage`、uploads / media 和备份流程已经稳定。

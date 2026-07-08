@@ -351,6 +351,19 @@
 | 生产配置保护 | Pending | 生产 `.env`、Carté Key、邮件配置和支付密钥不得进入 GitHub，也不能被本地配置覆盖。 |
 | 备份流程 | Pending | 真实菜单录入前后都需要数据库和上传目录备份。 |
 
+## Render 部署方案记录
+
+记录日期：2026-07-08
+
+| 项目 | 状态 | 备注 |
+| --- | --- | --- |
+| Render 部署方案 | Done | 已新增 `RENDER_DEPLOYMENT_PLAN.md`，仅作为方案设计，不直接部署。 |
+| Render Web Service 路线 | Recommended | 第一版建议使用 Render Docker Web Service，但当前 Dockerfile 仍是本地开发方案，后续需要单独准备生产 Docker / Nginx / PHP-FPM / OPcache。 |
+| 数据库路线 | External MySQL / MariaDB recommended | 不建议第一版直接切换到 Render PostgreSQL；当前项目和本地验证均基于 MySQL / MariaDB。 |
+| Persistent Disk | Required | `storage`、uploads / media 和菜品图片必须持久化；`public/media` 需要后续通过安全 symlink 或等价方案接入持久磁盘。 |
+| 生产环境变量 | Pending | Render Environment Variables 需要人工配置；`.env`、Carté Key、邮件密码和支付密钥不得进入 GitHub。 |
+| 自动初始化风险 | Blocked until confirmed | 生产环境不得自动运行会清空、重建或写入 demo 数据的命令；数据库迁移必须先备份并人工确认。 |
+
 ## 前台流程低风险验证记录
 
 记录日期：2026-07-08
