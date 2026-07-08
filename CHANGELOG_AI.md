@@ -418,3 +418,68 @@
 - Q-002 需要后续主题改造或等价非侵入式前台展示改造。
 - Q-005 应先处理关键前台文案，不建议一次性翻译全部 2992 条。
 - Q-001 取决于是否安全配置 Carté Key；没有 Carté Key 时可以先用 `lang/vendor` 覆盖关键前台文案。
+
+## 2026-07-08 首页单店 CTA 实施
+
+### 验证内容
+
+- 已同步最新 `4.x` 分支。
+- 已新建 `homepage-single-location-cta` 分支。
+- 已确认 Docker baseline 可启动。
+- 已确认 frontend `http://127.0.0.1:8000` 返回 `200`。
+- 已确认 admin login `http://127.0.0.1:8000/admin/login` 返回 `200`。
+- 已重新确认首页搜索模块来自 Orange theme 的 `igniter-orange::local-search` Livewire component。
+- 已确认首页使用 `vendor/tastyigniter/ti-theme-orange/resources/views/_pages/home.blade.php` 渲染该 component，但本次未修改 `vendor/`。
+
+### 修改内容
+
+- 新增 `resources/views/vendor/igniter-orange/livewire/local-search.blade.php`。
+- 通过项目级 Orange 视图覆盖隐藏首页 local search / delivery address 搜索区域。
+- 将原搜索区域替换为两个 CTA：
+  - `Commander / Order Now`
+  - `Réserver une fête / Book a Party`
+- 两个 CTA 使用当前默认门店 slug 生成链接：
+  - 点单入口：`http://127.0.0.1:8000/default/menus`
+  - 预约入口：`http://127.0.0.1:8000/default/reservation`
+- 更新 `ADMIN_CONFIGURATION_TRACKER.md`：将 Q-004 标记为 Resolved，并记录本次首页 CTA 检查结果。
+- 更新 `CHANGELOG_AI.md`：记录本次实施。
+
+### 验收结果
+
+- 首页不再显示 `Enter delivery address`。
+- 首页不再显示 `Find a restaurant near you`。
+- 首页不再显示 location search / address search 输入框。
+- 首页显示 `Commander / Order Now`。
+- 首页显示 `Réserver une fête / Book a Party`。
+- 点单按钮可打开菜单页。
+- 预约按钮可打开预约页。
+- 菜单页仍显示 `Pick-up` 和 `in 30 min`。
+- 390px 移动端宽度下两个按钮可见且未超出屏幕。
+- 前台未发现系统错误。
+- 后台登录页仍可访问。
+
+### 未修改内容
+
+- 未修改 TastyIgniter core。
+- 未修改 `vendor/`。
+- 未直接修改 Orange vendor theme。
+- 未修改订单逻辑。
+- 未修改支付逻辑。
+- 未修改预约冲突检测逻辑。
+- 未修改登录认证逻辑。
+- 未修改安全相关逻辑。
+- 未写入数据库。
+- 未登录后台。
+- 未提交订单。
+- 未提交预约。
+- 未测试真实支付。
+- 未处理 Q-001 Carté Key。
+- 未处理完整法语翻译。
+- 未添加完整语言切换。
+- 未提交 `.env`、管理员密码、数据库真实密码、API key、token、Carté Key、真实顾客信息或真实支付信息。
+
+### 风险说明
+
+- Q-004 已解决：首页误导性的 Delivery / 地址搜索入口已隐藏。
+- Q-002 仍为 Open：前台仍没有可见语言切换入口。
+- Q-005 仍为 Open：首页 CTA 当前使用法语在前、英语辅助的临时双语文案；完整本地化后应改为语言 key 或本地翻译覆盖。
