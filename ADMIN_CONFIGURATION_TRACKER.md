@@ -412,6 +412,24 @@
 | 部署状态 | Pending | 本次只修复 build 输入文件复制问题，Render staging 仍需重新 build / deploy 验证。 |
 | 生产数据 | Not touched | 未连接或写入生产数据库，未配置真实密钥或真实业务数据。 |
 
+## Render staging 访问问题排查记录
+
+记录日期：2026-07-08
+
+| 项目 | 状态 | 备注 |
+| --- | --- | --- |
+| 测试地址 | Checked | `https://le-chateau-des-enfants.onrender.com`。 |
+| 静态资源 | Pass | `favicon.svg` 返回 200，说明域名、HTTPS、Render 入口和 Nginx 静态文件服务初步正常。 |
+| 首页动态页面 | Failing | `/` 约 60 秒后返回 504。 |
+| 后台登录页动态页面 | Failing | `/admin/login` 约 60 秒后返回 504。 |
+| 菜单页动态页面 | Failing | `/default/menus` 在 20 秒内没有返回首字节。 |
+| 初步判断 | Database connection likely | 动态页面卡住但静态文件正常，最可能是 Laravel / TastyIgniter 请求期间等待外部 MySQL / MariaDB 连接。 |
+| 低风险修复 | Applied | MySQL 连接新增 `DB_CONNECT_TIMEOUT` 环境变量支持，默认 5 秒，避免数据库不可达时一直等待到 Render 504。 |
+| 启动缓存默认值 | Adjusted | Render 启动脚本中 `RUN_CONFIG_CACHE` 默认值改为 `false`，避免 staging 数据库未确认时卡在 `php artisan package:discover` / `config:cache`。 |
+| PHP socket 超时 | Adjusted | 生产 PHP 配置中 `default_socket_timeout` 设为 10 秒，作为外部服务网络等待的辅助保护；本地黑洞型数据库地址模拟中动态请求仍可能超过 20 秒。 |
+| 仍需确认 | Pending | Render Environment Variables 中的 `DB_*` 配置、外部 MySQL / MariaDB 防火墙和数据库初始化状态仍需在 Render / 数据库服务商后台确认。 |
+| 生产数据 | Not touched | 未读取、连接或写入真实数据库，未提交密钥或真实业务数据。 |
+
 ## 前台流程低风险验证记录
 
 记录日期：2026-07-08

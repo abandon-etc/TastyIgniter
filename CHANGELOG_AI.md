@@ -976,3 +976,40 @@
 - 本次只修复 Render build 的 `composer.lock` 复制问题。
 - Render staging 仍未确认完整部署成功，需要等待下一次 Render build / deploy 日志。
 - 没有 `composer.lock` 时，Composer install 的生产可重复性弱于锁文件；后续可以单独评估是否提交 `composer.lock`。
+
+## 2026-07-08 Render staging 访问问题排查与数据库连接超时修复
+
+### 执行内容
+
+- 使用浏览器 / HTTP 工具检查 `https://le-chateau-des-enfants.onrender.com`。
+- 已确认静态资源 `favicon.svg` 返回 200。
+- 已确认首页 `/` 和后台登录页 `/admin/login` 约 60 秒后返回 504。
+- 已确认菜单页 `/default/menus` 在短超时测试中没有返回首字节。
+- 判断域名、HTTPS、Render 入口和 Nginx 静态资源服务初步正常。
+- 判断动态页面最可能卡在 Laravel / TastyIgniter 访问外部 MySQL / MariaDB 连接阶段。
+- 在 `config/database.php` 的 MySQL 配置中新增 `DB_CONNECT_TIMEOUT` 支持，默认 5 秒。
+- 将 Render 启动脚本中 `RUN_CONFIG_CACHE` 的默认值改为 `false`，避免 staging 数据库未确认时卡在 `php artisan package:discover` / `config:cache`。
+- 在 `docker/render/php-production.ini` 中将 `default_socket_timeout` 设置为 10 秒，作为外部服务网络等待的辅助保护。
+- 更新 `RENDER_RUNTIME_READINESS.md`，记录线上访问诊断、`DB_CONNECT_TIMEOUT` 和仍需确认的 Render 数据库环境变量。
+- 更新 `ADMIN_CONFIGURATION_TRACKER.md`，记录 Render staging 访问问题排查结果。
+
+### 未修改内容
+
+- 未修改订单逻辑。
+- 未修改支付逻辑。
+- 未修改预约冲突检测逻辑。
+- 未修改登录认证逻辑。
+- 未修改安全相关逻辑。
+- 未修改 TastyIgniter core。
+- 未修改 `vendor/`。
+- 未写入数据库。
+- 未连接真实数据库。
+- 未提交 `.env`、`.local`、密码、密钥、token、Carté Key、Render secret、数据库密码、真实顾客信息或真实支付信息。
+
+### 风险说明
+
+- `DB_CONNECT_TIMEOUT` 只能让数据库不可达时更快暴露错误，不能替代正确配置外部 MySQL / MariaDB。
+- `RUN_CONFIG_CACHE=false` 是 staging 首次部署的保守默认值；数据库和动态页面确认正常后，可以再单独评估是否在 Render 环境变量中改为 `true`。
+- `default_socket_timeout=10` 是运行时辅助保护；本地黑洞型数据库地址模拟中动态请求仍可能超过 20 秒，因此不能替代正确配置外部 MySQL / MariaDB。
+- Render 仍需要确认 `DB_CONNECTION`、`DB_HOST`、`DB_PORT`、`DB_DATABASE`、`DB_USERNAME`、`DB_PASSWORD`、`DB_PREFIX` 和数据库防火墙设置。
+- 如果数据库尚未安装 / 迁移，动态页面仍会显示数据库相关错误，需要在备份和人工确认后处理。

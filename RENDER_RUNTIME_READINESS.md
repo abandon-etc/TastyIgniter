@@ -150,9 +150,11 @@ Render Persistent Disk 计划挂载到：
 
 建议：
 
-- `RUN_CONFIG_CACHE=true`
+- `RUN_CONFIG_CACHE=false`
 - `RUN_ROUTE_CACHE=false`，确认 TastyIgniter route cache 兼容后再启用。
 - `RUN_VIEW_CACHE=false`，确认主题和扩展兼容后再启用。
+
+staging 首次部署建议先保持 `RUN_CONFIG_CACHE=false`。外部 MySQL / MariaDB、Render Environment Variables、安装状态和动态页面都确认正常后，再单独评估是否改为 `true`。
 
 ### 外部 MySQL / MariaDB
 
@@ -163,11 +165,61 @@ Render Persistent Disk 计划挂载到：
 - `DB_USERNAME`
 - `DB_PASSWORD`
 - `DB_PREFIX`
+- `DB_CONNECT_TIMEOUT`
 
 建议第一版：
 
 - `DB_CONNECTION=mysql`
 - `DB_PORT=3306`
+- `DB_CONNECT_TIMEOUT=5`
+
+`DB_CONNECT_TIMEOUT` 用于限制 PHP 连接 MySQL / MariaDB 的等待时间。Render 上如果 `DB_HOST`、端口、防火墙、用户名或密码配置错误，动态页面可能一直等待数据库连接，最终由 Render 返回 504。设置较短超时可以更快暴露数据库连接问题，便于排查；它不能替代正确的外部 MySQL / MariaDB 配置。
+
+## Render staging 动态页面 504 排查记录
+
+记录日期：2026-07-08
+
+已测试站点：
+
+```text
+https://le-chateau-des-enfants.onrender.com
+```
+
+检查结果：
+
+- 静态资源 `https://le-chateau-des-enfants.onrender.com/favicon.svg` 返回 200。
+- 首页 `/` 在约 60 秒后返回 504。
+- 后台登录页 `/admin/login` 在约 60 秒后返回 504。
+- 菜单页 `/default/menus` 在 20 秒内没有返回首字节。
+- DNS、HTTPS、Cloudflare、Render 入口和 Nginx 静态资源服务初步正常。
+
+判断：
+
+- 问题不在域名解析或 TLS。
+- 问题也不像是 Nginx 完全没有启动，因为静态文件可以返回。
+- 动态页面卡住，最可能原因是 Laravel / TastyIgniter 在请求期间等待外部 MySQL / MariaDB 连接。
+- 如果 Render Environment Variables 中的数据库配置缺失、错误，或数据库防火墙不允许 Render 访问，就会出现这种现象。
+
+已做的低风险修复：
+
+- `config/database.php` 的 MySQL 连接新增 `DB_CONNECT_TIMEOUT` 支持。
+- 默认连接超时为 5 秒。
+- Render 启动脚本中 `RUN_CONFIG_CACHE` 的默认值改为 `false`，避免 staging 数据库未确认时卡在 `php artisan package:discover` / `config:cache`。
+- 生产 PHP 配置中 `default_socket_timeout` 设置为 10 秒，作为外部服务网络等待的辅助保护。
+- 该修复不写入数据库，不修改订单、支付、预约、认证或安全逻辑。
+- 本地黑洞型数据库地址模拟中，静态资源可返回 200，但动态请求仍可能超过 20 秒；因此根本修复仍是正确配置 Render 的外部 MySQL / MariaDB 连接和数据库防火墙。
+
+仍需在 Render 确认：
+
+- `DB_CONNECTION=mysql`
+- `DB_HOST`
+- `DB_PORT`
+- `DB_DATABASE`
+- `DB_USERNAME`
+- `DB_PASSWORD`
+- `DB_PREFIX`
+- 外部 MySQL / MariaDB 是否允许 Render Web Service 的出站连接。
+- 数据库是否已经完成 TastyIgniter 所需安装或迁移。
 
 ### Cache / Session / Queue
 

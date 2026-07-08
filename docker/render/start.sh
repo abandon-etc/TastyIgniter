@@ -66,7 +66,7 @@ chmod -R ug+rw "${STORAGE_PATH}" "${APP_ROOT}/bootstrap/cache" || true
 log "Rendering Nginx configuration for port ${PORT}"
 envsubst '$PORT' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf
 
-if [ "${RUN_CONFIG_CACHE:-true}" = "true" ]; then
+if [ "${RUN_CONFIG_CACHE:-false}" = "true" ]; then
     log "Discovering Laravel packages"
     php artisan package:discover --ansi
 
