@@ -241,7 +241,18 @@ Render Persistent Disk 注意事项：
 
 ## Dockerfile / Nginx / PHP-FPM / OPcache / Laravel cache 准备
 
-后续生产 Docker PR 应准备：
+Render production runtime 已新增基础文件：
+
+- `Dockerfile.render`
+- `docker/render/nginx.conf.template`
+- `docker/render/php-production.ini`
+- `docker/render/start.sh`
+- `.dockerignore`
+- `RENDER_RUNTIME_READINESS.md`
+
+这些文件用于后续 Render Docker Web Service staging / production 部署准备。当前仍未实际部署，也未配置真实数据库、真实域名 DNS、真实支付、真实邮件或生产 Carté Key。
+
+本次 runtime 已准备：
 
 - 使用 PHP 8.3+。
 - 使用 PHP-FPM，而不是 `php artisan serve`。
@@ -261,22 +272,21 @@ Render Persistent Disk 注意事项：
   - `composer install --no-dev --optimize-autoloader`
 - Node / npm 用于 build 阶段构建前端资源：
   - `npm ci`
-  - `npm run prod` 或项目实际生产构建命令
-- 最终镜像不应包含不必要的开发依赖。
-- 应新增 `.dockerignore`，避免把 `.env`、`.local`、备份文件、测试浏览器目录和不必要文件放入 Docker build context。
-- 应准备生产启动脚本：
+  - `npm run prod`
+- 最终镜像不包含 `node_modules` 和 `vendor` 的本地副本，而是在 Docker build 内安装。
+- `.dockerignore` 已排除 `.env`、`.local`、备份文件、测试浏览器目录和不必要文件。
+- 生产启动脚本已准备：
   - 检查必要目录。
   - 确保 `storage` 权限。
   - 确保 `public/storage` symlink。
   - 安全处理 `public/media` symlink。
   - 执行 `php artisan config:cache`。
-  - 执行 `php artisan route:cache`，如果 TastyIgniter 当前路由兼容。
-  - 执行 `php artisan view:cache`，如果当前主题 / 扩展兼容。
+  - `route:cache` 和 `view:cache` 默认关闭，可用环境变量确认兼容后再启用。
   - 启动 Nginx 和 PHP-FPM。
 
 注意：
 
-- 生产 Docker PR 需要单独验证，不要和业务功能混在一个 PR。
+- 生产 runtime PR 只处理部署文件，不和业务功能混在一个 PR。
 - 如果 `route:cache` 或 `view:cache` 与 TastyIgniter 扩展不兼容，应记录并只启用安全缓存。
 - 不要在启动脚本中执行会清空数据库的命令。
 
@@ -412,7 +422,7 @@ Render Persistent Disk 注意事项：
 ## 推荐部署顺序
 
 1. 先保留当前 `4.x` 稳定功能，不录入大量真实菜单。
-2. 创建独立 PR：生产 Docker / Render runtime 准备。
+2. 审查并合并生产 Docker / Render runtime PR。
    - Nginx。
    - PHP-FPM。
    - OPcache。
@@ -438,7 +448,7 @@ Render Persistent Disk 注意事项：
 ## 本阶段不做的事
 
 - 不直接部署 Render。
-- 不修改 Dockerfile。
+- 不修改本地开发 Docker baseline。
 - 不新增 Render secret。
 - 不提交 `.env`。
 - 不提交 `.local`。
