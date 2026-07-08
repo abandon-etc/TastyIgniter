@@ -133,14 +133,14 @@
 | 冰淇淋蛋糕提前准备时间 | Not configured in first batch | 不写入 | Deferred |  | 第一版暂不做冰淇淋蛋糕预订，仅保留后续规划。 |
 | 前台是否显示自取说明 | Yes | 菜单页显示 `Pick-up · in 30 min` | Yes |  | 非登录前台只读检查已确认。 |
 | 前台是否误显示配送 | No | 首页已隐藏 delivery address 搜索 | Yes | Q-004 已通过项目级 Orange 视图覆盖解决。 | 菜单页仍显示 Pickup，首页改为点单和预约入口。 |
-| 是否需要后续主题改造 | Yes | 项目级 Orange 视图覆盖 | Yes | Q-002 / Q-005 仍需后续处理。 | 首页搜索模块已非侵入式覆盖；语言切换和完整翻译仍未完成。 |
+| 是否需要后续主题改造 | Yes | 项目级 Orange 视图覆盖 | Yes | Q-005 仍需后续处理。 | 首页搜索模块和语言切换入口已非侵入式覆盖；完整翻译仍未完成。 |
 
 ## 问题跟踪表
 
 | 问题编号 | 发现位置 | 问题描述 | 是否影响上线 | 分类：后台配置 / 翻译配置 / 主题改造 / 扩展开发 / 待确认 | 建议下一步 | 状态：Open / Resolved / Deferred |
 | --- | --- | --- | --- | --- | --- | --- |
 | Q-001 | Settings → Languages → `fr_CA` → Import translations | `fr_CA` 已创建、启用并设为默认，但翻译数量为 `0/2992`；导入翻译时报错：`A carte key is required to install/update from the TastyIgniter marketplace.` | Yes | 翻译配置 | 安全配置 TastyIgniter Carté Key 后重试导入；如果暂时没有 Carté Key，后续可评估本地 `lang/` 或 `lang/vendor/` 翻译文件方案。不要把 Carté Key 写入聊天、GitHub 或文档。 | Open |
-| Q-002 | 前台首页 | `fr_CA` 和 `en_CA` 都已启用，但前台没有可见语言切换入口。代码检查未发现 Orange theme 内置可见语言切换组件。 | Yes | 主题改造 | 先记录为后续主题改造任务；优先通过自定义主题或主题覆盖添加语言切换入口，不改 core、不改 `vendor/`。 | Open |
+| Q-002 | 前台首页 | `fr_CA` 和 `en_CA` 都已启用，但前台没有可见语言切换入口。代码检查未发现 Orange theme 内置可见语言切换组件。 | Yes | 主题改造 | 已新增项目级 Orange header view override，前台显示 `Français | English`；点击后通过 `/language/fr_CA` 或 `/language/en_CA` 设置 session locale 并返回当前页面。未使用 `/fr_CA` 或 `/en_CA` URL prefix。 | Resolved |
 | Q-003 | Settings / Currencies | 删除币种后 Currency / Currencies 页面报错。数据库中 CAD 仍存在且为默认币种，但 `currency_rate` 为 `0.00000000`；日志还显示 Currency 列表页渲染 `currency_rate` 浮点值时触发 TastyIgniter core 类型错误。 | Yes | 后台配置 / 待确认 | 已在本地开发数据库将 CAD 设为唯一默认币种、启用状态，并将 rate 修复为 `1.00000000`。店主已在后台确认 Currencies 页面恢复，CAD 存在、为默认币种且 rate 为 1。 | Resolved |
 | Q-004 | 前台首页 | 第一批已关闭或后置 Delivery，但首页仍显示 delivery address 搜索入口；菜单页显示 Pickup，不显示 Delivery。 | Yes | 主题改造 | 已通过项目级 Orange 视图覆盖隐藏首页 local search / delivery address 搜索区域，并替换为 `Commander / Order Now` 和 `Réserver une fête / Book a Party` 两个入口按钮；未修改 core、`vendor/` 或数据库。 | Resolved |
 | Q-005 | 前台首页、菜单页、预约页、购物车入口 | `<html lang>` 已是 `fr_CA`，但前台可见文字仍大量为英文；本次首页 CTA 使用法语在前、英语辅助的临时双语文案。 | Yes | 翻译配置 / 主题改造 | 先解决 Q-001 的法语翻译导入或本地翻译方案；仍无法翻译的主题文字再进入后续主题改造。首页 CTA 的临时双语文案后续应改为语言 key 或本地翻译覆盖。 | Open |
@@ -168,7 +168,7 @@
 | 英语已启用 | Yes | 实际 locale：`en_CA`。 |
 | 法语为默认语言 | Yes | `fr_CA` 已设为默认语言。 |
 | 前台可访问 | Yes | `http://127.0.0.1:8000` 返回 `200`。 |
-| 前台语言切换情况已记录 | Yes | 前台没有可见语言切换入口，见 Q-002。 |
+| 前台语言切换情况已记录 | Yes | 前台已显示 `Français | English`，见 Q-002。 |
 | 店铺基础信息已配置 | Yes | 店铺名称、地址、城市、省份、邮编、电话、邮箱、时区、CAD 已写入本地开发数据库；不在文档记录完整联系方式。 |
 | 营业时间已配置 | Yes | 每天 12:00-22:00，已写入 `opening` 和 `collection` 时间。 |
 | Pickup 设置已检查 | Yes | Pickup 已启用，普通订单准备时间为 30 minutes。 |
@@ -187,7 +187,7 @@
 | 首页是否返回 200 | Yes | `http://127.0.0.1:8000` 返回 `200`。 |
 | 首页是否正常显示 | Yes | 未发现系统错误或异常页面。 |
 | 首页是否显示店铺信息 | Yes | 店铺名称可见；文档不记录完整地址、电话或邮箱。 |
-| 首页是否有语言切换入口 | No | 未看到 `Français | English`、语言下拉框、国旗或 globe 图标，见 Q-002。 |
+| 首页是否有语言切换入口 | Resolved | 后续语言切换实施已显示 `Français | English`，见 Q-002。 |
 | `<html lang>` 是否为法语 locale | Yes | 当前为 `fr_CA`。 |
 | 首页是否明显英文-only | Yes | 首页导航、搜索和 cookie 文案仍为英文，见 Q-005。 |
 | 菜单页是否能打开 | Yes | 浏览器可打开 `http://127.0.0.1:8000/default/menus`；HTTP 直访会先重定向。 |
@@ -200,7 +200,7 @@
 | Pickup / Collection 是否显示 | Yes | 菜单页显示 `Pick-up · in 30 min`。 |
 | Delivery 是否仍显示 | Resolved on homepage | 原首页 delivery address 搜索入口已在后续首页 CTA 实施中隐藏，见 Q-004。菜单页未显示 Delivery。 |
 | 移动端导航是否明显破损 | No | 390px 宽度下未发现明显横向溢出；导航可见。 |
-| 移动端是否有语言切换入口 | No | 390px 宽度下也未看到语言切换入口，见 Q-002。 |
+| 移动端是否有语言切换入口 | Resolved | 后续语言切换实施已确认 390px 宽度下 `Français` 和 `English` 均可见，见 Q-002。 |
 
 ## 首页单店 CTA 实施检查记录
 
@@ -223,8 +223,30 @@
 | 预约页是否出现系统错误 | No | 浏览器检查未发现系统错误。 |
 | 移动端 390px 是否可见 | Yes | 两个按钮在 390px 宽度下可见并未超出屏幕。 |
 | Q-004 状态 | Resolved | 首页误导性的 Delivery / 地址搜索入口已隐藏。 |
-| Q-002 状态 | Open | 仍没有可见语言切换入口。 |
+| Q-002 状态 | Resolved | 后续语言切换实施已显示 `Français | English`。 |
 | Q-005 状态 | Open | 首页 CTA 使用临时双语文案，完整法语翻译仍未完成。 |
+
+## 前台语言切换实施检查记录
+
+检查日期：2026-07-08
+
+检查方式：只读 HTTP 检查和浏览器检查。未登录后台，未提交订单，未提交预约，未写入数据库，未输入真实顾客信息，未测试真实支付。
+
+| 检查项 | 结果 | 备注 |
+| --- | --- | --- |
+| 首页是否返回 200 | Yes | `http://127.0.0.1:8000` 可访问。 |
+| 后台登录页是否返回 200 | Yes | `http://127.0.0.1:8000/admin/login` 可访问，未登录后台。 |
+| 前台是否显示语言切换入口 | Yes | 显示 `Français | English`。 |
+| 默认语言是否仍为法语 | Yes | 初始 `<html lang>` 为 `fr_CA`。 |
+| 点击 English 是否可切换 | Yes | 点击后 session locale 变为 `en_CA`，并返回当前页面。 |
+| 点击 Français 是否可切换 | Yes | 点击后 session locale 变为 `fr_CA`，并返回当前页面。 |
+| 是否使用 `/fr_CA` 或 `/en_CA` URL prefix | No | 本次使用 `/language/fr_CA` 和 `/language/en_CA`，不使用 locale prefix。 |
+| 是否限制 locale | Yes | 只允许 `fr_CA` 和 `en_CA`；其他 locale 返回 `404`。 |
+| 是否避免 open redirect | Yes | 外部 `Referer` 会回到首页，站内 `Referer` 才返回原页面。 |
+| 移动端 390px 是否可见 | Yes | `Français` 和 `English` 均可见且未超出屏幕。 |
+| Q-002 状态 | Resolved | 前台可见语言切换入口已完成。 |
+| Q-001 状态 | Open | Carté Key / 法语翻译导入仍未处理。 |
+| Q-005 状态 | Open | 完整法语翻译和英文-only 文案仍未处理。 |
 
 ## 配置完成后反馈给 Codex 的内容
 

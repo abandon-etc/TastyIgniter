@@ -483,3 +483,68 @@
 - Q-004 已解决：首页误导性的 Delivery / 地址搜索入口已隐藏。
 - Q-002 仍为 Open：前台仍没有可见语言切换入口。
 - Q-005 仍为 Open：首页 CTA 当前使用法语在前、英语辅助的临时双语文案；完整本地化后应改为语言 key 或本地翻译覆盖。
+
+## 2026-07-08 前台语言切换入口实施
+
+### 验证内容
+
+- 已同步最新 `4.x` 分支，其中包含已合并的 PR #8。
+- 已新建 `frontend-language-switcher` 分支。
+- 已确认 Docker baseline 可启动。
+- 已确认 frontend `http://127.0.0.1:8000` 返回 `200`。
+- 已确认 admin login `http://127.0.0.1:8000/admin/login` 返回 `200`。
+- 已确认 TastyIgniter localization middleware 会读取 request、browser、session、default locale。
+- 已确认 session locale key 由 TastyIgniter localization service 管理，内部 key 为 `igniter.translation.locale`。
+- 已确认可通过 `app('translator.localization')->setSessionLocale($locale)` 设置 session locale。
+- 已确认当前不应使用 `/fr_CA` 或 `/en_CA` URL prefix。
+- 已确认 Orange header 来自 `igniter-orange::includes.header`，本次通过项目级 view override 覆盖。
+
+### 修改内容
+
+- 修改 `routes/web.php`：新增 `language.switch` route。
+- 新增 `resources/views/vendor/igniter-orange/includes/header.blade.php`。
+- 通过项目级 Orange header view override 显示 `Français | English`。
+- 语言切换链接：
+  - `http://127.0.0.1:8000/language/fr_CA`
+  - `http://127.0.0.1:8000/language/en_CA`
+- route 只允许 `fr_CA` 和 `en_CA`。
+- route 设置 session locale 后返回当前站内页面；外部来源会回到首页，避免 open redirect。
+- 更新 `ADMIN_CONFIGURATION_TRACKER.md`：将 Q-002 标记为 Resolved，并记录本次语言切换检查结果。
+- 更新 `CHANGELOG_AI.md`：记录本次实施。
+
+### 验收结果
+
+- 首页显示 `Français | English`。
+- 默认 `<html lang>` 为 `fr_CA`。
+- 点击 `English` 后 `<html lang>` 变为 `en_CA`。
+- 点击 `Français` 后 `<html lang>` 回到 `fr_CA`。
+- 非允许 locale，例如 `/language/es_MX`，返回 `404`。
+- 外部 `Referer` 不会导致跳转到外部网站。
+- 站内 `Referer` 会返回原页面。
+- 390px 移动端宽度下 `Français` 和 `English` 都可见且未超出屏幕。
+
+### 未修改内容
+
+- 未修改 TastyIgniter core。
+- 未修改 `vendor/`。
+- 未直接修改 Orange vendor theme。
+- 未修改订单逻辑。
+- 未修改支付逻辑。
+- 未修改预约冲突检测逻辑。
+- 未修改登录认证逻辑。
+- 未修改安全相关逻辑。
+- 未写入数据库。
+- 未登录后台。
+- 未提交订单。
+- 未提交预约。
+- 未测试真实支付。
+- 未处理 Q-001 Carté Key。
+- 未处理完整法语翻译。
+- 未配置菜单、商品或支付。
+- 未提交 `.env`、管理员密码、数据库真实密码、API key、token、Carté Key、真实顾客信息或真实支付信息。
+
+### 风险说明
+
+- Q-002 已解决：前台现在有可见语言切换入口。
+- Q-001 仍为 Open：法语翻译导入仍需要 Carté Key 或本地翻译方案。
+- Q-005 仍为 Open：切换到 `fr_CA` 后仍有大量英文-only 文案，因为完整翻译尚未处理。
