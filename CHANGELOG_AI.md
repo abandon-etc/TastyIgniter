@@ -1046,3 +1046,36 @@
 - 在 DigitalOcean Managed MySQL 中确认 Trusted Sources / Firewall 是否允许 Render 连接。
 - 在 Render Shell / Console 中执行 `mysql ... -e "select 1;"`。
 - 如果 `select 1` 成功，再执行 `show tables;` 判断 staging 数据库是否为空或缺表。
+
+## 2026-07-08 MySQL init command option for DigitalOcean staging
+
+### 执行内容
+
+- 根据 Render staging 初始化失败日志，记录 DigitalOcean Managed MySQL `sql_require_primary_key=ON` 兼容问题。
+- 已确认用户侧检查结果：Render Shell 中 `mysql select 1` 成功，`show tables` 成功但 staging 数据库为空。
+- 已记录失败原因：`SQLSTATE[HY000]: General error: 3750 Unable to create or change a table without a primary key, when sql_require_primary_key is set.`
+- 已记录 DigitalOcean Managed MySQL 普通用户不能执行 `SET GLOBAL`，但可以执行 `SET SESSION sql_require_primary_key = OFF`。
+- 在 `config/database.php` 的 MySQL `options` 中新增 `\PDO::MYSQL_ATTR_INIT_COMMAND => env('MYSQL_ATTR_INIT_COMMAND')`。
+- 保留已有 `DB_CONNECT_TIMEOUT` 和 `MYSQL_ATTR_SSL_CA` 支持。
+- 更新 `RENDER_RUNTIME_READINESS.md`。
+- 更新 `ADMIN_CONFIGURATION_TRACKER.md`。
+
+### 未修改内容
+
+- 未修改业务代码。
+- 未修改 TastyIgniter core。
+- 未修改 `vendor/`。
+- 未修改订单逻辑。
+- 未修改支付逻辑。
+- 未修改预约冲突检测逻辑。
+- 未修改登录认证或安全逻辑。
+- 未写入数据库。
+- 未运行 `igniter:install`。
+- 未运行 `migrate:fresh`、`migrate:refresh` 或 `db:seed`。
+- 未提交 `.env`、`.local`、APP_KEY、DB_HOST、DB_USERNAME、DB_PASSWORD、Render secret、DigitalOcean token、Carté Key、支付密钥、真实顾客信息或真实支付信息。
+
+### 风险说明
+
+- `MYSQL_ATTR_INIT_COMMAND` 只有在 Render Environment Variables 中显式设置时才生效。
+- 代码不硬编码 DigitalOcean，也不默认强制关闭 `sql_require_primary_key`。
+- 本次修复只为 staging 数据库初始化提供 session 级兼容入口；生产环境是否使用该变量需要单独确认。

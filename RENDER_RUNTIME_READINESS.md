@@ -167,6 +167,7 @@ staging 首次部署建议先保持 `RUN_CONFIG_CACHE=false`。外部 MySQL / Ma
 - `DB_PASSWORD`
 - `DB_PREFIX`
 - `DB_CONNECT_TIMEOUT`
+- `MYSQL_ATTR_INIT_COMMAND`
 
 建议第一版：
 
@@ -175,6 +176,43 @@ staging 首次部署建议先保持 `RUN_CONFIG_CACHE=false`。外部 MySQL / Ma
 - `DB_CONNECT_TIMEOUT=5`
 
 `DB_CONNECT_TIMEOUT` 用于限制 PHP 连接 MySQL / MariaDB 的等待时间。Render 上如果 `DB_HOST`、端口、防火墙、用户名或密码配置错误，动态页面可能一直等待数据库连接，最终由 Render 返回 504。设置较短超时可以更快暴露数据库连接问题，便于排查；它不能替代正确的外部 MySQL / MariaDB 配置。
+
+`MYSQL_ATTR_INIT_COMMAND` 是可选项。第一版默认不设置，保持 Laravel / MySQL 原行为。如果 staging 使用 DigitalOcean Managed MySQL 且全局 `sql_require_primary_key=ON`，普通数据库用户通常不能执行 `SET GLOBAL`，但可以执行 session 级设置。此时可在 Render Environment Variables 中设置：
+
+```text
+MYSQL_ATTR_INIT_COMMAND=SET SESSION sql_require_primary_key = OFF
+```
+
+这个变量只影响当前应用创建的 MySQL session，不会硬编码 DigitalOcean，也不会默认关闭 primary key 要求。不要把数据库密码、完整连接字符串或 Render secret 写入 GitHub。
+
+## DigitalOcean Managed MySQL primary key 限制记录
+
+记录日期：2026-07-08
+
+已知 staging 现象：
+
+- `mysql select 1` 已成功，说明 Render 到 DigitalOcean Managed MySQL 的基本连接可用。
+- `show tables` 已成功，但 staging 数据库为空。
+- 执行 TastyIgniter 初始化时失败：`SQLSTATE[HY000]: General error: 3750 Unable to create or change a table without a primary key, when sql_require_primary_key is set.`
+- DigitalOcean Managed MySQL 全局 `sql_require_primary_key=ON`。
+- 普通数据库用户不能执行 `SET GLOBAL`。
+- 普通数据库用户可以执行 `SET SESSION sql_require_primary_key = OFF`。
+
+处理方式：
+
+- `config/database.php` 已新增 `MYSQL_ATTR_INIT_COMMAND` 支持。
+- Render staging 可通过 Environment Variable 设置 session 初始化命令。
+- 不在代码中硬编码 DigitalOcean。
+- 不默认强制关闭 `sql_require_primary_key`。
+- 不修改业务逻辑，不写入数据库。
+
+下一次 staging 初始化前需要确认：
+
+1. Render Environment Variables 已设置 `MYSQL_ATTR_INIT_COMMAND`。
+2. Render 已重新部署，使新配置进入容器。
+3. 再次确认当前数据库仍是 staging 空库。
+4. 再执行 `php artisan igniter:install --force`。
+5. 交互时 `Install demo data?` 仍选择 `no`。
 
 ## Render staging 动态页面 504 排查记录
 
