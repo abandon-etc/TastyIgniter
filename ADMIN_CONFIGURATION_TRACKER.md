@@ -338,3 +338,14 @@
 | 数据保护 | Required | 部署后录入真实菜单前，必须确认生产数据库、`storage` / uploads 和 `.env` 不会被本地配置或部署脚本覆盖。 |
 
 详细计划见 `MENU_DATA_ENTRY_PLAN.md`。
+
+## 部署准备 checklist 记录
+
+记录日期：2026-07-08
+
+| 项目 | 状态 | 备注 |
+| --- | --- | --- |
+| 部署准备 checklist | Done | 已新增 `DEPLOYMENT_READINESS_CHECKLIST.md`。 |
+| 真实菜单数据保护 | Pending | 部署前必须确认生产数据库不会被重建，`storage` / uploads 会持久化并备份。 |
+| 生产配置保护 | Pending | 生产 `.env`、Carté Key、邮件配置和支付密钥不得进入 GitHub，也不能被本地配置覆盖。 |
+| 备份流程 | Pending | 真实菜单录入前后都需要数据库和上传目录备份。 |
