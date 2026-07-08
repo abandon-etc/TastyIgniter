@@ -399,6 +399,19 @@
 | 真实环境配置 | Pending | 尚未配置真实数据库、真实域名 DNS、真实支付、真实邮件或 Render secrets。 |
 | 下一步 | Pending | 创建 Render staging Web Service，并配置外部 MySQL / MariaDB、Persistent Disk 和 Render Environment Variables。 |
 
+## Render composer.lock Build 修复记录
+
+记录日期：2026-07-08
+
+| 项目 | 状态 | 备注 |
+| --- | --- | --- |
+| Render Dockerfile | Confirmed | Render staging 已确认使用 `Dockerfile.render`。 |
+| Build 失败原因 | Identified | `Dockerfile.render` 强制 `COPY composer.json composer.lock ./`，但 GitHub 仓库当前没有 `composer.lock`。 |
+| 修复方式 | Applied | 已改为 `COPY composer.* ./`，兼容存在或不存在 `composer.lock` 的情况。 |
+| Composer install 逻辑 | Preserved | 后续 `composer install` 逻辑保持不变。 |
+| 部署状态 | Pending | 本次只修复 build 输入文件复制问题，Render staging 仍需重新 build / deploy 验证。 |
+| 生产数据 | Not touched | 未连接或写入生产数据库，未配置真实密钥或真实业务数据。 |
+
 ## 前台流程低风险验证记录
 
 记录日期：2026-07-08

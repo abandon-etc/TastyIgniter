@@ -40,7 +40,7 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
 
-COPY composer.json composer.lock ./
+COPY composer.* ./
 RUN composer config --no-plugins --no-scripts "preferred-install.tastyigniter/*" source \
     && composer install \
     --no-dev \

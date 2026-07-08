@@ -948,3 +948,31 @@
 - 配置 Render Persistent Disk 到 `/var/www/html/storage`。
 - 配置 Render Environment Variables。
 - 在 staging 验证首页、后台登录、菜单、购物车、checkout 表单、预约页、storage / media 持久化和 OPcache。
+
+## 2026-07-08 Render composer.lock build 修复
+
+### 执行内容
+
+- 已确认 Render staging build 使用的是 `Dockerfile.render`。
+- 已记录 Render build 失败原因：`Dockerfile.render` 强制复制 `composer.lock`，但 GitHub 仓库当前没有 `composer.lock`。
+- 已将 `Dockerfile.render` 中的 Composer 文件复制方式改为 `COPY composer.* ./`。
+- 这样如果仓库以后有 `composer.lock` 会一起复制；如果当前只有 `composer.json`，Docker build 不会在 COPY 阶段失败。
+- 后续 `composer install` 逻辑保持不变。
+- 更新 `RENDER_RUNTIME_READINESS.md`。
+- 更新 `ADMIN_CONFIGURATION_TRACKER.md`。
+- 更新 `CHANGELOG_AI.md`。
+
+### 未修改内容
+
+- 未修改业务代码。
+- 未修改 TastyIgniter core。
+- 未修改 `vendor/`。
+- 未写入数据库。
+- 未连接真实数据库。
+- 未提交 `.env`、`.local`、密码、密钥、token、Carté Key、Render secret、数据库密码、真实顾客信息或真实支付信息。
+
+### 风险说明
+
+- 本次只修复 Render build 的 `composer.lock` 复制问题。
+- Render staging 仍未确认完整部署成功，需要等待下一次 Render build / deploy 日志。
+- 没有 `composer.lock` 时，Composer install 的生产可重复性弱于锁文件；后续可以单独评估是否提交 `composer.lock`。
