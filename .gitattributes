@@ -4,3 +4,8 @@
 
 # Set the default behavior, in case people don't have core.autocrlf set.
 text=auto
+
+Dockerfile.render text eol=lf
+docker/render/*.sh text eol=lf
+docker/render/*.template text eol=lf
+docker/render/*.ini text eol=lf

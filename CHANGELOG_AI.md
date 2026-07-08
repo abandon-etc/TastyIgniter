@@ -905,3 +905,46 @@
 - 未修改 `vendor/`。
 - 未写入数据库。
 - 未提交 `.env`、`.local`、数据库备份、密码、密钥、token、Carté Key、Cloudflare token、Render secret、真实顾客信息或真实支付信息。
+
+## 2026-07-08 Render production runtime
+
+### 执行内容
+
+- 新增 `Dockerfile.render`，用于 Render Docker Web Service 的生产 runtime。
+- 新增 `docker/render/nginx.conf.template`，使用 Nginx 服务 Laravel / TastyIgniter public 目录，并支持 Render `$PORT`。
+- 新增 `docker/render/php-production.ini`，启用生产 PHP / OPcache 配置。
+- 新增 `docker/render/start.sh`，启动 PHP-FPM 和 Nginx，并安全准备 `storage`、`public/storage` 和 `public/media`。
+- 更新 `.dockerignore`，避免 `.env`、`.local`、备份、本地依赖和上传数据进入 Docker build context。
+- 新增 `RENDER_RUNTIME_READINESS.md`，记录 Render Web Service、Persistent Disk、Environment Variables、staging 验证和 Cloudflare custom domain 后续步骤。
+- 更新 `.gitattributes`，固定 Render runtime 文件使用 LF 行尾。
+- 更新 `RENDER_DEPLOYMENT_PLAN.md` 和 `ADMIN_CONFIGURATION_TRACKER.md`。
+- 已执行本地 Docker build：`docker build -f Dockerfile.render -t tastyigniter-render-test .`，结果成功。
+- 已检查生产镜像 PHP 扩展，确认 `bcmath`、`curl`、`exif`、`gd`、`intl`、`mbstring`、`pdo_mysql`、`zip` 和 `Zend OPcache` 存在。
+- 已渲染 Nginx template 并执行 `nginx -t`，结果通过。
+- 已确认测试镜像内没有 `/var/www/html/.env` 或 `/var/www/html/.local`。
+
+### 安全边界
+
+- 未直接部署 Render。
+- 未修改业务代码。
+- 未修改本地开发 `Dockerfile` 或 `docker-compose.yml`。
+- 未修改 TastyIgniter core。
+- 未修改 `vendor/`。
+- 未写入数据库。
+- 未自动运行数据库迁移、seed、install、fresh 或 refresh 命令。
+- 未配置真实数据库、真实域名 DNS、真实支付、真实邮件或 Render secrets。
+- 未提交 `.env`、`.local`、数据库备份、密码、密钥、token、Carté Key、Cloudflare token、Render secret、真实顾客信息或真实支付信息。
+
+### 构建中发现并处理的问题
+
+- TastyIgniter Composer dist zip 曾出现 checksum mismatch；已在 `Dockerfile.render` 中让 `tastyigniter/*` 包使用 source 安装，避免 Render build 受到该 dist 校验问题影响。
+- 本地开发缓存 `bootstrap/cache/*.php` 曾引用 dev-only provider；已在 `.dockerignore` 排除这些缓存文件，并在 Docker build 中清理缓存。
+
+### 下一步
+
+- 审查 Render production runtime PR。
+- 创建 Render staging Web Service。
+- 配置外部 MySQL / MariaDB。
+- 配置 Render Persistent Disk 到 `/var/www/html/storage`。
+- 配置 Render Environment Variables。
+- 在 staging 验证首页、后台登录、菜单、购物车、checkout 表单、预约页、storage / media 持久化和 OPcache。

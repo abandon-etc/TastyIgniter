@@ -378,6 +378,27 @@
 | 生产密钥保护 | Required | 不提交真实域名私密配置、Cloudflare API token、数据库密码、Render secret、Carté Key、支付密钥或邮件密码。 |
 | 下一阶段 | Recommended | 创建 Render production runtime PR，准备 Nginx + PHP-FPM + OPcache + Render `$PORT` + Persistent Disk symlink / directory setup + `.dockerignore` + safe startup script。 |
 
+## Render Production Runtime 记录
+
+记录日期：2026-07-08
+
+| 项目 | 状态 | 备注 |
+| --- | --- | --- |
+| Render production runtime 文件 | Added | 已新增 `Dockerfile.render`、`docker/render/nginx.conf.template`、`docker/render/php-production.ini`、`docker/render/start.sh` 和 `RENDER_RUNTIME_READINESS.md`。 |
+| 本地 Docker baseline | Preserved | 未修改现有 `Dockerfile` 和 `docker-compose.yml`。 |
+| Nginx / PHP-FPM | Added | Render runtime 使用 Nginx + PHP-FPM，不使用 `php artisan serve`。 |
+| OPcache | Added | 已新增生产 PHP / OPcache 配置。 |
+| Render `$PORT` | Added | 启动脚本会渲染 Nginx template，优先使用 Render 提供的 `$PORT`。 |
+| Persistent Disk setup | Added | 启动脚本会创建 `storage` 运行时目录，并安全处理 `public/storage` 和 `public/media` symlink。 |
+| Destructive commands | Blocked | 启动脚本不自动运行 `migrate:fresh`、`migrate:refresh`、`db:seed` 或 `igniter:install`。 |
+| Docker build 验证 | Pass | `docker build -f Dockerfile.render -t tastyigniter-render-test .` 已成功。 |
+| PHP 扩展检查 | Pass | 已确认 `bcmath`、`curl`、`exif`、`gd`、`intl`、`mbstring`、`pdo_mysql`、`zip` 和 `Zend OPcache` 存在。 |
+| Nginx template 检查 | Pass | 使用 `PORT=10000` 渲染后，`nginx -t` 通过。 |
+| 镜像敏感文件检查 | Pass | 已确认测试镜像内没有 `/var/www/html/.env` 或 `/var/www/html/.local`。 |
+| Linux 行尾保护 | Added | `.gitattributes` 已固定 Render runtime 文件使用 LF 行尾。 |
+| 真实环境配置 | Pending | 尚未配置真实数据库、真实域名 DNS、真实支付、真实邮件或 Render secrets。 |
+| 下一步 | Pending | 创建 Render staging Web Service，并配置外部 MySQL / MariaDB、Persistent Disk 和 Render Environment Variables。 |
+
 ## 前台流程低风险验证记录
 
 记录日期：2026-07-08
