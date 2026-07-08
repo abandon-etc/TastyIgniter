@@ -626,3 +626,67 @@
 - Q-002 保持 Resolved：语言切换入口仍存在。
 - Q-004 保持 Resolved：首页地址搜索入口仍隐藏。
 - Q-005 保持 Open：关键文案已部分覆盖，但完整站点翻译、后台 demo content 和剩余英文文案仍需后续处理。
+
+## 2026-07-08 第一版顾客前台视觉系统
+
+### 验证内容
+
+- 已从最新 `4.x` 新建 `frontend-visual-system-local` 分支。
+- 已确认 Docker baseline 可启动。
+- 已确认首页、菜单页、预约页、购物车页、结账入口、登录页、注册页和后台登录页均可访问。
+- 已确认 `fr_CA` / `en_CA` 语言切换仍正常。
+- 已确认 390px 移动端下首页、菜单页和预约页无明显破版。
+
+### 修改内容
+
+- 新增 `public/css/brand-colors.css`：
+  - 应用粉色主背景 `#FAC8D5`。
+  - 应用奶油白内容卡片背景 `#FFF8F2`。
+  - 应用薰衣草紫按钮 / 强调色 `#ADA4CB`。
+  - 应用深色正文 `#332B4F`。
+  - 统一 header、footer、按钮、表单、卡片、菜单状态区域和 cookie banner 的基础视觉风格。
+- 新增项目级 Orange head override：`resources/views/vendor/igniter-orange/includes/head.blade.php`，用于加载项目级 CSS。
+- 更新项目级 Orange local-search override：`resources/views/vendor/igniter-orange/livewire/local-search.blade.php`，为首页 CTA 添加稳定样式 class。
+- 更新 `ADMIN_CONFIGURATION_TRACKER.md`：记录第一版前台视觉系统检查结果。
+
+### 验收结果
+
+- 首页可访问。
+- 首页不显示 hero slider、大图或装饰图。
+- 首页使用 solid `#FAC8D5` 粉色背景。
+- 首页 CTA 居中，按钮仍可打开菜单页和预约页。
+- 菜单页可访问。
+- 菜单页商品卡片布局正常。
+- 本次 CSS 未匹配或隐藏 `.menu-item-image`；当前本地 demo 数据未渲染商品缩略图元素。
+- 菜单页 Pickup / Cueillette 正常。
+- 预约页可访问，表单布局正常。
+- 购物车页可访问，空购物车状态正常。
+- 后台登录页可访问。
+- 语言切换仍正常。
+- CSS 未使用 `linear-gradient`、`radial-gradient` 或 `background-image` 渐变。
+- CSS 未使用全局 `img { display: none; }`、`.carousel { display: none; }` 或 `.card img { display: none; }`。
+
+### 未修改内容
+
+- 未修改 TastyIgniter core。
+- 未修改 `vendor/`。
+- 未直接修改 Orange vendor theme。
+- 未修改订单逻辑。
+- 未修改支付逻辑。
+- 未修改预约冲突检测逻辑。
+- 未修改登录认证逻辑。
+- 未修改安全相关逻辑。
+- 未写入数据库。
+- 未登录后台。
+- 未提交订单。
+- 未提交预约。
+- 未处理 Carté Key。
+- 未导入 Marketplace 完整语言包。
+- 未提交 `.env`、`.local`、数据库备份、本地配置 JSON、管理员密码、数据库真实密码、API key、token、Carté Key、真实顾客信息或真实支付信息。
+
+### 风险说明
+
+- Q-001 保持 Open：Carté Key / Marketplace 翻译导入仍未处理。
+- Q-002 保持 Resolved：前台语言切换入口仍正常。
+- Q-004 保持 Resolved：首页 Delivery / Find Location 搜索入口仍隐藏。
+- Q-005 保持 Open：本次只统一视觉，不完成全站翻译。

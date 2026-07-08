@@ -3,10 +3,10 @@
     $locationParams = $location ? ['location' => $location->permalink_slug] : [];
 @endphp
 
-<div class="text-center">
-    <h2 class="mb-4">@lang('igniter.orange::default.home_cta_title')</h2>
+<div class="home-cta-card text-center">
+    <h1 id="single-store-home-title" class="home-cta-title mb-4">@lang('igniter.orange::default.home_cta_title')</h1>
 
-    <div class="d-grid gap-3 d-sm-flex justify-content-sm-center">
+    <div class="home-cta-actions d-grid gap-3 d-sm-flex justify-content-sm-center">
         <a
             class="btn btn-primary btn-lg fw-bold"
             href="{{ page_url('local.menus', $locationParams) }}"
