@@ -58,7 +58,11 @@ RUN rm -f .env bootstrap/cache/*.php \
     && rm -f public/css/app.css public/js/app.js public/mix-manifest.json \
     && mkdir -p \
         /var/www/html/storage/app/public \
+        /var/www/html/storage/app/public/media/uploads \
+        /var/www/html/storage/app/public/media/attachments \
         /var/www/html/storage/app/media \
+        /var/www/html/storage/app/media/media/uploads \
+        /var/www/html/storage/app/media/media/attachments \
         /var/www/html/storage/framework/cache \
         /var/www/html/storage/framework/sessions \
         /var/www/html/storage/framework/views \
