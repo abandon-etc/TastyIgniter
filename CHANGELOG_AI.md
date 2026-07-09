@@ -1645,3 +1645,116 @@
 - 未导入真实顾客数据、真实菜单、真实图片、真实订单、真实预约或真实支付数据。
 - 未运行 `migrate:fresh`、`migrate:refresh` 或 `db:seed`。
 - 未修改 vendor、TastyIgniter core、订单、支付、预约、认证或安全逻辑。
+
+## 2026-07-09 Plan Google Cloud Canada staging experiment
+
+### 执行内容
+
+- 已同步最新 `4.x`，确认 PR #36 已合并，合并提交为 `b4710f22`。
+- 已创建 Google Cloud Canada staging experiment 规划。
+- 本阶段只更新文档，不创建 Google Cloud 资源，不产生费用，不迁 production。
+
+### 规划结论
+
+- 首选平台：Google Cloud。
+- 首选区域：Montréal `northamerica-northeast1`。
+- 备选区域：Toronto `northamerica-northeast2`。
+- 第一个 staging experiment：Cloud Run + Cloud SQL for MySQL + Cloud Storage + Secret Manager。
+- Optional：Memorystore / Redis 先不创建，只在 cache 评估阶段启用。
+- Render staging 保留为 fallback。
+
+### Google Cloud 前置条件
+
+- 独立 Google Cloud staging project。
+- Billing 已启用。
+- Budget / alerts 已设置。
+- 用户确认目标区域。
+- 用户确认允许创建：
+  - Artifact Registry。
+  - Cloud Run。
+  - Cloud SQL for MySQL。
+  - Cloud Storage bucket。
+  - Secret Manager secrets。
+  - Cloud Logging / Monitoring。
+  - 可选 Memorystore / Redis。
+
+### Secret 清单
+
+仅记录 secret 名称，不记录真实值：
+
+- `staging-app-key`
+- `staging-db-password`
+- `staging-db-username`
+- `staging-db-database`
+- `staging-db-host-or-connection-name`
+- `staging-mysql-attr-init-command`
+- `staging-app-url`
+- `staging-asset-url`
+- `staging-mail-host`
+- `staging-mail-username`
+- `staging-mail-password`
+- `staging-cache-connection`
+- `staging-session-driver`
+- `staging-queue-connection`
+- `staging-cloud-storage-bucket`
+- `staging-cloud-storage-service-account`
+- `staging-payment-placeholder-secrets`
+- `staging-cloudflare-or-domain-placeholder-secrets`
+
+### Runtime 影响
+
+- `Dockerfile.render` 可能可作为 Cloud Run Docker runtime 起点。
+- `docker/render/start.sh` 需要后续验证：
+  - `$PORT` / Nginx template。
+  - Render Persistent Disk 逻辑是否需要抽象。
+  - `/healthz`。
+  - storage symlink。
+  - config cache。
+  - Livewire 和 TastyIgniter assets。
+- 本 PR 不修改 runtime；后续如需适配，单独创建 PR。
+
+### Storage 方案
+
+- 第一阶段建议评估 Cloud Storage FUSE volume mount，尽量保持现有 media filesystem 语义。
+- 如果 FUSE 不适合，再评估 Laravel / TastyIgniter media storage adapter。
+- 不上传正式图片，不提交真实上传文件。
+
+### Cloud SQL 方案
+
+- 继续 MySQL 优先。
+- 只创建 Canada staging DB。
+- 不使用 production 数据。
+- 优先通过 Cloud Run / Cloud SQL connector 或 private connectivity，避免 public DB host。
+- 不运行 `migrate:fresh`、`migrate:refresh` 或 `db:seed`。
+
+### 验收清单
+
+- `/healthz`。
+- 首页、菜单页、购物车、预约页。
+- Livewire JS。
+- 后台登录页和 dashboard。
+- admin assets。
+- media upload。
+- media 重新部署持久性。
+- Cloud SQL RTT / dynamic HTML TTFB baseline。
+- logs 无 fatal / exception / 500 / storage permission error。
+- backup / restore baseline。
+- Render staging fallback 可用。
+
+### 安全边界
+
+- 未创建付费资源。
+- 未提交 secret。
+- 未要求用户把 password、token、APP_KEY、DB_PASSWORD、Google Cloud key、Cloudflare token 发到聊天。
+- 未碰 production。
+- 未导入真实顾客数据、真实菜单、真实订单、真实预约或真实支付数据。
+- 未运行 `migrate:fresh`、`migrate:refresh` 或 `db:seed`。
+- 未修改 vendor、TastyIgniter core、订单、支付、预约、认证或安全逻辑。
+
+### 下一步建议
+
+- 用户确认 Google Cloud billing / budget。
+- 用户确认 Montréal vs Toronto。
+- 用户确认是否允许创建 Cloud Run / Cloud SQL / Cloud Storage / Secret Manager。
+- 用户在 Google Cloud UI / Secret Manager 输入 secrets。
+- 确认后进入 `Create Google Cloud Canada staging resources`。
