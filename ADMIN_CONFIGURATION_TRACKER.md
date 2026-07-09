@@ -796,3 +796,114 @@
 4. 用户需先确认：Google Cloud project、billing、预算上限、目标区域、是否允许创建 Cloud SQL / Cloud Run / Cloud Storage / Secret Manager / 可选 Memorystore。
 5. 用户需要在平台 UI 输入：APP_KEY、DB password、Cloud SQL credentials、mail/payment placeholder secrets、Cloudflare/custom domain 相关 secret；不要发到聊天。
 6. Render staging 保留为 fallback，直到 Canada staging 完整通过初始化、登录、前后台 smoke、媒体上传、重新部署持久性和性能基线。
+
+## Google Cloud Canada staging experiment 规划记录
+
+记录日期：2026-07-09
+
+环境：planning / staging only
+
+当前阶段：Plan Google Cloud Canada staging experiment
+
+| 项目 | 状态 | 备注 |
+| --- | --- | --- |
+| 当前代码 | Confirmed | 本地 `4.x` 已同步到 PR #36 合并提交 `b4710f22`。 |
+| 首选区域 | Recommended | Montréal `northamerica-northeast1`。 |
+| 备选区域 | Viable | Toronto `northamerica-northeast2`。 |
+| 当前动作 | Planning only | 不创建 Google Cloud 资源，不产生费用，不迁 production。 |
+| Fallback | Required | Render staging 必须保留，直到 Canada staging 完整验收通过。 |
+| Secret handling | UI only | 用户在 Google Cloud Console / Secret Manager 输入真实值；不要发到聊天或提交到 GitHub。 |
+
+Google Cloud 前置条件：
+
+- Google Cloud project：建议独立 staging project，例如 `le-chateau-staging-ca`，避免与未来 production 混用。
+- Billing：用户确认启用 billing，并设置预算提醒。
+- Budget：建议先设置月度预算和 alerts，例如 50%、80%、100%；具体金额由用户决定。
+- IAM：用户确认谁可以管理 Cloud Run、Cloud SQL、Cloud Storage、Artifact Registry、Secret Manager、Cloud Logging。
+- APIs：Cloud Run、Cloud SQL Admin、Cloud Build、Artifact Registry、Secret Manager、Cloud Storage、Cloud Logging。
+- Region：默认 Montréal；如配额、价格或服务限制不合适，再改 Toronto。
+
+计划资源清单：
+
+| 资源 | 建议名称 | 区域 | 用途 | 费用确认 |
+| --- | --- | --- | --- | --- |
+| Artifact Registry repository | `tastyigniter-staging` | Montréal | 保存 Docker image | 需要 |
+| Cloud Run service | `le-chateau-staging` | Montréal | 运行 TastyIgniter app | 需要 |
+| Cloud SQL for MySQL | `le-chateau-staging-mysql` | Montréal | staging MySQL DB | 需要，通常是主要成本 |
+| Cloud Storage bucket | 唯一 bucket 名，例如 `le-chateau-staging-media-ca` | Montréal | media / uploads / public files | 需要 |
+| Secret Manager secrets | 见 secret 清单 | Global control plane / regional access 需后续确认 | 保存 env secrets | 需要 |
+| Optional Memorystore / Redis | `le-chateau-staging-redis` | Montréal | cache / session 评估 | 可选，先不创建 |
+| Logs / Monitoring | Cloud Logging / Monitoring | Montréal service context | logs / alerting | 需要 |
+
+Secret Manager 名称清单，不包含真实值：
+
+- `staging-app-key`
+- `staging-db-password`
+- `staging-db-username`
+- `staging-db-database`
+- `staging-db-host-or-connection-name`
+- `staging-mysql-attr-init-command`
+- `staging-app-url`
+- `staging-asset-url`
+- `staging-mail-host`
+- `staging-mail-username`
+- `staging-mail-password`
+- `staging-cache-connection`
+- `staging-session-driver`
+- `staging-queue-connection`
+- `staging-cloud-storage-bucket`
+- `staging-cloud-storage-service-account`
+- `staging-payment-placeholder-secrets`
+- `staging-cloudflare-or-domain-placeholder-secrets`
+
+Cloud Run runtime planning：
+
+- 先评估复用 `Dockerfile.render`，因为它已经包含 Nginx + PHP-FPM + TastyIgniter asset handling。
+- `docker/render/start.sh` 需要确认：
+  - Cloud Run 是否提供 `$PORT`，以及 Nginx template 是否可直接使用。
+  - Render Persistent Disk setup 是否需要跳过或抽象。
+  - `/healthz` 是否继续由 Nginx 静态返回。
+  - config cache 是否继续通过 `RUN_CONFIG_CACHE=true` 控制。
+  - storage symlink 是否指向 Cloud Storage mount 或本地 ephemeral path。
+- 不在本规划 PR 中修改 runtime；后续创建单独 PR 做 Cloud Run compatibility changes。
+
+Cloud SQL 连接规划：
+
+- DB engine：MySQL。
+- Staging DB：新建空 staging DB 或导入非真实测试数据；不使用 production 数据。
+- 连接方式第一阶段优先 Cloud SQL connector / Cloud Run integration，避免 public DB host。
+- 如使用 private IP，需要 VPC / Serverless VPC Access 或 Direct VPC egress 方案，单独验证。
+- 保留 `MYSQL_ATTR_INIT_COMMAND=SET SESSION sql_require_primary_key = OFF` 的兼容检查，但 Cloud SQL 是否需要该设置需在 staging 初始化前确认。
+- 不运行 `migrate:fresh`、`migrate:refresh` 或 `db:seed`；初始化流程需沿用 TastyIgniter install 路径。
+
+Cloud Storage media planning：
+
+- Render Persistent Disk 不能照搬。
+- 第一阶段建议试 Cloud Storage FUSE volume mount，尽量保持 TastyIgniter 现有 local filesystem 语义。
+- 验证点：media manager、上传、缩略图、公开 URL、重新部署持久性、并发写入、权限、缓存头。
+- 如果 FUSE 不稳定，再评估 Laravel / TastyIgniter filesystem disk 到 Cloud Storage adapter。
+- 不上传正式图片，不提交上传文件。
+
+Canada staging 验收清单：
+
+- `/healthz` 返回 200。
+- 首页、`/default/menus`、`/cart`、`/default/reservation` 返回 200。
+- Livewire JS 返回 200。
+- 后台登录页和 dashboard 正常。
+- TastyIgniter admin assets 正常。
+- 测试分类 / 测试菜品可创建或迁移，不录真实菜单。
+- 测试图片上传和重新部署持久性通过。
+- Cloud SQL query RTT 明显低于当前 Render + DO 路径。
+- 动态 HTML TTFB 重新建立 baseline。
+- 日志无新的 PHP fatal、Laravel exception、500、storage permission error。
+- Backup / restore 基线有记录。
+- 删除或停止 staging 资源的回滚 / 成本控制路径明确。
+
+Rollback / fallback：
+
+- Render staging 保持不变，不删除 service、disk、database 或 env。
+- Canada staging 使用独立 URL、独立 DB、独立 media bucket、独立 secrets。
+- 如 Cloud Run experiment 失败，停止或删除 Cloud Run / Cloud SQL / bucket 前先确认是否有需要保留的测试数据。
+- 不迁 production DNS，不改正式域名，不启用正式支付。
+
+下一步建议：合并本规划 PR 后，进入 `Create Google Cloud Canada staging resources` 前必须由用户确认 billing、预算上限、Montréal / Toronto、允许创建的资源，以及在 Google Cloud UI / Secret Manager 中输入 secrets。

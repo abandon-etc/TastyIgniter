@@ -834,3 +834,152 @@ Storage 适配路径：
 - AWS Regions: https://docs.aws.amazon.com/global-infrastructure/latest/regions/aws-regions.html
 - AWS App Runner availability change: https://aws.amazon.com/apprunner/
 - DigitalOcean regional availability: https://docs.digitalocean.com/platform/regional-availability/
+
+## Google Cloud Canada staging experiment plan
+
+记录日期：2026-07-09
+
+范围：
+
+- 仅规划 Canada staging。
+- 不创建 Google Cloud 资源。
+- 不产生费用。
+- 不迁 production。
+- 不输入或记录真实 secrets。
+
+推荐配置：
+
+| 类别 | 推荐 |
+| --- | --- |
+| Google Cloud project | 独立 staging project，例如 `le-chateau-staging-ca` |
+| Region | Montréal `northamerica-northeast1` |
+| Backup region / fallback region | Toronto `northamerica-northeast2` 作为备选 |
+| Container registry | Artifact Registry |
+| Compute | Cloud Run service |
+| Database | Cloud SQL for MySQL |
+| Media storage | Cloud Storage bucket，优先测试 Cloud Storage FUSE volume mount |
+| Secrets | Secret Manager |
+| Logs | Cloud Logging |
+| Optional cache | Memorystore / Redis，先不创建 |
+
+Budget / billing 确认点：
+
+1. 用户确认 Google Cloud billing 已启用。
+2. 用户确认 staging 月度预算上限。
+3. 用户确认 budget alerts 百分比。
+4. 用户确认是否允许创建 Cloud SQL，因为它通常是 staging experiment 的主要持续成本。
+5. 用户确认实验结束后是否允许停止或删除 Cloud SQL / Cloud Run / bucket，以控制费用。
+
+资源创建顺序草案：
+
+1. 创建或选择 Google Cloud staging project。
+2. 启用必要 APIs。
+3. 创建 Artifact Registry repository。
+4. 构建并推送 Docker image。
+5. 创建 Cloud SQL for MySQL staging instance。
+6. 创建 staging database 和 user，真实 password 只在 Google Cloud UI / Secret Manager 输入。
+7. 创建 Cloud Storage media bucket。
+8. 创建 Secret Manager secrets。
+9. 部署 Cloud Run service。
+10. 配置 Cloud SQL connection。
+11. 配置 media storage mount 或 adapter。
+12. 配置 `APP_URL` / `ASSET_URL` 到 Canada staging URL。
+13. 初始化 TastyIgniter staging。
+14. 执行 Canada staging 验收。
+
+Secret Manager 名称清单：
+
+- `staging-app-key`
+- `staging-db-password`
+- `staging-db-username`
+- `staging-db-database`
+- `staging-db-host-or-connection-name`
+- `staging-mysql-attr-init-command`
+- `staging-app-url`
+- `staging-asset-url`
+- `staging-mail-host`
+- `staging-mail-username`
+- `staging-mail-password`
+- `staging-cache-connection`
+- `staging-session-driver`
+- `staging-queue-connection`
+- `staging-cloud-storage-bucket`
+- `staging-cloud-storage-service-account`
+- `staging-payment-placeholder-secrets`
+- `staging-cloudflare-or-domain-placeholder-secrets`
+
+Cloud Run runtime checklist：
+
+- Confirm `Dockerfile.render` builds in Cloud Build.
+- Confirm Cloud Run passes `$PORT` and Nginx listens on it.
+- Remove or no-op Render Persistent Disk assumptions.
+- Confirm `/healthz` returns 200.
+- Confirm PHP-FPM starts.
+- Confirm Nginx serves TastyIgniter public assets.
+- Confirm Livewire asset route returns 200.
+- Confirm config cache is generated only after env / secrets are available.
+- Confirm Cloud Run filesystem writes are not relied on for persistent media.
+
+Cloud SQL connection options:
+
+1. Cloud SQL connector / Cloud Run integration:
+   - Preferred first experiment.
+   - Avoids exposing public DB host.
+   - Needs service account permissions.
+2. Private IP:
+   - Requires VPC planning and serverless VPC access / direct VPC egress.
+   - More production-like, but more moving parts.
+3. Public IP:
+   - Not preferred for the Canada unified architecture.
+   - Only use temporarily if connector/private path blocks staging validation.
+
+Cloud Storage media options:
+
+1. Cloud Storage FUSE volume mount:
+   - Best first experiment because it preserves local filesystem semantics.
+   - Must validate media manager upload, thumbnail generation, public URL, cache headers and concurrent writes.
+2. Laravel / TastyIgniter Cloud Storage adapter:
+   - Better long-term if TastyIgniter media manager supports it cleanly.
+   - Requires code/config PR after investigation.
+3. Cloud Filestore:
+   - Fallback if POSIX semantics are mandatory.
+   - Higher cost and network complexity.
+
+Canada staging acceptance checklist:
+
+- `/healthz` returns 200.
+- `/` returns 200.
+- `/default/menus` returns 200.
+- `/cart` returns 200.
+- `/default/reservation` returns 200.
+- `/livewire/livewire*.js` returns 200.
+- `/admin/login` returns 200.
+- Logged-in `/admin/dashboard` renders normally.
+- TastyIgniter admin CSS / JS returns 200.
+- Test media upload works.
+- Uploaded media persists after Cloud Run redeploy.
+- Test category / test item can be created or restored without real menu data.
+- Dynamic HTML TTFB baseline is recorded.
+- Cloud SQL query RTT baseline is recorded.
+- Logs show no new PHP fatal, Laravel exception, 500 or storage permission error.
+- Cloud SQL backup is enabled or documented.
+- Media bucket backup / lifecycle / versioning decision is documented.
+
+Rollback checklist:
+
+- Keep Render staging live and unchanged.
+- Use separate Canada staging URL.
+- Use separate Canada staging DB.
+- Use separate Canada staging media bucket.
+- Do not change production DNS.
+- Do not configure production payment.
+- If Canada staging fails, stop Cloud Run and Cloud SQL after confirming whether test data should be retained.
+- Document resource deletion / shutdown steps before creating resources.
+
+Next gate:
+
+- User confirms Google Cloud billing and budget.
+- User confirms Montréal or Toronto.
+- User confirms permission to create Cloud Run, Cloud SQL, Cloud Storage, Artifact Registry and Secret Manager resources.
+- User enters secrets in Google Cloud UI / Secret Manager.
+- Only then proceed to `Create Google Cloud Canada staging resources`.
