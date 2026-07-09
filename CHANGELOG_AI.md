@@ -1079,3 +1079,46 @@
 - `MYSQL_ATTR_INIT_COMMAND` 只有在 Render Environment Variables 中显式设置时才生效。
 - 代码不硬编码 DigitalOcean，也不默认强制关闭 `sql_require_primary_key`。
 - 本次修复只为 staging 数据库初始化提供 session 级兼容入口；生产环境是否使用该变量需要单独确认。
+
+## 2026-07-09 Render staging 前台交互 smoke test
+
+### 执行内容
+
+- 已确认本地仓库在 `4.x`，并同步到 live commit `d0aa9ff`。
+- 已验证 `https://le-chateau-des-enfants.onrender.com/healthz` 返回 200 和 `ok`。
+- 已验证首页 `/`、菜单页 `/default/menus`、购物车 `/cart`、预约页 `/default/reservation` 和 checkout 页面在测试购物车会话下可访问。
+- 已验证 `/livewire/livewire.min.js?id=42cd7fd5` 返回 200，content type 为 JavaScript。
+- 已检查前台页面引用的 CSS / JS 资源，均返回 200，未发现 public `localhost` 资源 URL。
+- 已确认 `Test Category`、`Test Item` 和测试价格在菜单页可见。
+- 已确认测试上传文件 `/storage/media/uploads/staging-test-upload.png` 返回 200。
+- 已记录当前 `Test Item` 菜品卡片未渲染商品图片元素；测试图片文件本身存在且可访问，后续真实内容录入时需要绑定商品图片后再复查。
+- 已使用 `Test Item` 验证加入购物车、数量增加 / 减少、删除商品、空车后再次添加商品。
+- 已从购物车点击 `Checkout` 进入 checkout 表单，但未点击最终 `Confirm`。
+- 已确认 checkout 表单字段、条款勾选和 Cash On Delivery 选项可见。
+- 已打开预约页，确认人数和时间下拉控件可选择测试值。
+- 已检查浏览器控制台，未发现前台页面 JavaScript error。
+- 已检查 Render 最近日志，未发现新的 HTTP 404 / 500、PHP fatal、Laravel exception、Livewire error、payment error 或 storage permission error。
+- 已记录 Nginx 对较大 `_assets` 响应有 upstream buffering warning；对应资源返回 200 / 304，当前不作为 smoke test blocker。
+- 更新 `ADMIN_CONFIGURATION_TRACKER.md`，记录本次 staging 前台交互 smoke test 结果。
+- 更新 `CHANGELOG_AI.md`，记录本次验收。
+
+### 未修改内容
+
+- 未修改业务代码。
+- 未修改 Docker / Nginx / PHP runtime 文件。
+- 未修改 TastyIgniter core。
+- 未修改 `vendor/`。
+- 未运行 `migrate:fresh`、`migrate:refresh` 或 `db:seed`。
+- 未提交订单。
+- 未提交预约。
+- 未创建真实顾客、真实地址、真实订单、真实预约或真实支付数据。
+- 未配置真实支付。
+- 未触碰 production。
+- 未提交 `.env`、`.local`、数据库 dump、真实上传文件、密码、密钥、token、APP_KEY、DB_PASSWORD、Render secret、DigitalOcean token、Cloudflare token、Carté Key、支付密钥、邮件密码或真实顾客信息。
+
+### 结论
+
+- 当前 staging 前台核心交互 smoke test 通过。
+- 未发现需要代码修复 PR 的 blocker。
+- 可以进入 staging 性能基线测试。
+- 后续真实内容录入前，建议单独确认商品图片绑定和前台商品图片展示。
