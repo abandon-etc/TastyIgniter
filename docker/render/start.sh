@@ -67,8 +67,6 @@ ensure_safe_symlink() {
 log "Preparing Render runtime directories"
 ensure_directory "${STORAGE_PATH}/app"
 ensure_directory "${STORAGE_PATH}/app/public"
-ensure_directory "${STORAGE_PATH}/app/public/media/uploads"
-ensure_directory "${STORAGE_PATH}/app/public/media/attachments"
 ensure_directory "${STORAGE_PATH}/app/media"
 ensure_directory "${STORAGE_PATH}/app/media/media/uploads"
 ensure_directory "${STORAGE_PATH}/app/media/media/attachments"
@@ -80,6 +78,7 @@ ensure_directory "${STORAGE_PATH}/igniter/combiner/data"
 ensure_directory "${STORAGE_PATH}/logs"
 ensure_directory "${APP_ROOT}/bootstrap/cache"
 
+ensure_safe_symlink "${STORAGE_PATH}/app/public/media" "${STORAGE_PATH}/app/media/media"
 ensure_safe_symlink "${APP_ROOT}/public/storage" "${STORAGE_PATH}/app/public"
 ensure_safe_symlink "${APP_ROOT}/public/media" "${STORAGE_PATH}/app/media"
 

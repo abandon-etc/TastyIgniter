@@ -58,8 +58,6 @@ RUN rm -f .env bootstrap/cache/*.php \
     && rm -f public/css/app.css public/js/app.js public/mix-manifest.json \
     && mkdir -p \
         /var/www/html/storage/app/public \
-        /var/www/html/storage/app/public/media/uploads \
-        /var/www/html/storage/app/public/media/attachments \
         /var/www/html/storage/app/media \
         /var/www/html/storage/app/media/media/uploads \
         /var/www/html/storage/app/media/media/attachments \
@@ -68,6 +66,8 @@ RUN rm -f .env bootstrap/cache/*.php \
         /var/www/html/storage/framework/views \
         /var/www/html/storage/logs \
         /var/www/html/bootstrap/cache \
+    && rm -rf /var/www/html/storage/app/public/media \
+    && ln -s /var/www/html/storage/app/media/media /var/www/html/storage/app/public/media \
     && chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/public \
     && rm -f /etc/nginx/sites-enabled/default \
     && ln -sf /dev/stdout /var/log/nginx/access.log \
