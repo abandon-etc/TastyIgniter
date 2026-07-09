@@ -580,3 +580,44 @@
 - 前台动态 HTML warm TTFB 仍需单独拆分 DB 查询、TastyIgniter boot、theme rendering 和 Laravel cache 影响。
 - 后台 dashboard 主 JS 体积较大，后续可评估资源构建 / combiner 缓存策略。
 - Laravel config / view cache 可作为下一阶段评估项；route cache 不应盲目默认启用。
+
+## Render staging 第二阶段性能诊断记录
+
+记录日期：2026-07-09
+
+环境：Render staging
+
+当前阶段：第二阶段性能诊断：动态 HTML TTFB 拆分
+
+| 项目 | 状态 | 备注 |
+| --- | --- | --- |
+| 本地分支 | Synced | 已同步最新 `4.x`，当前包含 PR #30：`6cb1e629 Improve Render asset caching and buffering (#30)`。 |
+| Render live commit | Confirmed | Render Events 显示 `6cb1e62` 已 live，对应 PR #30。 |
+| 诊断方式 | Read-only | 使用外部 HTTP timing、Render Shell 只读命令、PHP-FPM OPcache 检查、Laravel query event 统计和内部 `curl` timing。 |
+| 代码修改 | No runtime change | 本阶段未修改运行代码、业务逻辑、TastyIgniter core 或 `vendor/`。 |
+| 订单 / 预约 | Not created | 未提交测试订单，未提交测试预约。 |
+| OPcache | Confirmed enabled | PHP-FPM `Server API => FPM/FastCGI`，`opcache.enable => On`，`opcache.validate_timestamps => Off`，`opcache.memory_consumption => 192`，`opcache.max_accelerated_files => 20000`。 |
+| Laravel config cache | Disabled | 运行时 `RUN_CONFIG_CACHE=false`，`bootstrap/cache/config.php` 不存在。 |
+| Laravel route cache | Disabled | 运行时 `RUN_ROUTE_CACHE=false`，未发现 route cache 文件；route cache 仍不建议默认启用。 |
+| Laravel view cache | Disabled by startup flag | 运行时 `RUN_VIEW_CACHE=false`，但 `storage/framework/views` 已有约 128 个编译视图文件。 |
+| APP_DEBUG | Pass | staging 运行时 `APP_DEBUG=false`。 |
+| Cache / session | File-based | 运行时 `CACHE_DRIVER=file`，`SESSION_DRIVER=file`，`QUEUE_CONNECTION=sync`。 |
+| 数据库基础延迟 | Slow enough to matter | Render Shell 中 Laravel bootstrap 后连续 `select 1` 平均约 151ms，说明每次数据库往返成本较高。 |
+| 首页 `/` | DB-bound | 内部 HTTP TTFB 约 5.05-5.61s；Laravel query event 统计约 30 次查询，累计约 5.52s，全部查询超过 100ms。 |
+| 菜单页 `/default/menus` | DB-bound | 内部 HTTP TTFB 约 7.28-8.06s；约 44 次查询，累计约 7.20s。抽样显示包含多次 schema / settings / extension / pages 查询。 |
+| 购物车 `/cart` | DB-bound | 内部 HTTP TTFB 约 6.17-6.88s；约 37 次查询，累计约 6.05s。 |
+| 预约页 `/default/reservation` | DB-bound | 内部 HTTP TTFB 约 6.27-6.83s；约 37 次查询，累计约 6.79s。 |
+| 后台登录页 `/admin/login` | DB-bound | 内部 HTTP TTFB 约 2.81-3.11s；约 15 次查询，累计约 2.78s。 |
+| Dashboard | Partially diagnosed | 已登录浏览器下 dashboard 可打开且无控制台 error；此前体感约 14s。CLI 未携带后台 session，`/admin/dashboard` 只验证到未登录 302，不作为 dashboard 查询拆分依据。 |
+| 已排除因素 | Confirmed | 当前主要瓶颈不是 Cloudflare / 公网链路、Nginx buffering、静态资源缓存头、Livewire 404、上传图片或 OPcache 未启用。 |
+| 主要瓶颈 | Database round trips | 内部容器请求与外部请求耗时接近，且 query 累计时间接近页面总耗时，当前最大耗时来源是远程数据库多次往返和 TastyIgniter 启动 / 页面渲染过程中重复查询。 |
+| 低风险优化机会 | Recommended | 优先创建独立 PR 评估启用 Render 上的 config cache；view cache 可小范围验证；route cache 暂不默认启用。 |
+| 进一步诊断机会 | Recommended | 如需更精确拆 dashboard 或具体重复 query 来源，建议单独做 staging-only、环境变量控制的轻量性能诊断 PR。 |
+| 是否影响上线 | Performance risk | 当前不是功能 blocker，但 5-8s 动态 HTML TTFB 和 dashboard 慢会影响上线体验，production readiness 仍需性能优化或架构决策。 |
+
+推荐后续 PR 拆分：
+
+- PR A：`Enable safe Laravel config cache on Render`，先只启用 config cache，提供环境变量 fallback，不启用 route cache。
+- PR B：`Add lightweight staging performance diagnostics`，仅在需要进一步定位 dashboard / query 来源时启用，必须由环境变量控制。
+- PR C：`Evaluate Render database latency options`，评估数据库区域、连接方式、缓存或 Redis / persistent cache 策略。
+- PR D：`Assess dashboard loading bottlenecks`，仅在拿到后台 session 下的 dashboard profile 后处理，不改订单、预约、支付或认证逻辑。
