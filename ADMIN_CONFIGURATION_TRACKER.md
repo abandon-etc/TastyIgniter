@@ -505,39 +505,3 @@
 | Q-006 状态 | Resolved | 原因确认为测试时段不在营业时间内。 |
 
 详细检查见 `FRONTEND_FLOW_READINESS_CHECK.md`。
-
-## Render staging 前台交互 smoke test 记录
-
-记录日期：2026-07-09
-
-环境：Render staging
-
-当前阶段：前台交互 smoke test
-
-| 检查项 | 结果 | 备注 |
-| --- | --- | --- |
-| `/healthz` | Pass | 返回 200，内容为 `ok`。 |
-| 首页 `/` | Pass | 返回 200，前台页面可访问。 |
-| 菜单页 `/default/menus` | Pass | 返回 200，`Test Category`、`Test Item` 和测试价格可见。 |
-| 测试图片 URL | Pass | `/storage/media/uploads/staging-test-upload.png` 返回 200。 |
-| 测试图片是否显示在菜单商品卡片 | Not shown | 当前 `Test Item` 卡片未渲染商品图片元素；测试上传文件本身存在且可访问。此项属于测试内容绑定问题，不是资源或上传持久化 blocker。 |
-| Livewire JS | Pass | `/livewire/livewire.min.js?id=42cd7fd5` 返回 200，content type 为 JavaScript。 |
-| 前台 CSS / JS | Pass | 首页、菜单页、购物车、预约页和 checkout 相关 CSS / JS 均返回 200；未发现 public `localhost` 资源 URL。 |
-| 菜单页加入购物车 | Pass | 点击 `Test Item` 后购物车金额更新，Livewire / AJAX 请求正常，无控制台 error。 |
-| 购物车数量修改 | Pass | 可增加 / 减少测试商品数量，金额随测试数量变化。 |
-| 购物车删除商品 | Pass | 可将测试商品移除，空购物车状态可恢复。 |
-| 空车后再次添加商品 | Pass | 再次点击 `Test Item` 可重新加入购物车。 |
-| checkout 入口 | Pass | 有测试商品时从购物车点击 `Checkout` 可进入 checkout 表单；未点击最终 `Confirm`。 |
-| checkout 表单 | Pass | 顾客字段、备注字段、条款勾选和 Cash On Delivery 选项可见。 |
-| checkout 表单校验提交 | Skipped | 未提交 checkout 表单，避免创建测试订单、顾客记录或地址记录。 |
-| 预约页 `/default/reservation` | Pass | 返回 200，页面正常显示。 |
-| 预约控件 | Pass | 人数和时间下拉控件可选择测试值，无控制台 error。 |
-| 预约提交 / 校验 | Skipped | 未点击 `Find Table` 或后续提交按钮，避免创建测试预约。 |
-| 是否创建测试订单 | No | 本次未提交订单。 |
-| 是否创建测试预约 | No | 本次未提交预约。 |
-| 是否使用真实顾客数据 | No | 未填写真实顾客姓名、电话、邮箱、地址或支付信息。 |
-| Render / Laravel / TastyIgniter 日志 | Pass | 最近日志未发现新的 HTTP 404 / 500、PHP fatal、Laravel exception、Livewire error、payment error 或 storage permission error。 |
-| 非阻塞日志提示 | Noted | 发现 Nginx 对较大 `_assets` 响应有 upstream buffering warning，但对应资源返回 200 / 304；当前不影响 smoke test。 |
-| 是否影响上线 | No blocker found | 目前未发现阻止进入下一阶段的 blocker。 |
-
-下一步建议：可以进入 staging 性能基线测试；同时在正式内容录入阶段把测试图片或正式图片明确绑定到真实商品后，再复查菜单商品图片展示。
