@@ -596,7 +596,8 @@ Dashboard 判断：
 当前策略：
 
 - 诊断能力默认关闭。
-- 仅在 Render staging 短时间设置 `ENABLE_STAGING_PERF_DIAGNOSTICS=true` 后启用。
+- 仅在 `APP_ENV` 非 `production` 的 Render staging 短时间设置 `ENABLE_STAGING_PERF_DIAGNOSTICS=true` 后启用。
+- `APP_ENV=production` 时强制关闭，即使误设 `ENABLE_STAGING_PERF_DIAGNOSTICS=true` 也不会启用。
 - 完成采样后必须设置回 `false` 并重新部署。
 - 诊断日志事件名为 `staging_perf_diagnostics`。
 
@@ -630,11 +631,12 @@ Dashboard 判断：
 启用方式：
 
 1. 合并并部署 `Add lightweight staging performance diagnostics` PR。
-2. 在 Render staging Environment Variables 设置 `ENABLE_STAGING_PERF_DIAGNOSTICS=true`。
-3. 重新部署 staging。
-4. 访问公开页面和已登录 dashboard。
-5. 在 Render logs 中筛选 `staging_perf_diagnostics`。
-6. 采样完成后设置 `ENABLE_STAGING_PERF_DIAGNOSTICS=false` 并重新部署。
+2. 确认 Render staging 的 `APP_ENV` 不是 `production`。
+3. 在 Render staging Environment Variables 设置 `ENABLE_STAGING_PERF_DIAGNOSTICS=true`。
+4. 重新部署 staging。
+5. 访问公开页面和已登录 dashboard。
+6. 在 Render logs 中筛选 `staging_perf_diagnostics`。
+7. 采样完成后设置 `ENABLE_STAGING_PERF_DIAGNOSTICS=false` 并重新部署。
 
 可选调节项：
 

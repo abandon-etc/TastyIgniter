@@ -1350,6 +1350,7 @@
   - 可选 `STAGING_PERF_DIAGNOSTICS_MAX_PATTERNS`。
   - 可选 `STAGING_PERF_DIAGNOSTICS_LOG_CHANNEL`。
 - 默认关闭时不写诊断日志。
+- `APP_ENV=production` 时强制关闭，即使误设 `ENABLE_STAGING_PERF_DIAGNOSTICS=true` 也不会启用。
 - 启用后每个请求写一条 `staging_perf_diagnostics` 日志，用于定位：
   - path / status / duration。
   - query count / total query time / max query time。
@@ -1401,11 +1402,13 @@
 - Render Docker 镜像构建通过。
 - 容器环境中 `php artisan config:cache` 验证通过。
 - 默认未设置 `ENABLE_STAGING_PERF_DIAGNOSTICS` 时，config cache 中诊断状态为 disabled。
-- 设置 `ENABLE_STAGING_PERF_DIAGNOSTICS=true` 时，config cache 中诊断状态为 enabled。
+- `APP_ENV=staging` 且设置 `ENABLE_STAGING_PERF_DIAGNOSTICS=true` 时，config cache 中诊断状态为 enabled。
+- `APP_ENV=production` 且设置 `ENABLE_STAGING_PERF_DIAGNOSTICS=true` 时，config cache 中诊断状态仍为 disabled。
 
 ### 风险说明
 
 - 启用诊断会给每个请求增加 query listener 和日志聚合开销；只能在 staging 短时间开启。
+- production 环境默认不可启用 diagnostics；如需生产级性能观测，必须另做单独方案和审批。
 - 日志会增加 Render log volume；采样完成后必须关闭 `ENABLE_STAGING_PERF_DIAGNOSTICS` 并重新部署。
 - 诊断日志只用于定位 query 来源，不作为功能修复。
 - 动态 HTML TTFB 仍可能主要由数据库区域 / 网络 RTT 和重复查询共同造成；后续优化必须基于采样结果拆小 PR。
@@ -1413,7 +1416,7 @@
 ### 下一步建议
 
 - 合并并部署诊断 PR。
-- 在 Render staging 设置 `ENABLE_STAGING_PERF_DIAGNOSTICS=true` 并重新部署。
+- 确认 Render staging 的 `APP_ENV` 不是 `production`，再设置 `ENABLE_STAGING_PERF_DIAGNOSTICS=true` 并重新部署。
 - 访问 `/`、`/default/menus`、`/cart`、`/default/reservation`、`/admin/login` 和已登录 `/admin/dashboard`。
 - 从 Render logs 收集 `staging_perf_diagnostics` 摘要。
 - 完成采样后设置 `ENABLE_STAGING_PERF_DIAGNOSTICS=false` 并重新部署。

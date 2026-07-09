@@ -1,7 +1,10 @@
 <?php
 
+$isProduction = strtolower((string)env('APP_ENV', 'production')) === 'production';
+$isEnabled = filter_var(env('ENABLE_STAGING_PERF_DIAGNOSTICS', false), FILTER_VALIDATE_BOOLEAN);
+
 return [
-    'enabled' => (bool)env('ENABLE_STAGING_PERF_DIAGNOSTICS', false),
+    'enabled' => !$isProduction && $isEnabled,
 
     'log_channel' => env('STAGING_PERF_DIAGNOSTICS_LOG_CHANNEL', env('LOG_CHANNEL', 'stack')),
 
