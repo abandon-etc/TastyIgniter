@@ -1539,3 +1539,109 @@
 - 并行创建或规划 `Assess cache backend for Render staging`。
 - 后续再拆 `Reduce repeated settings and schema queries`。
 - 可以并行规划 Cloudflare / custom domain / production 前置事项，但不要直接进入 production。
+
+## 2026-07-09 Evaluate Canada unified hosting architecture
+
+### 决策更新
+
+- 用户已决定长期方向改为方案 C：加拿大同区统一架构。
+- 不再优先做 Render + DigitalOcean 的局部优化实验。
+- 当前目标改为评估新 Canada staging，使 app、database、media storage、cache、backup 尽量位于加拿大同一区域。
+
+### 调研范围
+
+- Google Cloud Run + Cloud SQL for MySQL + Cloud Storage + 可选 Memorystore / Redis。
+- AWS ECS / Fargate + RDS MySQL + S3 / EFS。
+- DigitalOcean TOR1：App Platform / Managed MySQL / Spaces / cache 资源。
+- Azure Canada：Container Apps / Azure Database for MySQL / Blob Storage，作为第三方备选。
+
+### 官方文档依据
+
+- Google Cloud Run locations 列出 Montréal `northamerica-northeast1` 和 Toronto `northamerica-northeast2`。
+- Cloud SQL for MySQL locations 列出 Montréal 和 Toronto。
+- Cloud Storage locations 列出 Montréal 和 Toronto，并支持 Canada configurable dual-region。
+- Memorystore for Redis locations 列出 Montréal 和 Toronto。
+- AWS 有 Canada Central `ca-central-1` 和 Canada West `ca-west-1`；RDS / Aurora MySQL 覆盖加拿大区域，但 App Runner 已公告将不再接受新客户，因此不建议作为新架构入口。
+- DigitalOcean regional availability 列出 TOR1，并显示 App Platform、Managed Databases、Spaces 等产品在区域矩阵中可用；仍需在 UI 中最终确认当前账号和产品可创建性。
+
+### 推荐方案
+
+- 首选平台：Google Cloud。
+- 首选区域：Montréal `northamerica-northeast1`。
+- 备选区域：Toronto `northamerica-northeast2`。
+- 理由：
+  - Montréal 更贴近本地用户。
+  - Google Cloud 在 Montréal / Toronto 同时覆盖 Cloud Run、Cloud SQL MySQL、Cloud Storage 和 Memorystore。
+  - Cloud Run 能继续使用 Docker 容器路线。
+  - Cloud SQL for MySQL 保持 MySQL 兼容优先，不需要切 PostgreSQL。
+  - Cloud Storage 可替代 Render Persistent Disk 的 media 持久化，但需要单独验证 TastyIgniter media storage 适配。
+
+### 迁移对象
+
+- Docker app runtime。
+- MySQL database。
+- uploaded media / storage。
+- env vars / secrets。
+- `APP_URL` / `ASSET_URL`。
+- cache / session / queue。
+- logs。
+- backup。
+- custom domain / HTTPS。
+- rollback plan。
+
+### 需要重新验证的 runtime 内容
+
+- `Dockerfile.render` 是否可复用，或是否需要拆出 cloud-agnostic Dockerfile。
+- `docker/render/start.sh` 中 Render `$PORT`、Persistent Disk 和 Nginx template 逻辑是否需要抽象。
+- Nginx + PHP-FPM 是否适合 Cloud Run 单容器；是否需要简化为 Cloud Run native HTTP listener。
+- `/healthz`。
+- storage symlink。
+- media upload。
+- public media URL。
+- config cache。
+- Livewire。
+- TastyIgniter assets。
+- persistent storage 替代方案。
+
+### 存储策略
+
+- Render Persistent Disk 不能直接照搬到 Cloud Run。
+- 首选评估 Cloud Storage bucket：
+  - 方案 1：通过 Cloud Storage FUSE volume mount 映射到现有 `storage` / media 路径，低代码改动但需验证性能、并发和权限。
+  - 方案 2：适配 Laravel / TastyIgniter filesystem disk 到 Cloud Storage，长期更云原生，但需要确认 TastyIgniter media manager 支持点。
+  - 方案 3：Cloud Filestore / NFS，仅在 media manager 强依赖 POSIX 文件语义且 Cloud Storage 方案不可行时评估。
+- 不上传真实图片，不提交真实上传文件。
+
+### 数据库策略
+
+- 必须继续 MySQL 兼容优先。
+- 不改 PostgreSQL，除非单独做 TastyIgniter 兼容验证。
+- 新 Canada DB 只做 staging test。
+- 用户必须在 Google Cloud / AWS / DigitalOcean UI 中输入 DB password 和 secret，不发到聊天。
+- 不运行 `migrate:fresh`、`migrate:refresh` 或 `db:seed`。
+
+### 方案比较
+
+| 方案 | 预期收益 | 复杂度 | 是否适合 staging 先试 | 主要风险 |
+| --- | --- | --- | --- | --- |
+| Google Cloud Canada | 高 | 中 | 是 | Cloud Storage media 适配、Cloud Run domain mapping / load balancer、Cloud SQL 成本 |
+| AWS Canada | 高 | 中到高 | 是 | ECS / Fargate 配置更复杂；App Runner 不适合作为新方案 |
+| DigitalOcean TOR1 | 中到高 | 低到中 | 是 | 长期平台能力、private networking、对象存储与 media manager 适配需验证 |
+| Azure Canada | 高 | 中到高 | 是 | 当前项目上下文少，需要额外学习和配置 |
+
+### 下一步建议
+
+- 创建 `Plan Google Cloud Canada staging experiment`。
+- 用户先确认 Google Cloud billing、预算上限、项目名称、首选区域 Montréal / Toronto。
+- Codex 后续负责生成非 secret 配置清单、部署步骤、验收清单和 rollback checklist。
+- Render staging 保留为 fallback，直到 Canada staging 完整通过。
+
+### 安全边界
+
+- 未创建付费资源。
+- 未提交 secret。
+- 未要求用户把 password、token、APP_KEY、DB_PASSWORD、Google Cloud key、AWS key、DigitalOcean token 或 Cloudflare token 发到聊天。
+- 未碰 production。
+- 未导入真实顾客数据、真实菜单、真实图片、真实订单、真实预约或真实支付数据。
+- 未运行 `migrate:fresh`、`migrate:refresh` 或 `db:seed`。
+- 未修改 vendor、TastyIgniter core、订单、支付、预约、认证或安全逻辑。

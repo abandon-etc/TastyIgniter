@@ -744,3 +744,55 @@
 4. Cloudflare / custom domain / production 前置规划可以并行，但 production readiness 仍受 DB RTT 风险影响。
 
 阻塞：需要用户确认是否愿意为 same-region staging DB 或新 Render staging service 产生额外费用，并在 Render / DigitalOcean UI 中配置或输入 secret；不需要把 secret 发到聊天。
+
+## Canada unified hosting architecture 评估记录
+
+记录日期：2026-07-09
+
+环境：planning / staging only
+
+当前阶段：Evaluate Canada unified hosting architecture
+
+| 项目 | 状态 | 备注 |
+| --- | --- | --- |
+| 当前决策 | Updated | 用户已决定长期方向改为方案 C：app、database、media storage、cache、backup 尽量位于加拿大同一区域。 |
+| PR #35 | Merged | `Evaluate database latency options` 已合并；其 Render + DigitalOcean 局部优化实验不再是第一优先级。 |
+| 首选候选 | Recommended | Google Cloud Run + Cloud SQL for MySQL + Cloud Storage + 可选 Memorystore / Redis。 |
+| 首选区域 | Recommended | Montréal `northamerica-northeast1`，因为目标用户在 Montréal，且 Google Cloud 官方文档列出 Cloud Run、Cloud SQL MySQL、Cloud Storage 和 Memorystore 均支持该区域。 |
+| 备选区域 | Viable | Toronto `northamerica-northeast2`，同样支持核心组件；对 Montréal 用户略远，但仍可实现加拿大同区 app / DB / storage / cache。 |
+| AWS Canada | Candidate with more ops | ECS / Fargate + RDS MySQL + S3 / EFS 在加拿大区域可行；App Runner 不建议作为新方案，因为 AWS 已公告 App Runner 将不再接受新客户。 |
+| DigitalOcean Canada | Candidate if simplifying | DigitalOcean TOR1 支持 App Platform、Managed MySQL、Spaces 和 cache 类资源；更简单，但长期平台能力、private networking、备份和对象存储适配需单独验证。 |
+| Storage 策略 | Needs validation | Render Persistent Disk 不能照搬到 Cloud Run；需评估 Cloud Storage bucket、Cloud Storage FUSE volume mount 或 Laravel / TastyIgniter media disk 适配。 |
+| Database 策略 | MySQL required | 继续 MySQL 兼容优先；不切 PostgreSQL，除非单独验证 TastyIgniter 兼容性。 |
+| Security boundary | Enforced | 不创建付费资源、不输入或记录 secret、不碰 production、不导入真实数据。 |
+
+迁移对象清单：
+
+- Docker app runtime：验证 `Dockerfile.render` 是否可作为 cloud-agnostic Dockerfile 基础。
+- Startup：评估 `docker/render/start.sh` 是否需要抽象出 Render 专用 `$PORT`、persistent disk 和 Nginx template 逻辑。
+- Database：新 Canada Cloud SQL for MySQL staging DB，只用测试数据或空库初始化；不使用 production 数据。
+- Media：将当前 `storage` / uploads / media 从 Render Persistent Disk 迁移到 Cloud Storage / S3 / Spaces 或挂载方案。
+- Env / secrets：迁移 `APP_URL`、`ASSET_URL`、`APP_KEY`、DB credentials、mail、cache、session 等；secret 只能在平台 UI / Secret Manager 输入。
+- Cache / session / queue：先保持低风险默认值；再评估 Memorystore / Redis 对 settings / pages / theme / menus 查询的收益。
+- Logs：Cloud Logging / CloudWatch / DO logs 需要纳入验收。
+- Backup：Cloud SQL automated backup + on-demand export；media bucket lifecycle / versioning / cross-region backup 需要单独决策。
+- Custom domain / HTTPS：Cloud Run 加拿大区域的直接 domain mapping 需要验证；可能需要 external HTTPS Load Balancer 或 Cloudflare。
+- Rollback：保留 Render staging，直到 Canada staging 完成前后台、媒体、Livewire、性能和重新部署持久性验证。
+
+候选方案比较：
+
+| 方案 | 预期收益 | 复杂度 | Docker | MySQL | 媒体存储 | 加拿大区域 | Private networking | 备份 | Rollback | 结论 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Google Cloud Canada | 高 | 中 | Cloud Run 支持容器 | Cloud SQL MySQL | Cloud Storage / FUSE / Filestore | Montréal / Toronto | Cloud SQL connector 或 private IP + VPC | Cloud SQL backup + bucket lifecycle | 保留 Render staging | 首选。组件齐全，最符合“一劳永逸”同区架构。 |
+| AWS Canada | 高 | 中到高 | ECS / Fargate 支持容器 | RDS MySQL / Aurora MySQL | S3 / EFS | Canada Central / Canada West | VPC 内连接成熟 | RDS backup + S3 lifecycle | 保留 Render staging | 可行但运维复杂度高；App Runner 不建议新采用。 |
+| DigitalOcean TOR1 | 中到高 | 低到中 | App Platform / DOKS / Droplet | Managed MySQL | Spaces TOR1 / Volumes | Toronto | VPC / trusted sources 需验证 | Managed DB backup + Spaces | 保留 Render staging | 简化候选；若用户偏好低复杂度，可作为备选实验。 |
+| Azure Canada | 高 | 中到高 | Container Apps / App Service | Azure Database for MySQL | Blob Storage / Files | Canada Central / East | VNet integration | Managed backup | 保留 Render staging | 可行但当前项目上下文少，暂列第三方备选。 |
+
+推荐路径：
+
+1. 首选平台：Google Cloud。
+2. 首选区域：Montréal `northamerica-northeast1`；如账号、配额、价格或 Cloud Run / Cloud SQL 限制不合适，再改 Toronto `northamerica-northeast2`。
+3. 第一个 experiment：新建 Canada staging Cloud Run + Cloud SQL for MySQL + Cloud Storage bucket，使用测试数据库和测试图片验证 app / DB / media / cache / logs / backup 基线。
+4. 用户需先确认：Google Cloud project、billing、预算上限、目标区域、是否允许创建 Cloud SQL / Cloud Run / Cloud Storage / Secret Manager / 可选 Memorystore。
+5. 用户需要在平台 UI 输入：APP_KEY、DB password、Cloud SQL credentials、mail/payment placeholder secrets、Cloudflare/custom domain 相关 secret；不要发到聊天。
+6. Render staging 保留为 fallback，直到 Canada staging 完整通过初始化、登录、前后台 smoke、媒体上传、重新部署持久性和性能基线。

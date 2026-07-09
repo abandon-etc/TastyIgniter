@@ -722,3 +722,115 @@ Dashboard 判断：
 3. 创建或规划 `Assess cache backend for Render staging`。
 4. 如区域实验仍不足，再拆 `Reduce repeated settings and schema queries`。
 5. Cloudflare / custom domain / production 前置规划可以并行，但 production readiness 仍受当前 DB RTT 风险影响。
+
+## Canada unified hosting architecture
+
+记录日期：2026-07-09
+
+当前决策：
+
+- 长期方向改为加拿大同区统一架构。
+- 目标是让 app、database、media storage、cache 和 backup 尽量位于加拿大同一区域。
+- 现有 Render staging 继续保留为 fallback，不直接迁 production。
+- 不再优先做 Render + DigitalOcean 跨云局部优化实验。
+
+首选候选：
+
+- Google Cloud Run。
+- Google Cloud SQL for MySQL。
+- Google Cloud Storage。
+- 可选 Google Memorystore / Redis。
+- 首选 Montréal `northamerica-northeast1`，备选 Toronto `northamerica-northeast2`。
+
+官方区域确认摘要：
+
+- Google Cloud Run、Cloud SQL for MySQL、Cloud Storage 和 Memorystore 官方文档均列出 Montréal / Toronto。
+- Cloud Storage 支持加拿大区域 bucket，也支持 Canada configurable dual-region；单区域有较低延迟和较低成本，dual-region 更适合备份 / 灾备。
+- AWS 提供 Canada Central / Canada West 区域，RDS / Aurora MySQL 可作为数据库候选；但 App Runner 不建议作为新方案入口。
+- DigitalOcean TOR1 是加拿大候选，区域矩阵显示 App Platform、Managed Databases、Spaces 等资源可作为简化方案验证。
+
+架构目标：
+
+1. Cloud Run 部署 Docker app。
+2. Cloud SQL for MySQL 作为主数据库，保持 MySQL 兼容。
+3. Cloud Storage 替代 Render Persistent Disk 保存 media / uploads。
+4. Secret Manager 或平台环境变量保存 secrets。
+5. Cloud Logging 保存运行日志。
+6. Cloud SQL automated backups + media bucket lifecycle / versioning / export 作为备份基础。
+7. Cloudflare / custom domain / HTTPS 在 staging 完成后再规划，不作为当前 DB RTT 修复手段。
+
+Montréal vs Toronto：
+
+- 对 Montréal 本地用户，Montréal 通常是首选。
+- 对本项目当前性能问题，关键不是离用户近，而是 app 和 DB 同区；Montréal 和 Toronto 都能满足同区原则。
+- 如果 Montréal 账号配额、服务可用性、成本或 Cloud Storage 区域风险不理想，Toronto 是合理备选。
+- 若需要更强媒体灾备，可考虑 Canada dual-region bucket 或定期备份到 Toronto / Montréal 另一区域，但这会增加成本和复杂度。
+
+Cloud Run runtime 需要重新验证：
+
+- `Dockerfile.render` 是否可复用。
+- `docker/render/start.sh` 是否应拆出 cloud-agnostic startup script。
+- Nginx + PHP-FPM 是否继续保留，还是为 Cloud Run 简化 HTTP listener。
+- `/healthz`。
+- storage symlink。
+- media upload。
+- public media URL。
+- config cache。
+- Livewire。
+- TastyIgniter asset combiner。
+- Cloud Run stateless filesystem 与 media persistence。
+
+Storage 适配路径：
+
+1. Cloud Storage FUSE volume mount：
+   - 最接近现有 local filesystem 语义。
+   - 适合先做 staging experiment。
+   - 需要验证 TastyIgniter media manager、缩略图、权限、并发写入和 URL 生成。
+2. Laravel / TastyIgniter filesystem disk 到 Cloud Storage：
+   - 长期更云原生。
+   - 需要确认 TastyIgniter media library 是否可安全配置到非 local disk。
+3. Cloud Filestore / NFS：
+   - POSIX 语义更强。
+   - 成本和网络配置更高，只作为 fallback。
+
+候选平台比较：
+
+| 平台 | Docker | MySQL | Media storage | Canada region | Private networking | Backup | Rollback | 适合 future production |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Google Cloud Canada | Cloud Run | Cloud SQL MySQL | Cloud Storage / Filestore | Montréal / Toronto | Cloud SQL connector / private IP | Cloud SQL backup + bucket lifecycle | 保留 Render staging | 是，首选 |
+| AWS Canada | ECS / Fargate | RDS / Aurora MySQL | S3 / EFS | Canada Central / West | VPC | RDS backup + S3 lifecycle | 保留 Render staging | 是，但复杂 |
+| DigitalOcean TOR1 | App Platform / DOKS / Droplet | Managed MySQL | Spaces / Volumes | Toronto | VPC / trusted sources | Managed backups + Spaces | 保留 Render staging | 可能，需验证 |
+| Azure Canada | Container Apps / App Service | Azure Database for MySQL | Blob / Files | Canada Central / East | VNet | Managed backups | 保留 Render staging | 可能，当前优先级较低 |
+
+推荐的第一个 staging experiment：
+
+1. 用户确认 Google Cloud project、billing、预算上限和目标区域。
+2. 创建 Canada staging project / resources，仅用于测试。
+3. 创建 Cloud SQL for MySQL staging instance。
+4. 创建 Cloud Storage staging media bucket。
+5. 创建 Cloud Run staging service，先复用 Docker runtime。
+6. 使用平台 UI / Secret Manager 输入 secrets，不发到聊天。
+7. 初始化空 staging DB 或迁移非真实测试数据。
+8. 验证 `/healthz`、首页、菜单页、购物车、预约页、后台登录页、dashboard、Livewire、assets、media upload、重新部署持久性和 TTFB。
+9. 验证 backup / restore 基线。
+10. 保留 Render staging 作为 rollback / comparison baseline。
+
+下一步更新：
+
+1. 创建 `Plan Google Cloud Canada staging experiment`。
+2. 用户确认是否接受 Google Cloud 计费和测试资源成本。
+3. 用户确认首选区域：Montréal 或 Toronto。
+4. 用户在 Google Cloud UI 输入 secrets；不要发送到聊天。
+5. 在 Canada staging 通过前，不进入 production。
+
+参考官方文档：
+
+- Google Cloud Run locations: https://docs.cloud.google.com/run/docs/locations
+- Cloud SQL for MySQL locations: https://docs.cloud.google.com/sql/docs/mysql/locations
+- Cloud Storage bucket locations: https://docs.cloud.google.com/storage/docs/locations
+- Memorystore for Redis regions: https://docs.cloud.google.com/memorystore/docs/redis/regions
+- Cloud Run Cloud Storage volume mounts: https://docs.cloud.google.com/run/docs/configuring/services/cloud-storage-volume-mounts
+- Cloud SQL private IP: https://docs.cloud.google.com/sql/docs/mysql/private-ip
+- AWS Regions: https://docs.aws.amazon.com/global-infrastructure/latest/regions/aws-regions.html
+- AWS App Runner availability change: https://aws.amazon.com/apprunner/
+- DigitalOcean regional availability: https://docs.digitalocean.com/platform/regional-availability/
