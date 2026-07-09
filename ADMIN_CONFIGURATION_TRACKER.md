@@ -671,3 +671,33 @@
 | 敏感信息 | Not touched | 未提交 `.env`、`.local`、数据库 dump、真实上传文件、密码、密钥、token、APP_KEY、DB_PASSWORD、Render secret、DigitalOcean token、Cloudflare token、Carté Key、支付密钥、邮件密码或真实顾客信息。 |
 
 下一步建议：合并并部署诊断 PR 后，在 Render staging 临时设置 `ENABLE_STAGING_PERF_DIAGNOSTICS=true`，采样公开页面和已登录 dashboard；完成采样后立即改回 `false` 并重新部署。
+
+## Render staging performance diagnostics 采样记录
+
+记录日期：2026-07-09
+
+环境：Render staging
+
+当前阶段：PR #33 部署与 staging performance diagnostics 采样
+
+| 项目 | 状态 | 备注 |
+| --- | --- | --- |
+| PR #33 | Merged / deployed | Render Events 显示 `bbd9376` 已 live。 |
+| `APP_ENV` | Confirmed | Render Shell 显示 `APP_ENV=staging`，不是 `production`。 |
+| Diagnostics 启用 | Completed | 短时间设置 `ENABLE_STAGING_PERF_DIAGNOSTICS=true` 并重新部署后采样。 |
+| Diagnostics 关闭 | Completed | 采样后设置 `ENABLE_STAGING_PERF_DIAGNOSTICS=false` 并重新部署；config cache 中 `DIAG_ENABLED=false`。 |
+| 关闭后验证 | Pass | 关闭后访问首页仍返回 200，`staging_perf_diagnostics` 日志计数未增加。 |
+| `/` | DB-bound | duration 3018.26ms；query_count 19；query_total 2893.4ms；top 类别为 theme / pages / other。 |
+| `/default/menus` | DB-bound | duration 5114.76ms；query_count 33；query_total 4978.89ms；top 类别为 settings / other / menus。 |
+| `/cart` | DB-bound | duration 4377ms；query_count 26；query_total 4315.51ms；top 类别为 theme / pages / settings。 |
+| `/default/reservation` | DB-bound | duration 4468.38ms；query_count 26；query_total 4372.31ms；top 类别为 theme / pages / settings。 |
+| `/admin/login` | DB-bound | duration 710.24ms；query_count 4；query_total 688.27ms；top 来源包含 user login、settings 和 cart status middleware。 |
+| `/admin/dashboard` | DB-bound / widget queries | POST duration 4739.67ms；query_count 24；query_total 3672.89ms；top 类别包含 users、orders aggregate 和 reservation aggregate。 |
+| Smoke check | Pass | `/healthz`、首页、菜单页、购物车、预约页、后台登录页、Livewire JS 和已登录 dashboard 均返回 / 显示正常。 |
+| 新错误日志 | None from sampling | 采样期间未发现新的 PHP fatal、Laravel exception、500 或 storage permission error；日志中两条 ERROR 为早前旧记录。 |
+| 敏感信息 | Not touched | 未记录 SQL bindings、请求 body、cookie、session、CSRF token、用户 ID、真实顾客、真实订单、真实预约或真实支付数据。 |
+| 数据操作 | Not performed | 未提交测试订单或测试预约；未运行 `migrate:fresh`、`migrate:refresh`、`db:seed`。 |
+
+主要结论：动态 HTML TTFB 仍主要由远程数据库多次往返叠加造成；每个页面的 query_total_ms 基本覆盖 duration_ms。公开页面重复来源集中在 theme / pages / settings / menus；dashboard 额外包含订单、预约、客户和用户偏好等 widget / aggregate 查询。
+
+下一步建议：优先创建 `Evaluate database latency options`，评估数据库区域、Render 到数据库连接路径和缓存策略；随后再评估 `Reduce repeated settings and schema queries` 与 `Assess cache backend for Render staging`。Cloudflare / custom domain / production 前置规划可以并行，但 production readiness 仍受动态 HTML TTFB 风险影响。
