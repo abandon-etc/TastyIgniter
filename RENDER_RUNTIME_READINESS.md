@@ -466,6 +466,50 @@ Staging 至少验证：
 - 提交真实顾客信息。
 - 提交真实订单或预约。
 
+## Staging 第一阶段性能优化
+
+记录日期：2026-07-09
+
+本阶段目标是先处理低风险 Render runtime 性能问题，不处理业务级或数据库级重构。
+
+已准备的 runtime 调整：
+
+- `_assets` 和 `admin/_assets` 继续保留 Laravel / TastyIgniter combiner fallback。
+- 当 combined asset 不存在于磁盘时，进入专用 named FastCGI location。
+- combined asset 响应由 Nginx 设置 `Cache-Control: public, max-age=86400`。
+- combined asset FastCGI buffer 增大，减少大 CSS / JS 响应写入 Nginx 临时文件。
+- `/storage` 和 `/media` 增加 `Cache-Control: public, max-age=604800`。
+- `/livewire/` location 不变，继续 fallback 到 Laravel，避免 Livewire JS 404。
+- `/healthz` location 不变，继续由 Nginx 静态返回。
+
+本阶段不启用：
+
+- Laravel route cache。
+- Laravel config cache 默认值变更。
+- Laravel view cache 默认值变更。
+- DB 查询优化。
+- TastyIgniter boot 优化。
+- 主题渲染重构。
+- Cloudflare 或 production 配置。
+
+部署到 staging 后必须复查：
+
+| 检查项 | 期望 |
+| --- | --- |
+| `/healthz` | 200 `ok` |
+| 首页、菜单页、购物车、预约页 | 200 |
+| 后台登录页、dashboard | 可打开 |
+| Livewire JS | 200，仍走正确 Laravel fallback |
+| `_assets` / `admin/_assets` | 200，`Cache-Control` 包含 `max-age=86400` |
+| `/storage/media/uploads/staging-test-upload.png` | 200，`Cache-Control` 包含 `max-age=604800` |
+| Render logs | 无新的 404 / 500 / PHP fatal / Laravel exception / storage permission error |
+| upstream buffering warning | 应减少或消失；如仍出现，记录具体路径，不在本阶段扩大范围 |
+
+注意：
+
+- dynamic HTML TTFB 慢的问题预计仍会存在，需要后续单独拆分数据库、TastyIgniter boot、theme rendering 和 Laravel cache 影响。
+- 媒体路径使用 7 天缓存，真实内容录入时应避免同名替换文件造成浏览器短期看到旧图。
+
 ## 下一步
 
 1. 审查本 PR。

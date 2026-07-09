@@ -541,3 +541,42 @@
 | 是否影响上线 | No blocker found | 目前未发现阻止进入下一阶段的 blocker。 |
 
 下一步建议：可以进入 staging 性能基线测试；同时在正式内容录入阶段把测试图片或正式图片明确绑定到真实商品后，再复查菜单商品图片展示。
+
+## Render staging 第一阶段性能优化记录
+
+记录日期：2026-07-09
+
+环境：Render staging
+
+当前阶段：第一阶段性能优化：asset cache headers + buffering
+
+| 项目 | 状态 | 备注 |
+| --- | --- | --- |
+| 修改范围 | Prepared | 本阶段只调整 Render Nginx runtime 配置和项目记录文件。 |
+| `_assets` / `admin/_assets` 当前来源 | Dynamic via Laravel | 当前仓库没有可提交的 `public/_assets` 或 `public/admin/_assets` 文件；Render 日志显示这些请求走 `fastcgi://127.0.0.1:9000`。 |
+| `_assets` / `admin/_assets` 修改 | Prepared | 增加专用 named FastCGI location，保留 Laravel fallback，并设置 `Cache-Control: public, max-age=86400`。 |
+| `/storage` / `/media` 修改 | Prepared | 增加 `Cache-Control: public, max-age=604800`。 |
+| FastCGI buffering | Prepared | 只针对 TastyIgniter combined asset fallback 增大 FastCGI buffer，减少大 CSS / JS 写入临时文件触发 warning。 |
+| `/livewire/` fallback | Preserved | 未修改 Livewire location，避免再次出现 Livewire JS 404。 |
+| `/healthz` | Preserved | 健康检查仍为 Nginx 静态返回，不依赖 Laravel。 |
+| Laravel route cache | Not enabled | 本 PR 不默认启用 route cache，避免影响 TastyIgniter extension / admin 动态路由。 |
+| Laravel config / view cache | Not enabled | 本 PR 只记录后续可评估，不改变默认启动策略。 |
+| 动态 HTML TTFB | Not addressed | 本 PR 不处理 DB 查询、TastyIgniter boot 或主题渲染。 |
+| 测试订单 / 测试预约 | Not created | 未提交订单或预约。 |
+| 生产配置 | Not touched | 未修改 production、Cloudflare、支付、邮件或真实菜单配置。 |
+| 部署后复测 | Pending | 合并并部署到 staging 后，需要复测资源 headers、upstream buffering warning 和关键页面。 |
+
+部署前验证要求：
+
+- Nginx 配置语法检查通过。
+- Docker build 成功。
+- `/healthz`、前台页面、后台登录页、dashboard、Livewire JS、测试图片和测试内容在 staging 部署后复查。
+- 复查 `_assets` / `admin/_assets` 是否有 `max-age=86400`。
+- 复查 `/storage/media/uploads/staging-test-upload.png` 是否有 `max-age=604800`。
+- 复查日志是否仍有 upstream buffering warning；如仍存在，记录后再进入下一轮优化。
+
+剩余性能问题：
+
+- 前台动态 HTML warm TTFB 仍需单独拆分 DB 查询、TastyIgniter boot、theme rendering 和 Laravel cache 影响。
+- 后台 dashboard 主 JS 体积较大，后续可评估资源构建 / combiner 缓存策略。
+- Laravel config / view cache 可作为下一阶段评估项；route cache 不应盲目默认启用。

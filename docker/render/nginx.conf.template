@@ -42,11 +42,35 @@ server {
     }
 
     location ^~ /_assets/ {
-        try_files $uri /index.php?$query_string;
+        add_header Cache-Control "public, max-age=86400";
+        try_files $uri @tastyigniter_combined_assets;
     }
 
     location ^~ /admin/_assets/ {
-        try_files $uri /index.php?$query_string;
+        add_header Cache-Control "public, max-age=86400";
+        try_files $uri @tastyigniter_combined_assets;
+    }
+
+    # TastyIgniter combines theme/admin assets through Laravel when they are not
+    # present on disk. The URLs include a deploy timestamp, so a conservative
+    # browser cache is safe while avoiding repeated multi-second asset requests.
+    location @tastyigniter_combined_assets {
+        add_header Cache-Control "public, max-age=86400";
+
+        fastcgi_buffer_size 64k;
+        fastcgi_buffers 32 64k;
+        fastcgi_busy_buffers_size 512k;
+        fastcgi_temp_file_write_size 512k;
+
+        fastcgi_pass 127.0.0.1:9000;
+        fastcgi_index index.php;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $realpath_root/index.php;
+        fastcgi_param SCRIPT_NAME /index.php;
+        fastcgi_param DOCUMENT_ROOT $realpath_root;
+        fastcgi_hide_header X-Powered-By;
+        fastcgi_hide_header Cache-Control;
+        fastcgi_hide_header Expires;
     }
 
     # Livewire serves its frontend assets and file endpoints through Laravel
@@ -67,11 +91,13 @@ server {
 
     location ^~ /storage/ {
         autoindex off;
+        add_header Cache-Control "public, max-age=604800";
         try_files $uri =404;
     }
 
     location ^~ /media/ {
         autoindex off;
+        add_header Cache-Control "public, max-age=604800";
         try_files $uri =404;
     }
 
