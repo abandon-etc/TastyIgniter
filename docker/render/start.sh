@@ -54,6 +54,7 @@ ensure_directory "${STORAGE_PATH}/framework"
 ensure_directory "${STORAGE_PATH}/framework/cache"
 ensure_directory "${STORAGE_PATH}/framework/sessions"
 ensure_directory "${STORAGE_PATH}/framework/views"
+ensure_directory "${STORAGE_PATH}/igniter/combiner/data"
 ensure_directory "${STORAGE_PATH}/logs"
 ensure_directory "${APP_ROOT}/bootstrap/cache"
 
