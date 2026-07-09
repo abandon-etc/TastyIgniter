@@ -589,11 +589,67 @@ Dashboard 判断：
    - 需要先取得 authenticated dashboard profile。
    - 不修改订单、预约、支付、认证或安全逻辑。
 
+## Staging 轻量性能诊断策略
+
+记录日期：2026-07-09
+
+当前策略：
+
+- 诊断能力默认关闭。
+- 仅在 `APP_ENV` 非 `production` 的 Render staging 短时间设置 `ENABLE_STAGING_PERF_DIAGNOSTICS=true` 后启用。
+- `APP_ENV=production` 时强制关闭，即使误设 `ENABLE_STAGING_PERF_DIAGNOSTICS=true` 也不会启用。
+- 完成采样后必须设置回 `false` 并重新部署。
+- 诊断日志事件名为 `staging_perf_diagnostics`。
+
+允许记录：
+
+- HTTP method。
+- path，不含 query string。
+- route name。
+- response status。
+- request duration。
+- query count。
+- total / max query time。
+- 聚合后的 query fingerprint。
+- schema / settings / extensions / theme / pages / menus / cart / reservation 等分类。
+- 非敏感 source file 摘要。
+
+禁止记录：
+
+- SQL bindings。
+- 完整 SQL 值。
+- 请求 body。
+- cookie。
+- session ID。
+- CSRF token。
+- 用户 ID。
+- 真实顾客数据。
+- 真实订单数据。
+- 真实预约数据。
+- 真实支付数据。
+
+启用方式：
+
+1. 合并并部署 `Add lightweight staging performance diagnostics` PR。
+2. 确认 Render staging 的 `APP_ENV` 不是 `production`。
+3. 在 Render staging Environment Variables 设置 `ENABLE_STAGING_PERF_DIAGNOSTICS=true`。
+4. 重新部署 staging。
+5. 访问公开页面和已登录 dashboard。
+6. 在 Render logs 中筛选 `staging_perf_diagnostics`。
+7. 采样完成后设置 `ENABLE_STAGING_PERF_DIAGNOSTICS=false` 并重新部署。
+
+可选调节项：
+
+- `STAGING_PERF_DIAGNOSTICS_SLOW_QUERY_MS`
+- `STAGING_PERF_DIAGNOSTICS_MAX_PATTERNS`
+- `STAGING_PERF_DIAGNOSTICS_LOG_CHANNEL`
+
 ## 下一步
 
-1. 审查并合并 `Enable safe Laravel config cache on Render` PR。
-2. 部署到 Render staging 后复测前台、后台、Livewire、媒体、日志和动态 HTML TTFB；如异常，先用 `RUN_CONFIG_CACHE=false` 回滚。
-3. 必要时创建 `Add lightweight staging performance diagnostics` PR，用于 authenticated dashboard 和重复 query 来源定位。
-4. 评估 Render database latency options，包括数据库区域、连接路径、缓存层或 Redis / persistent cache 策略。
-5. 可以并行规划 Cloudflare / custom domain / production 前置事项，但不要直接进入 production。
-6. Production readiness 仍受当前动态 HTML TTFB 性能风险影响，正式上线前必须继续处理。
+1. 审查并合并 `Add lightweight staging performance diagnostics` PR。
+2. 部署到 Render staging 后临时启用 `ENABLE_STAGING_PERF_DIAGNOSTICS=true`。
+3. 采样公开页面和已登录 dashboard 的 query fingerprint / timing。
+4. 采样完成后关闭 `ENABLE_STAGING_PERF_DIAGNOSTICS` 并重新部署。
+5. 基于采样结果评估 Render database latency options，包括数据库区域、连接路径、缓存层或 Redis / persistent cache 策略。
+6. 可以并行规划 Cloudflare / custom domain / production 前置事项，但不要直接进入 production。
+7. Production readiness 仍受当前动态 HTML TTFB 性能风险影响，正式上线前必须继续处理。

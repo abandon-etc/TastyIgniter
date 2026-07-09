@@ -1330,3 +1330,97 @@
 - 如果 staging 部署后出现配置异常，可先设置 `RUN_CONFIG_CACHE=false` 并重新部署回滚。
 - 当前动态 HTML TTFB 主要仍由远程数据库多次往返造成，config cache 可能改善启动和配置读取成本，但不保证解决 5-8s TTFB。
 - route cache 仍不建议默认启用，因为 TastyIgniter extension / admin routes 可能依赖动态注册。
+
+## 2026-07-09 Add lightweight staging performance diagnostics
+
+### 执行内容
+
+- 已同步最新 `4.x`，确认本地包含 PR #32：`9cbbea34 Enable Render config cache (#32)`。
+- 已通过 Render Events 确认 staging live commit 为 `9cbbea3`。
+- 已延续前序验证结论：`RUN_CONFIG_CACHE=true`，`bootstrap/cache/config.php` 已生成，config cache 已实际启用。
+- 已确认 config cache 对动态 HTML TTFB 改善有限，当前公开页面仍为 5-8s 级别 TTFB。
+- 已确认现有非侵入手段足以判断公开页面 DB-bound，但不足以定位已登录 dashboard 的服务端 query 来源。
+- 新增默认关闭的 staging performance diagnostics：
+  - 配置文件：`config/staging_performance_diagnostics.php`。
+  - 中间件：`app/Http/Middleware/StagingPerformanceDiagnostics.php`。
+  - 挂载点：`app/Http/Kernel.php` 全局 middleware stack。
+- 诊断只通过环境变量开启：
+  - `ENABLE_STAGING_PERF_DIAGNOSTICS=true`。
+  - 可选 `STAGING_PERF_DIAGNOSTICS_SLOW_QUERY_MS`。
+  - 可选 `STAGING_PERF_DIAGNOSTICS_MAX_PATTERNS`。
+  - 可选 `STAGING_PERF_DIAGNOSTICS_LOG_CHANNEL`。
+- 默认关闭时不写诊断日志。
+- `APP_ENV=production` 时强制关闭，即使误设 `ENABLE_STAGING_PERF_DIAGNOSTICS=true` 也不会启用。
+- 启用后每个请求写一条 `staging_perf_diagnostics` 日志，用于定位：
+  - path / status / duration。
+  - query count / total query time / max query time。
+  - 聚合后的 query fingerprint。
+  - schema / settings / extensions / theme / pages / menus / cart / reservation 等分类。
+  - 可能的 app / extension / theme / TastyIgniter source file 摘要。
+
+### 安全边界
+
+- 不记录 SQL bindings。
+- 不记录完整请求 body。
+- 不记录 cookie。
+- 不记录 session ID。
+- 不记录 CSRF token。
+- 不记录用户 ID。
+- 不记录真实顾客数据、真实订单、真实预约或真实支付数据。
+- 不提交 `.env`、`.local`、数据库 dump、真实上传文件、密码、密钥、token、APP_KEY、DB_PASSWORD、Render secret、DigitalOcean token、Cloudflare token、Carté Key、支付密钥或邮件密码。
+
+### 修改范围
+
+- `app/Http/Kernel.php`
+- `app/Http/Middleware/StagingPerformanceDiagnostics.php`
+- `config/staging_performance_diagnostics.php`
+- `ADMIN_CONFIGURATION_TRACKER.md`
+- `CHANGELOG_AI.md`
+- `RENDER_RUNTIME_READINESS.md`
+
+### 未修改内容
+
+- 未修改 vendor。
+- 未修改 TastyIgniter core。
+- 未修改订单逻辑。
+- 未修改支付逻辑。
+- 未修改预约冲突检测逻辑。
+- 未修改认证或安全逻辑。
+- 未默认启用 route cache。
+- 未默认启用 view cache。
+- 未引入 Redis。
+- 未迁移数据库。
+- 未运行 `migrate:fresh`、`migrate:refresh` 或 `db:seed`。
+- 未提交测试订单或测试预约。
+- 未触碰 production、Cloudflare、正式域名、真实菜单、真实图片、真实顾客数据或真实支付。
+
+### 验证结果
+
+- PHP 8.3 CLI 容器语法检查通过：
+  - `app/Http/Middleware/StagingPerformanceDiagnostics.php`
+  - `config/staging_performance_diagnostics.php`
+- Render Docker 镜像构建通过。
+- 容器环境中 `php artisan config:cache` 验证通过。
+- 默认未设置 `ENABLE_STAGING_PERF_DIAGNOSTICS` 时，config cache 中诊断状态为 disabled。
+- `APP_ENV=staging` 且设置 `ENABLE_STAGING_PERF_DIAGNOSTICS=true` 时，config cache 中诊断状态为 enabled。
+- `APP_ENV=production` 且设置 `ENABLE_STAGING_PERF_DIAGNOSTICS=true` 时，config cache 中诊断状态仍为 disabled。
+
+### 风险说明
+
+- 启用诊断会给每个请求增加 query listener 和日志聚合开销；只能在 staging 短时间开启。
+- production 环境默认不可启用 diagnostics；如需生产级性能观测，必须另做单独方案和审批。
+- 日志会增加 Render log volume；采样完成后必须关闭 `ENABLE_STAGING_PERF_DIAGNOSTICS` 并重新部署。
+- 诊断日志只用于定位 query 来源，不作为功能修复。
+- 动态 HTML TTFB 仍可能主要由数据库区域 / 网络 RTT 和重复查询共同造成；后续优化必须基于采样结果拆小 PR。
+
+### 下一步建议
+
+- 合并并部署诊断 PR。
+- 确认 Render staging 的 `APP_ENV` 不是 `production`，再设置 `ENABLE_STAGING_PERF_DIAGNOSTICS=true` 并重新部署。
+- 访问 `/`、`/default/menus`、`/cart`、`/default/reservation`、`/admin/login` 和已登录 `/admin/dashboard`。
+- 从 Render logs 收集 `staging_perf_diagnostics` 摘要。
+- 完成采样后设置 `ENABLE_STAGING_PERF_DIAGNOSTICS=false` 并重新部署。
+- 基于采样结果决定是否创建：
+  - `Evaluate database latency options`
+  - `Reduce repeated settings and schema queries`
+  - `Assess cache backend for Render staging`
