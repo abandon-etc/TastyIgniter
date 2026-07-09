@@ -644,3 +644,29 @@
 | 部署后验证 | Pending | 合并并部署到 staging 后需复测前后台、Livewire、媒体、日志和动态 HTML TTFB。 |
 
 下一步建议：合并本 PR 并部署 staging 后，验证 config cache 是否生成、页面功能是否正常、TTFB 是否有改善；如改善有限，继续评估数据库区域 / 连接路径和轻量 query diagnostics。
+
+## Render staging 数据库延迟 / query 来源定位记录
+
+记录日期：2026-07-09
+
+环境：Render staging
+
+当前阶段：database latency / query source diagnostics
+
+| 项目 | 状态 | 备注 |
+| --- | --- | --- |
+| 最新代码 | Confirmed | 本地 `4.x` 已同步到 `9cbbea34 Enable Render config cache (#32)`。 |
+| Render live commit | Confirmed | Render Events 显示 `9cbbea3` 已 live。 |
+| Config cache | Confirmed | 前序验证已确认 `RUN_CONFIG_CACHE=true`，`bootstrap/cache/config.php` 已生成。 |
+| 现有公开页面诊断 | DB-bound | 已知 `/`、`/default/menus`、`/cart`、`/default/reservation`、`/admin/login` 的 query 累计耗时接近页面 TTFB。 |
+| 数据库 RTT | Slow enough to dominate | 前序 `select 1` 平均约 151ms；页面 15-44 次查询足以解释 3-8s 动态 HTML TTFB。 |
+| 已登录 dashboard | Needs instrumentation | 浏览器可打开且无控制台 error，但现有 CLI / curl 不携带后台 session，无法定位 dashboard 内部 query 来源。 |
+| 诊断 PR | Prepared | 新增默认关闭、环境变量控制的 staging-only query 指纹 / timing 诊断能力。 |
+| 诊断开关 | Safe default | `ENABLE_STAGING_PERF_DIAGNOSTICS=false` 默认关闭；只在 staging 需要采样时设为 `true` 并重新部署。 |
+| 输出内容 | Sanitized | 只记录 path、状态码、请求耗时、query count、query total、query fingerprint、分类和来源文件摘要；不记录 bindings、请求 body、cookie、session、CSRF token、用户 ID 或真实业务数据。 |
+| Route / view cache | Not changed | 未启用 route cache 或 view cache。 |
+| 业务逻辑 | Not touched | 未修改订单、支付、预约、认证、安全逻辑或 TastyIgniter core。 |
+| 数据操作 | Not performed | 未运行 `migrate:fresh`、`migrate:refresh`、`db:seed`，未提交测试订单或测试预约。 |
+| 敏感信息 | Not touched | 未提交 `.env`、`.local`、数据库 dump、真实上传文件、密码、密钥、token、APP_KEY、DB_PASSWORD、Render secret、DigitalOcean token、Cloudflare token、Carté Key、支付密钥、邮件密码或真实顾客信息。 |
+
+下一步建议：合并并部署诊断 PR 后，在 Render staging 临时设置 `ENABLE_STAGING_PERF_DIAGNOSTICS=true`，采样公开页面和已登录 dashboard；完成采样后立即改回 `false` 并重新部署。
