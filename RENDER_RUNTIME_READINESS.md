@@ -510,6 +510,85 @@ Staging 至少验证：
 - dynamic HTML TTFB 慢的问题预计仍会存在，需要后续单独拆分数据库、TastyIgniter boot、theme rendering 和 Laravel cache 影响。
 - 媒体路径使用 7 天缓存，真实内容录入时应避免同名替换文件造成浏览器短期看到旧图。
 
+## Staging 第二阶段性能诊断：动态 HTML TTFB 拆分
+
+记录日期：2026-07-09
+
+本阶段目标是定位动态 HTML 5-8s TTFB 的主要来源，不改变运行行为。
+
+运行时确认：
+
+- Render staging live commit 为 `6cb1e62`，对应 PR #30。
+- `APP_DEBUG=false`。
+- `CACHE_DRIVER=file`。
+- `SESSION_DRIVER=file`。
+- `QUEUE_CONNECTION=sync`。
+- `RUN_CONFIG_CACHE=false`。
+- `RUN_ROUTE_CACHE=false`。
+- `RUN_VIEW_CACHE=false`。
+- PHP-FPM 下 OPcache 已启用：
+  - `Server API => FPM/FastCGI`。
+  - `opcache.enable => On`。
+  - `opcache.validate_timestamps => Off`。
+  - `opcache.memory_consumption => 192`。
+  - `opcache.max_accelerated_files => 20000`。
+- `bootstrap/cache/config.php` 不存在，说明 config cache 当前未启用。
+- route cache 当前未启用。
+- `storage/framework/views` 中已有编译视图文件，view 编译不是当前最大嫌疑。
+
+内部请求测量：
+
+| 页面 | 内部 TTFB / total | 查询数 | 查询累计耗时 | 结论 |
+| --- | --- | --- | --- | --- |
+| `/` | 约 5.05-5.61s | 约 30 | 约 5.52s | DB-bound |
+| `/default/menus` | 约 7.28-8.06s | 约 44 | 约 7.20s | DB-bound |
+| `/cart` | 约 6.17-6.88s | 约 37 | 约 6.05s | DB-bound |
+| `/default/reservation` | 约 6.27-6.83s | 约 37 | 约 6.79s | DB-bound |
+| `/admin/login` | 约 2.81-3.11s | 约 15 | 约 2.78s | DB-bound |
+
+数据库基础延迟：
+
+- Laravel bootstrap 后连续 `select 1` 平均约 151ms。
+- 当前公开页面的查询数乘以单次远程往返成本，已经足以解释大部分 TTFB。
+- 菜单页抽样显示存在 schema / settings / extension / pages 等多次查询；多数约 170ms，首个 schema 检查可超过 600ms。
+
+已排除：
+
+- 当前主要瓶颈不是 OPcache 未启用。
+- 当前主要瓶颈不是 Cloudflare 或公网链路；容器内部 HTTP timing 与外部 timing 接近。
+- 当前主要瓶颈不是 Nginx buffering；PR #30 后 upstream buffering warning 已消失。
+- 当前主要瓶颈不是 Livewire JS 404。
+- 当前主要瓶颈不是测试图片或 Persistent Disk。
+- 当前主要瓶颈不是静态 `_assets` / `admin/_assets` 缓存头。
+
+缓存策略判断：
+
+- config cache 是下一步最低风险优化候选。建议先用独立 PR 开启或验证，并保留 `RUN_CONFIG_CACHE` fallback。
+- view cache 可以继续验证，但当前已有编译视图，预计收益小于 config cache / DB query 减少。
+- route cache 风险最高，仍不建议默认启用。TastyIgniter extension / admin routes 可能依赖动态注册。
+
+Dashboard 判断：
+
+- 已登录浏览器下 dashboard 可打开，但体感仍慢。
+- CLI 不携带后台 session，访问 `/admin/dashboard` 只得到未登录 302，因此不能用本轮 CLI query profile 代表 dashboard。
+- 如需定位 dashboard 特有慢点，应单独创建 staging-only、环境变量控制的轻量诊断 PR。
+
+推荐后续 PR：
+
+1. `Enable safe Laravel config cache on Render`
+   - 只处理 config cache。
+   - 保留环境变量关闭方式。
+   - 不默认启用 route cache。
+2. `Add lightweight staging performance diagnostics`
+   - 用于进一步定位 dashboard 和重复 query 来源。
+   - 默认关闭，只能通过环境变量在 staging 启用。
+   - 不记录 secret 或真实业务数据。
+3. `Evaluate Render database latency options`
+   - 评估数据库区域、连接路径、缓存层或 Redis / persistent cache。
+4. `Assess dashboard loading bottlenecks`
+   - 需要先取得 authenticated dashboard profile。
+   - 不修改订单、预约、支付、认证或安全逻辑。
+
 ## 下一步
 
 1. 审查本 PR。

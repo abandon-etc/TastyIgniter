@@ -1174,3 +1174,91 @@
 - `_assets` / `admin/_assets` 使用保守 1 天缓存，不使用 immutable，降低后台或主题资源变更后的缓存风险。
 - `/storage` / `/media` 使用 7 天缓存；如果后续存在同名替换图片场景，浏览器可能短期缓存旧文件，真实内容录入流程应优先使用新文件名或重新上传生成新路径。
 - 本 PR 主要改善重复访问和资源缓存，不预期显著降低动态 HTML TTFB。
+
+## 2026-07-09 Render staging 第二阶段性能诊断：动态 HTML TTFB 拆分
+
+### 执行内容
+
+- 已同步最新 `4.x`，确认本地包含 PR #30：`6cb1e629 Improve Render asset caching and buffering (#30)`。
+- 已通过 Render Events 确认 staging live commit 为 `6cb1e62`，对应 PR #30。
+- 已使用外部 HTTP timing 复测 `/healthz`、首页、菜单页、购物车、预约页、后台登录页和 Livewire JS，均返回 200。
+- 已在 Render Shell 中使用只读命令确认运行时状态：
+  - `APP_DEBUG=false`。
+  - `CACHE_DRIVER=file`。
+  - `SESSION_DRIVER=file`。
+  - `QUEUE_CONNECTION=sync`。
+  - `RUN_CONFIG_CACHE=false`。
+  - `RUN_ROUTE_CACHE=false`。
+  - `RUN_VIEW_CACHE=false`。
+- 已确认 PHP-FPM 下 OPcache 生效：
+  - `Server API => FPM/FastCGI`。
+  - `opcache.enable => On`。
+  - `opcache.validate_timestamps => Off`。
+  - `opcache.memory_consumption => 192`。
+  - `opcache.max_accelerated_files => 20000`。
+- 已确认 Laravel config cache 未启用，`bootstrap/cache/config.php` 不存在。
+- 已确认 route cache 未启用。
+- 已确认 view cache 启动开关未启用，但 `storage/framework/views` 中已有约 128 个编译视图文件。
+- 已用 Render 容器内部 `curl` 测量动态页面，内部 TTFB 与外部 TTFB 接近，说明主要慢点不在 Cloudflare 或公网链路。
+- 已用 Laravel query event 监听统计公开页面查询量和查询耗时：
+  - 首页约 30 次查询，累计约 5.52s。
+  - 菜单页约 44 次查询，累计约 7.20s。
+  - 购物车约 37 次查询，累计约 6.05s。
+  - 预约页约 37 次查询，累计约 6.79s。
+  - 后台登录页约 15 次查询，累计约 2.78s。
+- 已测 `select 1` 基础数据库往返，平均约 151ms。
+- 已观察菜单页查询样本，包含 schema / settings / extension / pages 等多次查询；这些查询每次约 170ms，第一条 schema 检查约 600ms 以上。
+- 已记录 dashboard 仍需要单独的已登录 profile；CLI 访问 `/admin/dashboard` 未携带后台 session，只返回未登录 302，不作为 dashboard 查询拆分依据。
+- 更新 `ADMIN_CONFIGURATION_TRACKER.md`，记录第二阶段性能诊断结果。
+- 更新 `CHANGELOG_AI.md`，记录本次诊断。
+- 更新 `RENDER_RUNTIME_READINESS.md`，记录 Render runtime 当前性能结论和后续 PR 拆分建议。
+
+### 诊断结论
+
+- 当前动态 HTML 5-8s TTFB 的最大来源是远程数据库多次往返和 TastyIgniter / Laravel 请求过程中的重复查询，不是 OPcache、Nginx buffering、静态资源缓存、Livewire JS 或图片访问。
+- OPcache 已在 PHP-FPM 中启用，配置值合理。
+- `APP_DEBUG=false` 已确认。
+- `RUN_CONFIG_CACHE=false` 导致 config cache 未启用，可能使启动和配置读取阶段产生额外数据库 / 文件系统工作；这是下一步低风险优化候选。
+- view cache 可以继续评估，但当前已有编译视图文件，预计不是最大瓶颈。
+- route cache 风险仍高，不建议默认启用；TastyIgniter extension / admin 动态路由可能不兼容。
+- 数据库基础往返约 151ms，公开页面 15-44 次查询会自然叠加到 2.8-7.2s 级别。
+- dashboard 慢点仍需更精确的 authenticated profile，不建议直接改 dashboard 业务逻辑。
+
+### 推荐后续 PR 拆分
+
+- PR A：`Enable safe Laravel config cache on Render`
+  - 仅启用或验证 config cache。
+  - 保留环境变量 fallback。
+  - 不默认启用 route cache。
+- PR B：`Add lightweight staging performance diagnostics`
+  - 仅在需要进一步定位 dashboard 或重复 query 来源时创建。
+  - 必须由环境变量控制。
+  - 不记录 secret、真实顾客数据、真实订单或真实预约。
+- PR C：`Evaluate Render database latency options`
+  - 评估数据库区域、连接路径、缓存策略或 Redis / persistent cache 的必要性。
+- PR D：`Assess dashboard loading bottlenecks`
+  - 仅在取得已登录 dashboard profile 后处理。
+  - 不改订单、预约、支付、认证或安全逻辑，除非先单独确认风险。
+
+### 未修改内容
+
+- 未修改运行代码。
+- 未修改 Docker / Nginx / PHP runtime 文件。
+- 未修改 TastyIgniter core。
+- 未修改 `vendor/`。
+- 未修改订单逻辑。
+- 未修改支付逻辑。
+- 未修改预约冲突检测逻辑。
+- 未修改认证或安全逻辑。
+- 未运行 `migrate:fresh`、`migrate:refresh` 或 `db:seed`。
+- 未提交订单。
+- 未提交预约。
+- 未触碰 production、Cloudflare、正式域名、真实菜单、真实图片、真实顾客数据或真实支付。
+- 未提交 `.env`、`.local`、数据库 dump、真实上传文件、密码、密钥、token、APP_KEY、DB_PASSWORD、Render secret、DigitalOcean token、Cloudflare token、Carté Key、支付密钥、邮件密码或真实顾客信息。
+
+### 风险说明
+
+- 当前性能问题不是功能 blocker，但仍是 production readiness 风险。
+- config cache 是低风险优先项，但仍需 staging 部署后完整复测后台、前台、媒体、Livewire 和日志。
+- route cache 暂不建议启用，除非单独验证 TastyIgniter 4.x extension / admin routes 兼容。
+- 如果数据库区域或网络路径导致单次往返长期保持约 150ms，仅靠 PHP cache 不能完全解决 30-44 次查询页面的 TTFB。
