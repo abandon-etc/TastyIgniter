@@ -1476,3 +1476,66 @@
 - 后续可拆分评估 `Reduce repeated settings and schema queries`。
 - 可并行规划 Cloudflare / custom domain / production 前置事项，但不要直接进入 production。
 - Production readiness 仍受动态 HTML TTFB 性能风险影响，正式上线前必须继续处理。
+
+## 2026-07-09 Evaluate database latency options
+
+### 执行内容
+
+- 已同步最新 `4.x`，确认包含 PR #34 合并提交 `bd1c4fe0`。
+- 已确认 PR #34 已合并并部署到 Render staging。
+- 已复测 staging 基础页面：
+  - `/healthz` 返回 200。
+  - `/` 返回 200。
+  - `/default/menus` 返回 200。
+  - `/cart` 返回 200。
+  - `/default/reservation` 返回 200。
+  - `/admin/login` 返回 200。
+- 已用安全摘要检查 app / DB 位置，不输出 DB host、IP 或 credentials。
+- 已复测 PDO 和 Laravel DB `select 1` timing，未执行 destructive 数据库操作。
+- 已比较数据库延迟解决方案和推荐顺序。
+
+### 调查结果
+
+- Render Dashboard 未在普通文本中暴露 service region 值；运行容器出口地理摘要为 Boardman, Oregon / AWS。
+- 当前 DigitalOcean DB 主机未输出；解析 IP 的地理摘要为 Clifton, New Jersey / DigitalOcean。
+- 当前数据库连接为 public / external host，不是 Render private network。
+- 当前路径可判断为跨云、跨美国东西部：Render Oregon / AWS 到 DigitalOcean New Jersey。
+- PDO 新连接平均 328.08ms，p50 332.93ms。
+- PDO 同连接 `select 1` 平均 80.94ms，p50 82.68ms。
+- Laravel `DB::purge()` 后首个 `select 1` 平均 651.35ms，p50 665.33ms。
+- Laravel 同连接 `select 1` 平均 161.89ms，p50 166.3ms。
+- 当前 `config/database.php` 未启用 `PDO::ATTR_PERSISTENT`；本阶段未修改配置。
+
+### 方案比较
+
+| 方案 | 预期收益 | 复杂度 / 风险 | 结论 |
+| --- | --- | --- | --- |
+| A. Render app + 更靠近 Oregon 的 DO Managed MySQL staging test DB | 中到高；减少跨美国东西部 RTT | 需要新 DB、可能新增费用、需要迁移或重装 staging 数据 | 第一优先级实验候选。 |
+| B. 当前 DO DB + 更靠近 New Jersey / NYC3 的 Render staging service | 中到高；减少 app 到 DB 距离 | Render 现有服务不能直接改 region，需要新 service 和 env/disk 配置 | 第二优先级实验候选。 |
+| C. App 和 DB 放同一平台 / 同一区域 | 高；可消除跨云 RTT | 迁移复杂度较高；Render PostgreSQL 不匹配当前 MySQL 假设 | 中期架构候选，不能直接进 production。 |
+| D. 增加 cache backend | 中；减少 settings / pages / theme / menus 重复查询 | 需验证 TastyIgniter cache 使用路径；Redis / Valkey 有费用 | 可与区域实验并行。 |
+| E. 优化重复查询 | 中；减少 query_count | 不能改 vendor / core；需避开订单、支付、预约、认证逻辑 | 后续小 PR。 |
+| F. Cloudflare / custom domain | 低；改善边缘、DNS、静态缓存 | 不能降低服务器到数据库 RTT | 可并行规划，但不是当前主解。 |
+
+### 结论
+
+- 当前动态 HTML 慢的主因是数据库 RTT 与重复查询叠加。
+- 每请求新建连接成本很高；即便同一连接，Laravel 层单次 `select 1` 仍约 150-170ms。
+- 仅继续调整 Nginx、asset cache、Livewire 或 Cloudflare 不能解决主要瓶颈。
+- 持久连接可能降低连接建立成本，但会引入 MySQL session state / failover / connection lifecycle 风险；不建议本阶段直接开启。
+
+### 安全边界
+
+- 未输出 DB host 全值、IP、用户名、密码、APP_KEY、token 或 Render / DigitalOcean / Cloudflare secret。
+- 未提交 `.env`、`.local`、数据库 dump、真实上传文件、真实顾客、真实订单、真实预约或真实支付数据。
+- 未运行 `migrate:fresh`、`migrate:refresh` 或 `db:seed`。
+- 未提交测试订单或测试预约。
+- 未修改 vendor、TastyIgniter core、订单、支付、预约、认证或安全逻辑。
+- 未触碰 production。
+
+### 下一步建议
+
+- 建议优先创建 `Create same-region staging database test`，由用户确认费用并在 DigitalOcean 或 Render UI 创建测试资源；Codex 负责配置指导和非 destructive 验证。
+- 并行创建或规划 `Assess cache backend for Render staging`。
+- 后续再拆 `Reduce repeated settings and schema queries`。
+- 可以并行规划 Cloudflare / custom domain / production 前置事项，但不要直接进入 production。
