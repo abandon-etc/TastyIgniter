@@ -1122,3 +1122,55 @@
 - 未发现需要代码修复 PR 的 blocker。
 - 可以进入 staging 性能基线测试。
 - 后续真实内容录入前，建议单独确认商品图片绑定和前台商品图片展示。
+
+## 2026-07-09 Render staging 第一阶段性能优化：asset cache headers + buffering
+
+### 执行内容
+
+- 已基于 staging 性能基线结果调查 `_assets`、`admin/_assets`、`/storage`、Livewire JS 和测试图片的响应头。
+- 已确认 `_assets` / `admin/_assets` 当前响应只有 `Cache-Control: public`，缺少 `max-age`。
+- 已确认测试上传图片 `/storage/media/uploads/staging-test-upload.png` 当前没有 `Cache-Control`。
+- 已确认 Render 日志中的 upstream buffering warning 主要来自较大的 `_assets` / `admin/_assets` CSS / JS 响应。
+- 已确认当前仓库中没有可提交的 `public/_assets` 或 `public/admin/_assets` 静态文件；这些资源在 Render 上通过 Laravel / TastyIgniter combiner 动态输出。
+- 更新 `docker/render/nginx.conf.template`：
+  - `_assets` 和 `admin/_assets` 改为先尝试磁盘文件，缺失时进入专用 named FastCGI location。
+  - 专用 combined asset location 设置 `Cache-Control: public, max-age=86400`。
+  - 专用 combined asset location 增大 FastCGI buffer，减少大资源响应写入临时文件。
+  - `/storage` 和 `/media` 设置 `Cache-Control: public, max-age=604800`。
+  - 保持 `/livewire/` Laravel fallback 不变。
+  - 保持 `/healthz` 静态健康检查不变。
+- 更新 `ADMIN_CONFIGURATION_TRACKER.md`，记录第一阶段性能优化范围、剩余问题和部署后复测要求。
+- 更新 `CHANGELOG_AI.md`，记录本次优化。
+- 更新 `RENDER_RUNTIME_READINESS.md`，记录 Render runtime asset caching / buffering 策略。
+
+### 未修改内容
+
+- 未修改业务代码。
+- 未修改 TastyIgniter core。
+- 未修改 `vendor/`。
+- 未修改订单逻辑。
+- 未修改支付逻辑。
+- 未修改预约冲突检测逻辑。
+- 未修改登录认证或安全逻辑。
+- 未运行 `migrate:fresh`、`migrate:refresh` 或 `db:seed`。
+- 未默认启用 Laravel route cache、config cache 或 view cache。
+- 未做 DB 查询优化、TastyIgniter boot 优化、主题渲染重构或资源构建流程重构。
+- 未触碰 production、Cloudflare、正式域名、真实菜单、真实图片、真实订单、真实预约或真实支付。
+- 未提交 `.env`、`.local`、数据库 dump、真实上传文件、密码、密钥、token、APP_KEY、DB_PASSWORD、Render secret、DigitalOcean token、Cloudflare token、Carté Key、支付密钥、邮件密码或真实顾客信息。
+
+### 验证计划
+
+- 本地需验证 Nginx 配置语法和 Docker build。
+- 合并并部署到 Render staging 后，需要复测：
+  - `/healthz`、首页、菜单页、购物车、预约页、Livewire JS、后台登录页和 dashboard。
+  - `_assets` / `admin/_assets` 是否返回 200 且带 `max-age=86400`。
+  - 测试图片 URL 是否返回 200 且带 `max-age=604800`。
+  - `Test Category` 和 `Test Item` 是否仍存在。
+  - Render 日志是否无新的 fatal / exception / 500 / storage permission error。
+  - upstream buffering warning 是否减少或消失。
+
+### 风险说明
+
+- `_assets` / `admin/_assets` 使用保守 1 天缓存，不使用 immutable，降低后台或主题资源变更后的缓存风险。
+- `/storage` / `/media` 使用 7 天缓存；如果后续存在同名替换图片场景，浏览器可能短期缓存旧文件，真实内容录入流程应优先使用新文件名或重新上传生成新路径。
+- 本 PR 主要改善重复访问和资源缓存，不预期显著降低动态 HTML TTFB。
