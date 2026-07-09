@@ -13,6 +13,24 @@ fail() {
 PORT="${PORT:-10000}"
 export PORT
 
+if [ "${RENDER:-}" = "true" ] && [ -n "${RENDER_EXTERNAL_URL:-}" ]; then
+    case "${APP_URL:-}" in
+        ""|"http://localhost"|"https://localhost"|"http://127.0.0.1"*|"https://127.0.0.1"*)
+            log "Using Render external URL for APP_URL"
+            APP_URL="${RENDER_EXTERNAL_URL}"
+            export APP_URL
+            ;;
+    esac
+
+    case "${ASSET_URL:-}" in
+        ""|"http://localhost"|"https://localhost"|"http://127.0.0.1"*|"https://127.0.0.1"*)
+            log "Using APP_URL for ASSET_URL"
+            ASSET_URL="${APP_URL}"
+            export ASSET_URL
+            ;;
+    esac
+fi
+
 APP_ROOT="/var/www/html"
 STORAGE_PATH="${APP_ROOT}/storage"
 
