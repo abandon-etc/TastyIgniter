@@ -88,20 +88,28 @@ chmod -R ug+rw "${STORAGE_PATH}" "${APP_ROOT}/bootstrap/cache" || true
 log "Rendering Nginx configuration for port ${PORT}"
 envsubst '$PORT' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf
 
-if [ "${RUN_CONFIG_CACHE:-false}" = "true" ]; then
+RUN_CONFIG_CACHE="${RUN_CONFIG_CACHE:-true}"
+RUN_ROUTE_CACHE="${RUN_ROUTE_CACHE:-false}"
+RUN_VIEW_CACHE="${RUN_VIEW_CACHE:-false}"
+export RUN_CONFIG_CACHE RUN_ROUTE_CACHE RUN_VIEW_CACHE
+
+# Cache config after Render URL fallbacks so Laravel captures runtime values.
+if [ "${RUN_CONFIG_CACHE}" = "true" ]; then
     log "Discovering Laravel packages"
     php artisan package:discover --ansi
 
     log "Caching Laravel configuration"
     php artisan config:cache
+else
+    log "Skipping Laravel configuration cache"
 fi
 
-if [ "${RUN_ROUTE_CACHE:-false}" = "true" ]; then
+if [ "${RUN_ROUTE_CACHE}" = "true" ]; then
     log "Caching Laravel routes"
     php artisan route:cache
 fi
 
-if [ "${RUN_VIEW_CACHE:-false}" = "true" ]; then
+if [ "${RUN_VIEW_CACHE}" = "true" ]; then
     log "Caching Laravel views"
     php artisan view:cache
 fi

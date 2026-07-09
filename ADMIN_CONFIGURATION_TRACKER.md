@@ -621,3 +621,26 @@
 - PR B：`Add lightweight staging performance diagnostics`，仅在需要进一步定位 dashboard / query 来源时启用，必须由环境变量控制。
 - PR C：`Evaluate Render database latency options`，评估数据库区域、连接方式、缓存或 Redis / persistent cache 策略。
 - PR D：`Assess dashboard loading bottlenecks`，仅在拿到后台 session 下的 dashboard profile 后处理，不改订单、预约、支付或认证逻辑。
+
+## Render staging config cache 启用记录
+
+记录日期：2026-07-09
+
+环境：Render staging
+
+当前阶段：Enable safe Laravel config cache on Render
+
+| 项目 | 状态 | 备注 |
+| --- | --- | --- |
+| PR #31 合并后 smoke check | Pass | `/healthz`、首页、菜单页、购物车、预约页和后台登录页均返回 200；文档 PR 未引入运行变化。 |
+| `RUN_CONFIG_CACHE` 默认值 | Updated | Render 启动脚本默认启用 config cache；如 staging 部署后异常，可设置 `RUN_CONFIG_CACHE=false` 回滚。 |
+| 启动顺序 | Checked | `APP_URL` / `ASSET_URL` 的 Render fallback、runtime 目录和权限准备完成后，再运行 `package:discover` 和 `config:cache`。 |
+| 关键配置来源 | Checked | `APP_URL`、`DB_*`、`MYSQL_ATTR_INIT_COMMAND`、`CACHE_DRIVER`、`SESSION_DRIVER`、`QUEUE_CONNECTION` 均通过 Laravel config 读取，会被 config cache 捕获。 |
+| Route cache | Not enabled | `RUN_ROUTE_CACHE` 仍默认 `false`，不在本阶段启用。 |
+| View cache | Not enabled | `RUN_VIEW_CACHE` 仍默认 `false`，不在本阶段启用。 |
+| 业务逻辑 | Not touched | 未修改订单、支付、预约、认证、安全逻辑或 TastyIgniter core。 |
+| 数据操作 | Not performed | 未运行 `migrate:fresh`、`migrate:refresh`、`db:seed`，未提交测试订单或测试预约。 |
+| 敏感信息 | Not touched | 未提交 `.env`、`.local`、数据库 dump、真实上传文件、密码、密钥、token、APP_KEY、DB_PASSWORD、Render secret、DigitalOcean token、Cloudflare token、Carté Key、支付密钥、邮件密码或真实顾客信息。 |
+| 部署后验证 | Pending | 合并并部署到 staging 后需复测前后台、Livewire、媒体、日志和动态 HTML TTFB。 |
+
+下一步建议：合并本 PR 并部署 staging 后，验证 config cache 是否生成、页面功能是否正常、TTFB 是否有改善；如改善有限，继续评估数据库区域 / 连接路径和轻量 query diagnostics。

@@ -151,11 +151,11 @@ Render Persistent Disk 计划挂载到：
 
 建议：
 
-- `RUN_CONFIG_CACHE=false`
+- `RUN_CONFIG_CACHE=true`，Render staging 当前已完成数据库、安装状态、前后台和媒体验证；如部署后出现异常，可在 Render Environment Variables 中临时设为 `false` 回滚。
 - `RUN_ROUTE_CACHE=false`，确认 TastyIgniter route cache 兼容后再启用。
 - `RUN_VIEW_CACHE=false`，确认主题和扩展兼容后再启用。
 
-staging 首次部署建议先保持 `RUN_CONFIG_CACHE=false`。外部 MySQL / MariaDB、Render Environment Variables、安装状态和动态页面都确认正常后，再单独评估是否改为 `true`。
+staging 首次部署阶段曾建议先保持 `RUN_CONFIG_CACHE=false`。当前外部 MySQL / MariaDB、Render Environment Variables、安装状态、前后台页面、Livewire 和媒体持久化都已通过基础验证，因此可以单独开启 config cache；route cache 和 view cache 仍保持默认关闭。
 
 ### 外部 MySQL / MariaDB
 
@@ -243,7 +243,7 @@ https://le-chateau-des-enfants.onrender.com
 
 - `config/database.php` 的 MySQL 连接新增 `DB_CONNECT_TIMEOUT` 支持。
 - 默认连接超时为 5 秒。
-- Render 启动脚本中 `RUN_CONFIG_CACHE` 的默认值改为 `false`，避免 staging 数据库未确认时卡在 `php artisan package:discover` / `config:cache`。
+- Render 启动脚本在 staging 早期曾将 `RUN_CONFIG_CACHE` 的默认值设为 `false`，避免数据库未确认时卡在 `php artisan package:discover` / `config:cache`；当前阶段改为默认 `true`，并保留 `RUN_CONFIG_CACHE=false` 回滚方式。
 - 生产 PHP 配置中 `default_socket_timeout` 设置为 10 秒，作为外部服务网络等待的辅助保护。
 - Nginx 新增 `/healthz` 静态健康检查端点，返回 `200 ok`，不进入 Laravel。
 - Nginx 对根路径 `HEAD /` 健康探测直接返回 200，避免 Render 默认探测打到 Laravel 动态首页并占满 PHP-FPM worker。
@@ -324,7 +324,7 @@ Carté Key 只在需要 Marketplace / 翻译导入时配置，不进入 GitHub�
 - 删除上传文件
 - 修改真实数据库
 
-启动脚本会运行 `php artisan package:discover --ansi` 和 `php artisan config:cache`，这只刷新 Laravel package / config cache，不执行数据库初始化、迁移或 seed。
+启动脚本默认会运行 `php artisan package:discover --ansi` 和 `php artisan config:cache`，这只刷新 Laravel package / config cache，不执行数据库初始化、迁移或 seed。如 staging 发现异常，可设置 `RUN_CONFIG_CACHE=false` 跳过。
 
 数据库迁移必须在备份完成后人工确认。
 
@@ -591,8 +591,8 @@ Dashboard 判断：
 
 ## 下一步
 
-1. 审查并合并 PR #31。
-2. 创建 `Enable safe Laravel config cache on Render` PR，先处理低风险 config cache 优化，并保留环境变量关闭方式。
+1. 审查并合并 `Enable safe Laravel config cache on Render` PR。
+2. 部署到 Render staging 后复测前台、后台、Livewire、媒体、日志和动态 HTML TTFB；如异常，先用 `RUN_CONFIG_CACHE=false` 回滚。
 3. 必要时创建 `Add lightweight staging performance diagnostics` PR，用于 authenticated dashboard 和重复 query 来源定位。
 4. 评估 Render database latency options，包括数据库区域、连接路径、缓存层或 Redis / persistent cache 策略。
 5. 可以并行规划 Cloudflare / custom domain / production 前置事项，但不要直接进入 production。
