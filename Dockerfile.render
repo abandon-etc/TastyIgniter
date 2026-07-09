@@ -54,6 +54,8 @@ COPY --from=assets /app/public ./public
 
 RUN rm -f .env bootstrap/cache/*.php \
     && composer dump-autoload --optimize --no-scripts \
+    && php artisan vendor:publish --tag=igniter-assets --force --ansi \
+    && rm -f public/css/app.css public/js/app.js public/mix-manifest.json \
     && mkdir -p \
         /var/www/html/storage/app/public \
         /var/www/html/storage/app/media \
