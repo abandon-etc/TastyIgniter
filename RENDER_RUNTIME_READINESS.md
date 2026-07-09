@@ -644,12 +644,42 @@ Dashboard 判断：
 - `STAGING_PERF_DIAGNOSTICS_MAX_PATTERNS`
 - `STAGING_PERF_DIAGNOSTICS_LOG_CHANNEL`
 
+## Staging 轻量性能诊断采样结果
+
+记录日期：2026-07-09
+
+执行状态：
+
+- PR #33 已合并并部署到 Render staging，live commit 为 `bbd9376`。
+- Render Shell 已确认 `APP_ENV=staging`，不是 `production`。
+- 已短时间启用 `ENABLE_STAGING_PERF_DIAGNOSTICS=true` 并重新部署。
+- 已采样公开页面和已登录 dashboard。
+- 采样完成后已设置 `ENABLE_STAGING_PERF_DIAGNOSTICS=false` 并重新部署。
+- 关闭后 config cache 中 `DIAG_ENABLED=false`，再次访问首页未新增 `staging_perf_diagnostics` 日志。
+
+采样摘要：
+
+| 页面 | duration | query_count | query_total | query_max | 主要来源 |
+| --- | ---: | ---: | ---: | ---: | --- |
+| `/` | 3018.26ms | 19 | 2893.4ms | 171.89ms | theme / pages / other |
+| `/default/menus` | 5114.76ms | 33 | 4978.89ms | 161.96ms | settings / other / menus |
+| `/cart` | 4377ms | 26 | 4315.51ms | 167.54ms | theme / pages / settings |
+| `/default/reservation` | 4468.38ms | 26 | 4372.31ms | 169.36ms | theme / pages / settings |
+| `/admin/login` | 710.24ms | 4 | 688.27ms | 175.15ms | user login / settings / cart status middleware |
+| `/admin/dashboard` | 4739.67ms | 24 | 3672.89ms | 165.05ms | users / orders aggregate / reservation aggregate / dashboard widgets |
+
+结论：
+
+- 动态 HTML TTFB 仍主要由远程数据库多次往返与重复查询叠加造成。
+- 每个采样页面的 query_total_ms 基本覆盖页面 duration_ms。
+- 公开页面主要来源集中在 theme / pages / settings / menus。
+- dashboard 额外包含订单、预约、客户和用户偏好相关 widget / aggregate 查询。
+- 当前结果支持优先评估数据库区域、连接路径和缓存策略；仅继续调整 Nginx / asset cache 不会解决主要 TTFB。
+
 ## 下一步
 
-1. 审查并合并 `Add lightweight staging performance diagnostics` PR。
-2. 部署到 Render staging 后临时启用 `ENABLE_STAGING_PERF_DIAGNOSTICS=true`。
-3. 采样公开页面和已登录 dashboard 的 query fingerprint / timing。
-4. 采样完成后关闭 `ENABLE_STAGING_PERF_DIAGNOSTICS` 并重新部署。
-5. 基于采样结果评估 Render database latency options，包括数据库区域、连接路径、缓存层或 Redis / persistent cache 策略。
-6. 可以并行规划 Cloudflare / custom domain / production 前置事项，但不要直接进入 production。
-7. Production readiness 仍受当前动态 HTML TTFB 性能风险影响，正式上线前必须继续处理。
+1. 创建 `Evaluate database latency options`，评估数据库区域、Render 到数据库连接路径、缓存层或 Redis / persistent cache 策略。
+2. 必要时创建 `Reduce repeated settings and schema queries`，聚焦 theme / pages / settings / menus 等重复查询来源。
+3. 评估 `Assess cache backend for Render staging`，确认 file cache、database cache、Redis 或其他 persistent cache 对 TastyIgniter 的实际收益和风险。
+4. 可以并行规划 Cloudflare / custom domain / production 前置事项，但不要直接进入 production。
+5. Production readiness 仍受当前动态 HTML TTFB 性能风险影响，正式上线前必须继续处理。

@@ -1424,3 +1424,55 @@
   - `Evaluate database latency options`
   - `Reduce repeated settings and schema queries`
   - `Assess cache backend for Render staging`
+
+## 2026-07-09 PR #33 部署与 staging performance diagnostics 采样
+
+### 执行内容
+
+- 已确认 PR #33：`Add lightweight staging performance diagnostics` 已合并。
+- 已同步最新 `4.x`，Render staging 已部署到 `bbd9376`。
+- 已在 Render Shell 中确认 `APP_ENV=staging`，不是 `production`。
+- 已短时间设置 `ENABLE_STAGING_PERF_DIAGNOSTICS=true` 并重新部署 staging。
+- 已采样 `/`、`/default/menus`、`/cart`、`/default/reservation`、`/admin/login` 和已登录 `/admin/dashboard`。
+- 采样完成后已立即设置 `ENABLE_STAGING_PERF_DIAGNOSTICS=false` 并重新部署 staging。
+- 已确认 config cache 中 diagnostics 为 disabled；关闭后访问首页不会新增 `staging_perf_diagnostics` 日志。
+
+### 采样结果
+
+| 页面 | duration | query_count | query_total | query_max | 主要来源 |
+| --- | ---: | ---: | ---: | ---: | --- |
+| `/` | 3018.26ms | 19 | 2893.4ms | 171.89ms | theme / pages / other |
+| `/default/menus` | 5114.76ms | 33 | 4978.89ms | 161.96ms | settings / other / menus |
+| `/cart` | 4377ms | 26 | 4315.51ms | 167.54ms | theme / pages / settings |
+| `/default/reservation` | 4468.38ms | 26 | 4372.31ms | 169.36ms | theme / pages / settings |
+| `/admin/login` | 710.24ms | 4 | 688.27ms | 175.15ms | user login / settings / cart status middleware |
+| `/admin/dashboard` | 4739.67ms | 24 | 3672.89ms | 165.05ms | users / orders aggregate / reservation aggregate / dashboard widgets |
+
+### 验证结果
+
+- 关闭 diagnostics 后 `/healthz`、首页、`/default/menus`、`/cart`、`/default/reservation`、`/admin/login`、Livewire JS 和已登录 dashboard 均正常。
+- 关闭 diagnostics 后 `ENABLE_STAGING_PERF_DIAGNOSTICS=false`，config cache 中 `DIAG_ENABLED=false`。
+- 关闭后再次访问首页，`staging_perf_diagnostics` 日志计数未增加。
+- 采样期间未发现新的 PHP fatal、Laravel exception、500 或 storage permission error；日志中两条 ERROR 为早前旧记录。
+
+### 结论
+
+- 当前动态 HTML TTFB 主要由远程数据库多次往返与重复查询叠加造成；query_total_ms 基本覆盖页面 duration_ms。
+- 公开页面重复来源集中在 theme / pages / settings / menus。
+- dashboard 额外包含订单、预约、客户和用户偏好等 widget / aggregate 查询。
+- config cache 已启用，但无法抵消每次数据库往返约 150ms 的成本。
+
+### 安全边界
+
+- 未记录 SQL bindings、请求 body、cookie、session ID、CSRF token、用户 ID、真实顾客、真实订单、真实预约或真实支付数据。
+- 未提交 `.env`、`.local`、数据库 dump、真实上传文件、密码、密钥、token、APP_KEY、DB_PASSWORD、Render secret、DigitalOcean token、Cloudflare token、Carté Key、支付密钥或邮件密码。
+- 未提交测试订单或测试预约。
+- 未运行 `migrate:fresh`、`migrate:refresh` 或 `db:seed`。
+- 未触碰 production。
+
+### 下一步建议
+
+- 优先创建 `Evaluate database latency options`，评估数据库区域、Render 到数据库连接路径、缓存层或 Redis / persistent cache 策略。
+- 后续可拆分评估 `Reduce repeated settings and schema queries`。
+- 可并行规划 Cloudflare / custom domain / production 前置事项，但不要直接进入 production。
+- Production readiness 仍受动态 HTML TTFB 性能风险影响，正式上线前必须继续处理。
