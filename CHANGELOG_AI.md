@@ -1262,3 +1262,71 @@
 - config cache 是低风险优先项，但仍需 staging 部署后完整复测后台、前台、媒体、Livewire 和日志。
 - route cache 暂不建议启用，除非单独验证 TastyIgniter 4.x extension / admin routes 兼容。
 - 如果数据库区域或网络路径导致单次往返长期保持约 150ms，仅靠 PHP cache 不能完全解决 30-44 次查询页面的 TTFB。
+
+## 2026-07-09 Enable safe Laravel config cache on Render
+
+### 执行内容
+
+- 已同步最新 `4.x`，确认 PR #31 已合并，最新合并提交为 `5c4b09b3 Record staging TTFB diagnostics (#31)`。
+- 已在创建运行时修改前复测 staging：
+  - `/healthz` 返回 200。
+  - 首页返回 200。
+  - `/default/menus` 返回 200。
+  - `/cart` 返回 200。
+  - `/default/reservation` 返回 200。
+  - `/admin/login` 返回 200。
+- 已确认 PR #31 为文档记录 PR，未修改运行代码、Docker/Nginx/PHP runtime、vendor、TastyIgniter core 或业务逻辑。
+- 已调查 `docker/render/start.sh` 的 cache 开关：
+  - `RUN_CONFIG_CACHE` 此前默认 `false`。
+  - `RUN_ROUTE_CACHE` 默认 `false`。
+  - `RUN_VIEW_CACHE` 默认 `false`。
+- 已确认 Laravel 关键运行配置来自 config 文件中的环境变量读取：
+  - `APP_URL` / `ASSET_URL`。
+  - `DB_CONNECTION`、`DB_HOST`、`DB_PORT`、`DB_DATABASE`、`DB_USERNAME`、`DB_PASSWORD`、`DB_PREFIX`。
+  - `DB_CONNECT_TIMEOUT` 和 `MYSQL_ATTR_INIT_COMMAND`。
+  - `CACHE_DRIVER`、`SESSION_DRIVER`、`QUEUE_CONNECTION`。
+- 已调整 Render 启动脚本：
+  - `RUN_CONFIG_CACHE` 默认改为 `true`。
+  - 仍可通过 `RUN_CONFIG_CACHE=false` 回滚。
+  - 在 Render URL fallback、runtime 目录和权限准备完成后，再运行 `package:discover` 和 `config:cache`。
+  - `RUN_ROUTE_CACHE` 和 `RUN_VIEW_CACHE` 仍默认 `false`。
+- 已更新 `ADMIN_CONFIGURATION_TRACKER.md` 和 `RENDER_RUNTIME_READINESS.md`，记录 config cache 启用策略、回滚方式和后续验证要求。
+
+### 修改范围
+
+- `docker/render/start.sh`
+- `ADMIN_CONFIGURATION_TRACKER.md`
+- `CHANGELOG_AI.md`
+- `RENDER_RUNTIME_READINESS.md`
+
+### 未修改内容
+
+- 未修改 vendor。
+- 未修改 TastyIgniter core。
+- 未修改订单逻辑。
+- 未修改支付逻辑。
+- 未修改预约冲突检测逻辑。
+- 未修改认证或安全逻辑。
+- 未默认启用 route cache。
+- 未默认启用 view cache。
+- 未运行 `migrate:fresh`、`migrate:refresh` 或 `db:seed`。
+- 未提交测试订单或测试预约。
+- 未触碰 production、Cloudflare、正式域名、真实菜单、真实图片、真实顾客数据或真实支付。
+- 未提交 `.env`、`.local`、数据库 dump、真实上传文件、密码、密钥、token、APP_KEY、DB_PASSWORD、Render secret、DigitalOcean token、Cloudflare token、Carté Key、支付密钥、邮件密码或真实顾客信息。
+
+### 验证结果
+
+- PR #31 合并后的 staging smoke check 已通过：`/healthz`、首页、菜单页、购物车、预约页和后台登录页均返回 200。
+- Render Docker 镜像构建通过。
+- 容器环境中已确认没有 `.env` 文件时，`php artisan package:discover --ansi` 和 `php artisan config:cache` 可成功运行。
+- 已确认 config cache 文件生成，并包含预期的非敏感运行配置值：staging URL、MySQL session init command、file cache、file session 和 sync queue。
+- 已验证 `php artisan config:clear` 可清理 config cache，作为回滚辅助。
+- 已验证 Render Nginx 配置语法和启动脚本 shell 语法。
+- 合并并部署到 staging 后仍需复测前台、后台、Livewire、媒体、日志和动态 HTML TTFB。
+
+### 风险说明
+
+- config cache 会固定启动时读取到的环境变量；Render 环境变量变更后必须重新部署或重新启动容器，才能让新配置进入 cache。
+- 如果 staging 部署后出现配置异常，可先设置 `RUN_CONFIG_CACHE=false` 并重新部署回滚。
+- 当前动态 HTML TTFB 主要仍由远程数据库多次往返造成，config cache 可能改善启动和配置读取成本，但不保证解决 5-8s TTFB。
+- route cache 仍不建议默认启用，因为 TastyIgniter extension / admin routes 可能依赖动态注册。
