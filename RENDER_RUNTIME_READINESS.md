@@ -683,3 +683,42 @@ Dashboard 判断：
 3. 评估 `Assess cache backend for Render staging`，确认 file cache、database cache、Redis 或其他 persistent cache 对 TastyIgniter 的实际收益和风险。
 4. 可以并行规划 Cloudflare / custom domain / production 前置事项，但不要直接进入 production。
 5. Production readiness 仍受当前动态 HTML TTFB 性能风险影响，正式上线前必须继续处理。
+
+## Staging 数据库延迟方案评估
+
+记录日期：2026-07-09
+
+评估结果：
+
+- 当前 Render staging 已部署到 PR #34 合并提交 `bd1c4fe0`。
+- 运行容器出口地理摘要为 Boardman, Oregon / AWS。
+- DigitalOcean DB 解析目标的地理摘要为 Clifton, New Jersey / DigitalOcean。
+- 当前 DB 连接为 public / external host；不是 Render private network。
+- 当前路径跨云且跨美国东西部，足以解释较高 RTT。
+- PDO 新连接平均 328.08ms；PDO 同连接 `select 1` 平均 80.94ms。
+- Laravel 重连后首查平均 651.35ms；Laravel 同连接 `select 1` 平均 161.89ms。
+- 当前 `config/database.php` 未启用 persistent PDO connection；本阶段不直接启用。
+
+方案判断：
+
+1. 优先做 same-region staging DB / service 实验。
+   - 如果保持 Render Oregon app，优先测试更靠近 Oregon 的 DO Managed MySQL staging test DB。
+   - 如果保持当前 DO DB，优先测试更靠近 New Jersey / NYC3 的新 Render staging service。
+   - Render 现有 service region 不能直接修改，需要新建 service 或新建 DB 做 A/B 验证。
+2. 并行评估 cache backend。
+   - 目标是减少 settings / pages / theme / menus 查询。
+   - Redis / Valkey / persistent cache 需要单独验证费用、生命周期和 TastyIgniter 实际命中路径。
+3. 后续再优化重复查询。
+   - 只在可扩展层或项目层做小 PR。
+   - 不修改 vendor、TastyIgniter core、订单、支付、预约、认证或安全逻辑。
+4. Cloudflare / custom domain 不是当前 DB-bound TTFB 的主修复。
+   - Cloudflare 可以改善 DNS、TLS、静态缓存和边缘体验。
+   - Cloudflare 不能降低 Render 应用服务器到数据库的 RTT。
+
+## 下一步更新
+
+1. 创建 `Create same-region staging database test`，先由用户确认新增费用和测试资源方向。
+2. Codex 负责指导配置 staging test DB / test service，并执行非 destructive 连通性和 TTFB 验证。
+3. 创建或规划 `Assess cache backend for Render staging`。
+4. 如区域实验仍不足，再拆 `Reduce repeated settings and schema queries`。
+5. Cloudflare / custom domain / production 前置规划可以并行，但 production readiness 仍受当前 DB RTT 风险影响。

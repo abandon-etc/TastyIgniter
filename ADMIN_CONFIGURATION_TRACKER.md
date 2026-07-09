@@ -701,3 +701,46 @@
 主要结论：动态 HTML TTFB 仍主要由远程数据库多次往返叠加造成；每个页面的 query_total_ms 基本覆盖 duration_ms。公开页面重复来源集中在 theme / pages / settings / menus；dashboard 额外包含订单、预约、客户和用户偏好等 widget / aggregate 查询。
 
 下一步建议：优先创建 `Evaluate database latency options`，评估数据库区域、Render 到数据库连接路径和缓存策略；随后再评估 `Reduce repeated settings and schema queries` 与 `Assess cache backend for Render staging`。Cloudflare / custom domain / production 前置规划可以并行，但 production readiness 仍受动态 HTML TTFB 风险影响。
+
+## Render staging database latency options 评估记录
+
+记录日期：2026-07-09
+
+环境：Render staging
+
+当前阶段：Evaluate database latency options
+
+| 项目 | 状态 | 备注 |
+| --- | --- | --- |
+| 最新代码 | Confirmed | 本地 `4.x` 已同步到 PR #34 合并提交 `bd1c4fe0`。 |
+| Render staging | Pass | PR #34 已自动部署；`/healthz`、首页、菜单页、购物车、预约页和后台登录页均返回 200。 |
+| Render app 位置 | Inferred Oregon | Render Dashboard 未在普通文本中暴露 region 值；运行容器出口地理摘要为 Boardman, Oregon / AWS。 |
+| DigitalOcean DB 位置 | Inferred New Jersey | 数据库主机未输出；解析 IP 的地理摘要为 Clifton, New Jersey / DigitalOcean。 |
+| 连接类型 | Public / cross-cloud | 当前数据库连接为 public / external host，不是 Render private network。 |
+| 架构判断 | Cross-cloud / cross-region | 当前路径为 Render Oregon / AWS 到 DigitalOcean New Jersey，跨云且跨美国东西部。 |
+| PDO 新连接 | Slow | 8 次新建 PDO 连接平均 328.08ms，p50 332.93ms。 |
+| PDO 同连接 `select 1` | Slow enough | 40 次同连接 `select 1` 平均 80.94ms，p50 82.68ms。 |
+| Laravel 重连后首查 | Very slow | 8 次 Laravel `DB::purge()` 后首个 `select 1` 平均 651.35ms，p50 665.33ms。 |
+| Laravel 同连接查询 | Dominant | 40 次 Laravel 同连接 `select 1` 平均 161.89ms，p50 166.3ms。 |
+| 持久连接 | Not enabled | 当前 `config/database.php` 未启用 `PDO::ATTR_PERSISTENT`；本阶段未修改配置。 |
+| Cloudflare / custom domain | Not primary fix | 可改善边缘 TLS、DNS、静态缓存和前端缓存，但不能降低 Render 到数据库的 RTT。 |
+
+方案比较：
+
+| 方案 | 预期收益 | 复杂度 / 风险 | 适合 staging 先试 | 结论 |
+| --- | --- | --- | --- | --- |
+| A. 保持 Render app，创建更靠近 Oregon 的 DigitalOcean Managed MySQL staging test DB | 中到高；可减少跨美国东西部 RTT，但仍跨云 / public internet | 需要新 DB、数据迁移或空库重装；有新增费用；需用户在 DO 创建资源并输入 secret | 是 | 推荐第一优先级实验。 |
+| B. 保持当前 DigitalOcean DB，创建更靠近 New Jersey / NYC3 的 Render staging app | 中到高；Render Virginia / Ohio 到 NYC3 预计比 Oregon 到 New Jersey 更近 | Render 现有服务不能直接改 region，需要新 service；需重新配置 env、disk、custom staging URL | 是 | 推荐第二优先级，尤其当用户不想重建 DB。 |
+| C. App 和 DB 放同一平台 / 同一区域 | 高；可消除跨云 RTT，若使用同平台 private network 收益更大 | 迁移复杂度较高；Render PostgreSQL 不兼容当前 MySQL 假设；DO App Platform 需重新评估 Docker/runtime | 是，但应新建 staging 试验 | 中期架构候选，不建议直接切 production。 |
+| D. 增加 cache backend | 中；可减少 settings / pages / theme / menus 重复查询 | 需要确认 TastyIgniter cache 使用路径；Redis / Valkey 有费用和运维策略；不能消除所有 DB 查询 | 是 | 与区域实验并行评估。 |
+| E. 优化应用重复查询 | 中；可减少 query_count | 不能改 vendor / core；需定位可扩展层缓存点，避免影响订单、支付、预约、认证 | 是，小 PR | 在区域/RTT验证后再拆小 PR。 |
+| F. Cloudflare / custom domain | 低；改善边缘与静态资源体验 | 不会改善服务器到 DB 的 RTT | 是，但非性能主解法 | 可并行规划，不作为当前 DB-bound 慢的主修复。 |
+
+推荐顺序：
+
+1. 创建 `Create same-region staging database test`：优先测试更靠近 Render Oregon 的 DO MySQL 区域，或创建更靠近当前 DO DB 的 Render staging service，二选一先做成本更低的一项。
+2. 创建 `Assess cache backend for Render staging`：评估 Redis / Valkey / persistent cache 是否减少 settings / pages / theme / menus 查询。
+3. 创建 `Reduce repeated settings and schema queries`：只在确认可扩展层缓存点后做，不修改 vendor / TastyIgniter core。
+4. Cloudflare / custom domain / production 前置规划可以并行，但 production readiness 仍受 DB RTT 风险影响。
+
+阻塞：需要用户确认是否愿意为 same-region staging DB 或新 Render staging service 产生额外费用，并在 Render / DigitalOcean UI 中配置或输入 secret；不需要把 secret 发到聊天。
