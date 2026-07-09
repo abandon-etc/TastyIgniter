@@ -591,10 +591,9 @@ Dashboard 判断：
 
 ## 下一步
 
-1. 审查本 PR。
-2. 在 Render 创建 staging Web Service。
-3. 配置外部 MySQL / MariaDB。
-4. 配置 Persistent Disk。
-5. 配置 Render Environment Variables。
-6. 验证 staging。
-7. 再决定是否准备 production。
+1. 审查并合并 PR #31。
+2. 创建 `Enable safe Laravel config cache on Render` PR，先处理低风险 config cache 优化，并保留环境变量关闭方式。
+3. 必要时创建 `Add lightweight staging performance diagnostics` PR，用于 authenticated dashboard 和重复 query 来源定位。
+4. 评估 Render database latency options，包括数据库区域、连接路径、缓存层或 Redis / persistent cache 策略。
+5. 可以并行规划 Cloudflare / custom domain / production 前置事项，但不要直接进入 production。
+6. Production readiness 仍受当前动态 HTML TTFB 性能风险影响，正式上线前必须继续处理。
