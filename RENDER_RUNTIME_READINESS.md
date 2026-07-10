@@ -1063,3 +1063,25 @@ functional work, subject to a fresh authenticated dashboard check. Production
 readiness remains deferred until the public `/healthz` behavior is separately
 resolved or explicitly accepted and the broader production checklist is
 completed.
+## 2026-07-10 - Canada staging dashboard acceptance and reservation audit
+
+Environment: Canada staging only. Status: Dashboard acceptance resolved;
+reservation requirements audit remains open.
+
+- Authenticated dashboard acceptance covered the dashboard, Orders,
+  Reservations, Categories, Menus, Media Manager, Settings, Extensions, and
+  Staff members pages. All rendered successfully and the session persisted.
+- Same-origin assets observed on the tested pages returned HTTP 200. No
+  localhost, old Render URL, browser console error, or page-level 5xx was
+  observed. The existing `Broadcast is not defined` warning is non-blocking.
+- `/healthz/` remains the Cloud Run liveness path. Bare `/healthz` remains the
+  known Google frontend 404 and is not mixed into this acceptance record.
+- The public reservation flow was inspected without submitting a form. Current
+  settings show reservations and automatic table assignment enabled, 15-minute
+  interval, 45-minute stay, 2-20 guests, 2-30 day advance window, no guest
+  count limiter, zero-minute cancellation timeout, and 24/7 location schedule.
+- Render staging and DigitalOcean fallback resources remain available.
+
+Production readiness has not started. The next gate is a business requirements
+decision for reservation behavior, followed by small staging-only changes and
+focused acceptance tests if needed.

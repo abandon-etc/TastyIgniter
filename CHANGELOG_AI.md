@@ -1908,3 +1908,31 @@ open separately.
 Next step: repeat authenticated dashboard verification, then handle the bare
 Cloud Run `/healthz` routing observation as a separate focused task before
 production planning.
+
+## 2026-07-10 - Record Canada staging dashboard acceptance and reservation audit
+
+Environment: Canada staging only. Status: Dashboard acceptance resolved;
+reservation requirements audit pending business confirmation.
+
+- Reused the authenticated Canada staging browser session and verified the
+  dashboard, Orders, Reservations, Categories, Menus, Media Manager, Settings,
+  Extensions, and Staff members pages.
+- Pages rendered successfully with no browser console errors, no same-origin
+  asset failures, and no localhost or old Render asset URLs. A repeated
+  non-blocking `Broadcast is not defined` console warning remains.
+- The Cloud Run liveness path remains `/healthz/` with the bare `/healthz`
+  Google frontend 404 documented separately. Render staging remains the
+  fallback and production was not changed.
+- Audited the public reservation form without submitting it. The observed flow
+  starts with date, guest count, and time selection followed by `Find Table`.
+- Recorded the current backend reservation configuration: reservations and
+  automatic table assignment enabled; 15-minute interval; 45-minute stay;
+  guest range 2-20; advance window 2-30 days; guest-count limiting disabled;
+  cancellation timeout 0; start-time inclusion enabled; location schedule
+  24/7; global reservation email/status mappings available.
+- No reservation, order, customer, menu, payment, mail, or settings write was
+  performed. No runtime code was modified.
+
+Next step: wait for explicit business requirements before proposing a focused
+reservation PR. Do not change reservation conflict logic or core/vendor code
+without a separately confirmed scope.

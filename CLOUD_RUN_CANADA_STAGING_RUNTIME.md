@@ -382,3 +382,30 @@ Core public/admin-login/media smoke checks passed. Authenticated dashboard
 verification should be repeated before calling the entire Canada staging
 acceptance checklist complete. Render staging remains the rollback fallback;
 production was not changed.
+## 2026-07-10 - Canada staging dashboard acceptance and reservation audit
+
+Environment: Canada staging only. Status: Dashboard acceptance resolved;
+reservation requirements audit pending business requirements.
+
+- The authenticated dashboard session successfully opened the dashboard,
+  Orders, Reservations, Categories, Menus, Media Manager, Settings, Extensions,
+  and Staff members pages.
+- The tested page assets returned HTTP 200 and no localhost or old Render URL
+  was observed. No browser console errors or page-level 5xx responses were
+  observed. The existing `Broadcast is not defined` warning is non-blocking.
+- The `/healthz/` liveness path, Cloud Run revision, media persistence result,
+  and read-only database latency result remain as documented in the previous
+  validation. Render remains the fallback.
+- Reservation inspection was read-only. The public form exposes date, guest
+  count, and time selection before `Find Table`; it was not submitted. Current
+  location settings expose reservation enablement, automatic table assignment,
+  interval, stay time, guest limits, advance window, cancellation timeout,
+  start-time behavior, and opening schedules. Global settings expose
+  reservation email recipients and status mappings.
+- No reservation, order, customer, menu, payment, or mail data was written.
+
+Before production planning, obtain explicit business requirements for date and
+time rules, table/capacity behavior, conflict handling, customer details and
+notes, notifications, bilingual copy, and mobile validation. Any confirmed
+change should be a small, reversible staging-only PR and must not modify core,
+vendor, or unrelated order/payment/authentication logic.
