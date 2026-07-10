@@ -1084,3 +1084,29 @@ conflict logic was modified. No real or test reservation was created.
 
 Next step: obtain the required reservation behavior from the business owner,
 then split any confirmed change into a small, reversible staging-only PR.
+## 2026-07-10 - Birthday reservation rules implementation
+
+Environment: local build only; Canada staging not deployed. Status: Pending PR
+review and staging migration.
+
+- Implemented the first Birthday Booking rules slice behind the non-secret
+  `BIRTHDAY_BOOKING_RULES_ENABLED` flag. The default remains disabled so Render
+  fallback behavior is unchanged.
+- Added centralized fixed slots `12:00-16:00` and `16:00-20:00`, venue-local
+  date validation for plus 2 through plus 60 days, and a frontend flow that
+  does not render fine-grained time options and reuses the existing reservation
+  customer form/save path.
+- Added nullable Birthday slot code/key fields and a unique
+  `(location_id, birthday_slot_key)` index to the existing reservations table.
+  The key is populated only for the configured default and confirmed statuses;
+  canceled, expired, rejected, and other non-occupying statuses release it.
+- Added server-side availability checks, explicit slot validation, and removal
+  of table assignments for Birthday reservations. The database unique index is
+  the final duplicate-prevention guard.
+- Automated Birthday rules tests pass: 4 tests, 11 assertions. Dockerfile.cloudrun
+  build and config cache validation pass. No staging database or business data
+  was changed.
+
+Next step: review the implementation PR, then run the additive migration and
+enable the feature only on Canada staging before browser/concurrency smoke
+tests. Render remains disabled and available as fallback.

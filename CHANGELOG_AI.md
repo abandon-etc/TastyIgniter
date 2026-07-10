@@ -1936,3 +1936,29 @@ reservation requirements audit pending business confirmation.
 Next step: wait for explicit business requirements before proposing a focused
 reservation PR. Do not change reservation conflict logic or core/vendor code
 without a separately confirmed scope.
+## 2026-07-10 - Implement Birthday reservation rules
+
+Environment: local build only; Canada staging not deployed. Status: Pending PR
+review.
+
+- Added an app-level Birthday Booking rules slice behind
+  `BIRTHDAY_BOOKING_RULES_ENABLED=false` by default.
+- Added centralized fixed slots `12:00-16:00` and `16:00-20:00`, venue-local
+  plus-2 through plus-60 date validation, and a custom reservation flow that
+  displays only those slots before reusing the existing customer form/save
+  path.
+- Added `birthday_slot_code` and `birthday_slot_key` to the existing
+  reservations schema with a unique location/key index. Occupancy uses the
+  configured default and confirmed status IDs; non-occupying statuses clear the
+  key while preserving the reservation record.
+- Added server-side availability and conflict checks, a table-independent
+  Birthday reservation guard, and an additive rollback migration.
+- No vendor/core, order, payment, authentication, security, notification,
+  takeout, production, or business-data changes were made.
+- Validation: all new PHP files linted, Dockerfile.cloudrun built successfully,
+  config cache succeeded, and Birthday rules tests passed with 4 tests and 11
+  assertions. Staging migration and concurrency testing remain pending.
+
+Next step: review and merge the implementation PR, then enable the flag only on
+Canada staging and execute migration, backend conflict, frontend, and smoke
+tests. Do not start payment, registration, or add-on work yet.
