@@ -1084,3 +1084,22 @@ conflict logic was modified. No real or test reservation was created.
 
 Next step: obtain the required reservation behavior from the business owner,
 then split any confirmed change into a small, reversible staging-only PR.
+
+## 2026-07-10 - Birthday reservation rules design
+
+Environment: Canada staging design only. Status: Pending design approval.
+
+- PR #44 is merged and the repository is synchronized with the latest `4.x`.
+- Audited the current TastyIgniter Reservation and Orange Booking call chain
+  from the upstream 4.x extension sources.
+- Confirmed that the current implementation is restaurant-table based, uses
+  location schedules and fine-grained time intervals, and can auto-assign
+  dining tables after a generic reservation is saved.
+- Designed an isolated Birthday Booking extension with fixed slot definitions,
+  date overrides, inventory rows, server-side availability validation, and a
+  database-backed capacity-one concurrency invariant.
+- No code, migration, vendor, core, order, payment, authentication, security,
+  production, or staging business data was changed.
+
+Next step: obtain approval for the design decisions, then create the focused
+`Birthday reservation rules` implementation PR.

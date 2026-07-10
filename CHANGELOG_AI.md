@@ -1936,3 +1936,25 @@ reservation requirements audit pending business confirmation.
 Next step: wait for explicit business requirements before proposing a focused
 reservation PR. Do not change reservation conflict logic or core/vendor code
 without a separately confirmed scope.
+
+## 2026-07-10 - Design Birthday reservation rules
+
+Environment: Canada staging design only. Status: Pending design approval.
+
+- PR #44 was confirmed merged and the design work started from the latest
+  `4.x`.
+- Reviewed the current `ti-ext-reservation` and Orange theme booking flow:
+  location schedule/date window, interval-generated times, generic reservation
+  save, MySQL process lock, and post-save table assignment.
+- Documented why the existing table reservation model should not be reused for
+  whole-venue birthday slots.
+- Proposed an isolated Birthday Booking extension with two fixed local-time
+  slots, a two-to-sixty-day server-side date window, capacity-one inventory,
+  date overrides, and transactional/unique-key concurrency control.
+- No runtime code, migration, secret, payment, notification, customer data,
+  reservation data, or production resource was changed.
+
+Design report: `BIRTHDAY_RESERVATION_RULES_DESIGN.md`.
+
+Next step: wait for user and review-agent approval before creating the
+`Birthday reservation rules` implementation PR.
