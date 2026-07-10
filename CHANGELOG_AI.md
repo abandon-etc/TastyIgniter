@@ -1815,3 +1815,46 @@ Environment: Canada staging only. Status: Blocked pending a focused runtime/conf
 - /healthz remains separate from this issue because Cloud Run frontend returns 404 before the container.
 
 Next step: merge and deploy the visibility fix, then validate homepage, media upload/persistence, logs, and TTFB.
+
+## 2026-07-10 - Record Cloud Run Canada staging validation
+
+Environment: Canada staging only. Status: Resolved for the PR #40 runtime
+issue; `/healthz` remains a separate blocker.
+
+- Deployed git SHA: `44940004`.
+- Cloud Build succeeded with `Dockerfile.cloudrun` and pushed the SHA-tagged
+  image `northamerica-northeast1-docker.pkg.dev/le-chateau-canada-staging/tastyigniter-staging/tastyigniter:44940004`
+  to the Canada Artifact Registry repository. Cloud Build emitted a
+  non-blocking Cloud Shell Regional Access Boundary warning; the build itself
+  completed successfully.
+- Cloud Run revision `le-chateau-canada-staging-00009-tvs` serves 100% of
+  traffic at `https://le-chateau-canada-staging-j675sib2hq-nn.a.run.app` in
+  `northamerica-northeast1`. The service URL and region remain Canada staging
+  only.
+- `FILESYSTEM_SKIP_VISIBILITY=true` is configured only on the Cloud Run
+  staging service. Existing Cloud SQL, Secret Manager, service account, and
+  Cloud Storage mount configuration was preserved.
+- Final smoke checks returned HTTP 200 for `/`, `/default/menus`, `/cart`,
+  `/default/reservation`, `/admin/login`, and `/livewire/livewire.min.js`.
+- Test media `IMG_2484.png` was uploaded to the staging bucket, returned HTTP
+  200 with `image/png`, and remained available after the same-image redeploy.
+  The object size was 109065 bytes; no image file was committed.
+- The `staging-inspector` database user is retained as a Canada staging
+  maintenance account only. It is not used as the Cloud Run runtime account or
+  in production, and its password is not recorded.
+- Final warm HTTP TTFB was approximately 0.66s for `/`, 0.60s for menus,
+  0.60s for cart, 0.62s for reservation, 0.39s for admin login, and 0.34s
+  for Livewire JavaScript. Compared with the former Render ranges, this is a
+  material improvement of roughly 78-92% for the public dynamic pages; the
+  result does not by itself isolate PDO connection latency.
+- No new FUSE visibility, chmod, storage permission, Laravel cache, Cloud SQL,
+  PHP-FPM, Nginx, fatal, exception, or 500 errors were found in the revision
+  logs.
+- `/healthz` still returns a Google frontend 404 and remains outside this PR.
+- Render staging, DigitalOcean resources, and production were not changed.
+- Canada staging core runtime readiness is achieved; the independent `/healthz`
+  routing issue remains open before treating the service as fully ready.
+
+Next step: document and fix Cloud Run health-check routing separately, then
+run an approved PDO/Laravel connection-latency sample before further runtime
+optimization.

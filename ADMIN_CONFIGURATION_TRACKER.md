@@ -965,3 +965,42 @@ Environment: Canada staging only.
 - /healthz remains a separate Cloud Run frontend 404 observation.
 
 Next step: merge the visibility fix, redeploy the new image with the Cloud Run-only flag, then repeat homepage and media smoke tests.
+
+## 2026-07-10 - Cloud Run Canada staging validation after PR #40
+
+Status: Resolved for the FUSE visibility issue. Environment: Canada staging
+only.
+
+- PR #40 is merged and deployed from git SHA `44940004`.
+- Cloud Run-only `FILESYSTEM_SKIP_VISIBILITY=true` is enabled. Render staging
+  configuration is unchanged.
+- Cloud Build completed successfully and pushed the SHA-tagged image to the
+  Canada Artifact Registry repository.
+- Revision `le-chateau-canada-staging-00008-tsd` first carried the fix. A
+  same-image redeploy created revision `le-chateau-canada-staging-00009-tvs`
+  with 100% traffic.
+- Homepage, menus, cart, reservation, admin login, and Livewire returned HTTP
+  200 after the final redeploy.
+- The Canada staging administrator login was verified in the browser. No
+  credentials are recorded here.
+- A non-business test image `IMG_2484.png` was uploaded. The object remained
+  available after redeploy, returned `image/png` and HTTP 200, and was recorded
+  at 109065 bytes. The image is not committed to git.
+- Cloud Run logs showed normal GCSFuse mount messages and no new visibility,
+  chmod, permission, cache-directory, Cloud SQL, PHP-FPM, Nginx, fatal, or
+  Laravel exception errors.
+- Warm HTTP TTFB after the final redeploy was approximately: `/` 0.66s,
+  `/default/menus` 0.60s, `/cart` 0.60s, `/default/reservation` 0.62s,
+  `/admin/login` 0.39s, and Livewire JavaScript 0.34s. These are HTTP smoke
+  measurements, not a replacement for PDO-level latency sampling.
+- `/healthz` remains a separate Cloud Run frontend HTTP 404 and is not mixed
+  into the FUSE fix. Render staging remains the fallback.
+
+Next steps:
+
+1. Retain `staging-inspector` as a Canada staging maintenance account. It is
+   not the Cloud Run application runtime account and must not be used for
+   production. Its password is not recorded here.
+2. Create a focused `Fix Cloud Run health check routing` task.
+3. Run a separate approved PDO/Laravel connection-latency measurement before
+   making a final database architecture decision.
