@@ -1031,3 +1031,56 @@ Environment: Canada staging only.
 
 Next steps: repeat authenticated dashboard verification and continue the
 separate `/healthz` public-routing investigation before any production work.
+
+## 2026-07-10 - Canada staging dashboard acceptance and reservation audit
+
+Environment: Canada staging only. Status: Dashboard acceptance resolved;
+reservation requirements audit remains open pending business requirements.
+
+Dashboard acceptance:
+
+- The authenticated Canada staging session remained active while opening the
+  dashboard, Orders, Reservations, Categories, Menus, Media Manager, Settings,
+  Extensions, and Staff members pages.
+- Each page rendered its expected title/layout and no page showed a 500/502/503/
+  504 or Laravel error screen.
+- Same-origin scripts, stylesheets, and images observed on the tested pages
+  returned HTTP 200. No localhost or old Render asset URL was observed.
+- No browser console errors were observed. A repeated non-blocking warning
+  states that Broadcast is not defined; it is not a failed request and did not
+  prevent navigation or widget rendering.
+- Dashboard navigation was about 1.24 seconds on the first observed load and
+  about 0.54 seconds on a warm navigation in this browser session. No order,
+  reservation, menu, or settings write was performed.
+- The Cloud Run revision and `/healthz/` liveness result remain those recorded
+  in the previous validation. The bare `/healthz` Google frontend 404 remains
+  a known separate observation. Render staging and DigitalOcean fallback
+  resources remain unchanged.
+
+Reservation behavior audit:
+
+- The public `/default/reservation` page is reachable and shows a date control,
+  guest selector, time selector, and `Find Table` action. The form is a POST
+  availability lookup; it was not submitted.
+- The observed guest range is 2 through 20. The observed time selector contains
+  288 entries in five-minute increments. The date selected by the page reflects
+  the configured minimum advance window.
+- Location booking settings currently show reservations enabled, automatic
+  table assignment enabled, a 15-minute reservation interval, 45-minute stay
+  time, minimum/maximum guest size 2/20, minimum/maximum advance window 2/30
+  days, guest-count limiting disabled, cancellation timeout 0, and inclusion of
+  the schedule start time enabled.
+- The current location opening, delivery, and pickup schedules are 24/7 for all
+  seven days. This is a configuration state to review before business launch.
+- Global reservation settings expose customer, restaurant, and location email
+  notifications plus default, confirmed, and canceled status mappings. The
+  protected reservations list is reachable and currently contains no records.
+- Availability exhaustion, duplicate reservations, conflict handling, customer
+  detail/notes collection after table lookup, bilingual validation copy, and
+  mobile interaction were not submitted or changed in this audit.
+
+No runtime code, vendor, core, payment, order, authentication, or reservation
+conflict logic was modified. No real or test reservation was created.
+
+Next step: obtain the required reservation behavior from the business owner,
+then split any confirmed change into a small, reversible staging-only PR.
