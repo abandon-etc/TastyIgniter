@@ -326,6 +326,11 @@ Observed results:
 - `/healthz` remains a separate Cloud Run frontend 404. It requires a focused
   health-check routing task and is not included in the FUSE change.
 
+The `staging-inspector` database user is retained for Canada staging
+maintenance and read-only investigations. It is not the Cloud Run application
+runtime account and is not a production credential. Its password remains only
+in the user-managed secret store.
+
 PDO new-connection, same-connection, Laravel first-query, and Laravel
 reconnect timings were not inferred from the HTTP measurements. They remain
 an explicit follow-up before final database architecture conclusions.

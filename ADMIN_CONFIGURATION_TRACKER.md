@@ -998,9 +998,9 @@ only.
 
 Next steps:
 
-1. Keep the temporary staging database inspector account only until the
-   read-only administrator lookup is complete, then remove it after explicit
-   confirmation.
+1. Retain `staging-inspector` as a Canada staging maintenance account. It is
+   not the Cloud Run application runtime account and must not be used for
+   production. Its password is not recorded here.
 2. Create a focused `Fix Cloud Run health check routing` task.
 3. Run a separate approved PDO/Laravel connection-latency measurement before
    making a final database architecture decision.

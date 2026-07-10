@@ -1839,6 +1839,9 @@ issue; `/healthz` remains a separate blocker.
 - Test media `IMG_2484.png` was uploaded to the staging bucket, returned HTTP
   200 with `image/png`, and remained available after the same-image redeploy.
   The object size was 109065 bytes; no image file was committed.
+- The `staging-inspector` database user is retained as a Canada staging
+  maintenance account only. It is not used as the Cloud Run runtime account or
+  in production, and its password is not recorded.
 - Final warm HTTP TTFB was approximately 0.66s for `/`, 0.60s for menus,
   0.60s for cart, 0.62s for reservation, 0.39s for admin login, and 0.34s
   for Livewire JavaScript. Compared with the former Render ranges, this is a
