@@ -1758,3 +1758,37 @@
 - 用户确认是否允许创建 Cloud Run / Cloud SQL / Cloud Storage / Secret Manager。
 - 用户在 Google Cloud UI / Secret Manager 输入 secrets。
 - 确认后进入 `Create Google Cloud Canada staging resources`。
+
+## 2026-07-09 - Prepare Cloud Run Canada staging runtime
+
+### Summary
+
+- Added a dedicated Cloud Run staging runtime entry point for the Canada experiment.
+- Added `CLOUD_RUN_CANADA_STAGING_RUNTIME.md` with Cloud Run, Cloud SQL, Secret Manager, media storage, Artifact Registry, validation, and rollback checklists.
+- Kept Render staging runtime files unchanged so Render remains the fallback.
+- Did not create a Cloud Run service.
+- Did not create or download a service account key.
+- Did not commit secrets or production configuration.
+
+### Files
+
+- `Dockerfile.cloudrun`
+- `docker/cloudrun/start.sh`
+- `CLOUD_RUN_CANADA_STAGING_RUNTIME.md`
+- `ADMIN_CONFIGURATION_TRACKER.md`
+- `CHANGELOG_AI.md`
+- `RENDER_RUNTIME_READINESS.md`
+
+### Runtime Notes
+
+- Cloud Run uses `$PORT`, defaulting to `8080` only when the platform value is absent.
+- Cloud SQL should use the Cloud Run connector socket at `/cloudsql/<INSTANCE_CONNECTION_NAME>`.
+- The first Cloud Storage media experiment should mount `le-chateau-canada-staging-media` at `/var/www/html/storage/app/media`.
+- The Cloud Run start script avoids recursive ownership changes under the media mount.
+
+### Safety
+
+- Staging only.
+- No production changes.
+- No real customer, order, reservation, payment, or menu data.
+- No destructive database commands.

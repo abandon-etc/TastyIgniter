@@ -907,3 +907,33 @@ Rollback / fallback：
 - 不迁 production DNS，不改正式域名，不启用正式支付。
 
 下一步建议：合并本规划 PR 后，进入 `Create Google Cloud Canada staging resources` 前必须由用户确认 billing、预算上限、Montréal / Toronto、允许创建的资源，以及在 Google Cloud UI / Secret Manager 中输入 secrets。
+
+## 2026-07-09 - Prepare Cloud Run Canada staging runtime
+
+Status: PR planned for review.
+
+Environment: Canada staging only.
+
+Scope:
+
+- Added a separate Cloud Run staging runtime entry point.
+- Kept Render staging runtime unchanged as fallback.
+- Recorded Cloud Run, Cloud SQL, Secret Manager, Cloud Storage media, Artifact Registry, acceptance, and rollback checklists.
+- Did not create a Cloud Run service.
+- Did not create or download a service account key.
+- Did not add secrets or production configuration.
+
+Key runtime decisions:
+
+- Cloud Run image listens on `$PORT`, defaulting to `8080` only if absent.
+- Cloud SQL uses the connector socket path `/cloudsql/<INSTANCE_CONNECTION_NAME>`.
+- Secret values remain in Google Cloud Secret Manager and are not recorded in git.
+- The first Cloud Storage media experiment mounts `le-chateau-canada-staging-media` at `/var/www/html/storage/app/media`.
+- Current TastyIgniter media symlinks are preserved.
+- Render staging remains active for rollback.
+
+Next gate:
+
+- Build and push the Cloud Run image only after user confirmation.
+- Create the Cloud Run service only after user confirms billable resource creation.
+- Bind secrets and Cloud SQL only through Google Cloud UI or approved deployment tooling.

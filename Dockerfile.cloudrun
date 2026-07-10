@@ -1,0 +1,87 @@
+FROM node:20-bookworm-slim AS assets
+
+WORKDIR /app
+
+COPY package.json package-lock.json webpack.mix.js ./
+RUN npm ci --no-audit --no-fund
+
+COPY resources ./resources
+COPY public ./public
+RUN npm run prod
+
+FROM php:8.3-fpm-bookworm
+
+ENV COMPOSER_ALLOW_SUPERUSER=1 \
+    APP_ENV=staging \
+    PORT=8080
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        curl \
+        default-mysql-client \
+        gettext-base \
+        git \
+        libcurl4-openssl-dev \
+        libfreetype6-dev \
+        libicu-dev \
+        libjpeg62-turbo-dev \
+        libonig-dev \
+        libpng-dev \
+        libzip-dev \
+        nginx \
+        unzip \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j"$(nproc)" bcmath curl exif gd intl mbstring opcache pdo_mysql zip \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+WORKDIR /var/www/html
+
+COPY composer.* ./
+RUN composer config --no-plugins --no-scripts "preferred-install.tastyigniter/*" source \
+    && composer install \
+    --no-dev \
+    --no-interaction \
+    --no-progress \
+    --no-scripts \
+    --optimize-autoloader
+
+COPY . .
+COPY --from=assets /app/public ./public
+
+RUN rm -f .env bootstrap/cache/*.php \
+    && composer dump-autoload --optimize --no-scripts \
+    && php artisan vendor:publish --tag=igniter-assets --force --ansi \
+    && rm -f public/css/app.css public/js/app.js public/mix-manifest.json \
+    && mkdir -p \
+        /var/www/html/storage/app/public \
+        /var/www/html/storage/app/media \
+        /var/www/html/storage/app/media/media/uploads \
+        /var/www/html/storage/app/media/media/attachments \
+        /var/www/html/storage/framework/cache \
+        /var/www/html/storage/framework/sessions \
+        /var/www/html/storage/framework/views \
+        /var/www/html/storage/igniter/combiner/data \
+        /var/www/html/storage/logs \
+        /var/www/html/bootstrap/cache \
+    && rm -rf /var/www/html/storage/app/public/media /var/www/html/public/storage /var/www/html/public/media \
+    && ln -s /var/www/html/storage/app/media/media /var/www/html/storage/app/public/media \
+    && ln -s /var/www/html/storage/app/public /var/www/html/public/storage \
+    && ln -s /var/www/html/storage/app/media /var/www/html/public/media \
+    && chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/public \
+    && rm -f /etc/nginx/sites-enabled/default \
+    && ln -sf /dev/stdout /var/log/nginx/access.log \
+    && ln -sf /dev/stderr /var/log/nginx/error.log
+
+COPY docker/render/php-production.ini /usr/local/etc/php/conf.d/zz-production.ini
+COPY docker/render/nginx.conf.template /etc/nginx/templates/default.conf.template
+COPY docker/cloudrun/start.sh /usr/local/bin/cloudrun-start
+
+RUN chmod +x /usr/local/bin/cloudrun-start
+
+EXPOSE 8080
+
+CMD ["cloudrun-start"]
