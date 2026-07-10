@@ -352,3 +352,33 @@ Nginx as `200 ok` and will be used for the Cloud Run liveness probe. The
 canonical public `/healthz` observation remains documented separately and is
 not treated as an application failure. Render's existing `/healthz` path is
 unchanged.
+
+## 2026-07-10 - Health and database latency validation
+
+PR #42 was deployed from git SHA `2796d2c6` as Cloud Run revision
+`le-chateau-canada-staging-00010-fh9` in `northamerica-northeast1`. The revision
+is Ready and serves 100% of traffic. The liveness probe uses `/healthz/`, which
+returns HTTP 200 and is visible in Cloud Run request logs. Bare `/healthz`
+remains a separate Google frontend 404 observation; Render's route is
+unchanged.
+
+The approved one-time read-only Job used the application database account and
+the Cloud SQL connector, did not write data, and was deleted after sampling.
+Results were:
+
+| Measurement | Count | Average | P50 | Max |
+| --- | ---: | ---: | ---: | ---: |
+| PDO new connection | 8 | 140.85 ms | 16.81 ms | 349.62 ms |
+| PDO same connection `select 1` | 40 | 2.23 ms | 2.20 ms | 2.60 ms |
+| Laravel reconnect first `select 1` | 8 | 147.87 ms | 24.28 ms | 356.22 ms |
+| Laravel same connection `select 1` | 40 | 4.33 ms | 4.32 ms | 5.11 ms |
+
+Compared with the former Render averages, the approximate average reductions
+are 57%, 97%, 77%, and 97%. These measurements are staging-only and do not
+include SQL bindings or credentials. `staging-inspector` remains a separate
+Canada staging maintenance account and is not the Cloud Run runtime account.
+
+Core public/admin-login/media smoke checks passed. Authenticated dashboard
+verification should be repeated before calling the entire Canada staging
+acceptance checklist complete. Render staging remains the rollback fallback;
+production was not changed.

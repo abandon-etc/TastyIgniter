@@ -1039,3 +1039,27 @@ Current next steps:
 1. Create a focused `Fix Cloud Run health check routing` task.
 2. Run a separate approved PDO/Laravel connection-latency measurement.
 3. Keep Render staging available as the rollback and comparison environment.
+
+## 2026-07-10 - Cloud Run health and database latency validation
+
+Canada staging validation completed for the deployed liveness path and the
+approved read-only database latency sample.
+
+- Image SHA: `2796d2c6`.
+- Cloud Run revision: `le-chateau-canada-staging-00010-fh9`.
+- Traffic: 100% to the Ready revision.
+- Liveness path: `/healthz/`, HTTP 200, with request evidence in Cloud Run
+  logs. Bare `/healthz` remains the separate known Google frontend 404.
+- Public/admin-login smoke checks for homepage, menus, cart, reservation,
+  Livewire JavaScript, and retained test media returned HTTP 200.
+- Read-only latency averages: PDO new 140.85 ms, PDO same connection 2.23 ms,
+  Laravel reconnect first query 147.87 ms, Laravel same connection 4.33 ms.
+  Compared with the former Render averages, approximate reductions are 57%,
+  97%, 77%, and 97%.
+- The temporary latency Job was deleted. Render staging remains the fallback.
+
+Current readiness: Canada staging is suitable for continued staging-only
+functional work, subject to a fresh authenticated dashboard check. Production
+readiness remains deferred until the public `/healthz` behavior is separately
+resolved or explicitly accepted and the broader production checklist is
+completed.
