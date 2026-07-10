@@ -17,9 +17,10 @@ server {
         return 200 "ok\n";
     }
 
-    # Cloud Run's canonical run.app frontend reserves the exact /healthz path
-    # before it reaches the container. Keep the slash variant for a
-    # container-level liveness probe; Render's existing /healthz stays intact.
+    # In the current Canada staging service, exact /healthz was observed to
+    # return a Google frontend 404 before reaching the container. Keep the
+    # slash variant as the selected container-level liveness workaround;
+    # Render's existing /healthz stays intact.
     location = /healthz/ {
         access_log off;
         default_type text/plain;

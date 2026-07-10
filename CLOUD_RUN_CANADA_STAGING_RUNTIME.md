@@ -341,10 +341,11 @@ the explicit connection-latency sample.
 
 ## Health check routing decision
 
-The exact `/healthz` path on the canonical Cloud Run `run.app` URL is returned
-by the Google frontend before the request reaches the container. The container
-already has an exact `/healthz` Nginx response for Render and local runtime,
-but a Laravel route cannot override this Cloud Run frontend behavior.
+In the current Canada staging service, the exact `/healthz` request on the
+canonical Cloud Run `run.app` URL was observed to return a Google frontend 404
+before reaching the container. The container already has an exact `/healthz`
+Nginx response for Render and local runtime, but a Laravel route cannot
+override the observed Cloud Run frontend behavior.
 
 The focused Cloud Run workaround is `/healthz/`, which is served directly by
 Nginx as `200 ok` and will be used for the Cloud Run liveness probe. The

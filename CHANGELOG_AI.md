@@ -1863,9 +1863,10 @@ optimization.
 
 Environment: Canada staging only. Status: Open pending the focused routing PR.
 
-- The canonical Cloud Run `run.app/healthz` request returns a Google frontend
-  404 before the container. It has no application response headers and does
-  not behave like the Laravel response at `/healthz/`.
+- In the current Canada staging service, the canonical Cloud Run
+  `run.app/healthz` request was observed to return a Google frontend 404 before
+  reaching the container. It has no application response headers and does not
+  behave like the Laravel response at `/healthz/`.
 - The existing exact `/healthz` Nginx rule remains correct for Render and for
   requests that reach the container; adding a Laravel route would not address
   the Cloud Run frontend interception.
