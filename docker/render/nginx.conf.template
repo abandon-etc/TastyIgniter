@@ -17,6 +17,16 @@ server {
         return 200 "ok\n";
     }
 
+    # In the current Canada staging service, exact /healthz was observed to
+    # return a Google frontend 404 before reaching the container. Keep the
+    # slash variant as the selected container-level liveness workaround;
+    # Render's existing /healthz stays intact.
+    location = /healthz/ {
+        access_log off;
+        default_type text/plain;
+        return 200 "ok\n";
+    }
+
     location = / {
         if ($request_method = HEAD) {
             return 200;

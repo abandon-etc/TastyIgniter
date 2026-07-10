@@ -1858,3 +1858,20 @@ issue; `/healthz` remains a separate blocker.
 Next step: document and fix Cloud Run health-check routing separately, then
 run an approved PDO/Laravel connection-latency sample before further runtime
 optimization.
+
+## 2026-07-10 - Cloud Run health check routing investigation
+
+Environment: Canada staging only. Status: Open pending the focused routing PR.
+
+- In the current Canada staging service, the canonical Cloud Run
+  `run.app/healthz` request was observed to return a Google frontend 404 before
+  reaching the container. It has no application response headers and does not
+  behave like the Laravel response at `/healthz/`.
+- The existing exact `/healthz` Nginx rule remains correct for Render and for
+  requests that reach the container; adding a Laravel route would not address
+  the Cloud Run frontend interception.
+- The focused fix adds `/healthz/` as a container-level liveness path while
+  preserving Render's existing `/healthz` behavior. Cloud Run probe
+  configuration will point to `/healthz/` after the image is deployed.
+- No production, Render service, database data, secrets, or business logic was
+  changed during the investigation.
