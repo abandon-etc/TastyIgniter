@@ -293,3 +293,11 @@ before proceeding.
   https://docs.cloud.google.com/sql/docs/mysql/connect-run
 - Google Cloud Run Cloud Storage volume mounts:
   https://docs.cloud.google.com/run/docs/configuring/services/cloud-storage-volume-mounts
+
+## Cloud Storage FUSE Visibility Note
+
+The mounted media path is not a full POSIX filesystem and does not support
+all chmod/visibility operations used by Laravel's local filesystem adapter.
+For the Cloud Run staging runtime only, set FILESYSTEM_SKIP_VISIBILITY=true
+after the corresponding configuration change is deployed. The default remains
+disabled so Render staging keeps its existing public-disk behavior.

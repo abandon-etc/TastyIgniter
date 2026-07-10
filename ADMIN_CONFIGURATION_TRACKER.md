@@ -951,3 +951,17 @@ Environment: Canada staging only.
 - Render staging remains unchanged and available as fallback.
 
 Next step: merge PR #39, rebuild/push the Canada staging image, deploy a new revision, and repeat dynamic page and admin smoke tests.
+
+## 2026-07-10 - Cloud Storage FUSE visibility blocker
+
+Status: Blocked pending a focused runtime/configuration PR.
+
+Environment: Canada staging only.
+
+- After PR #39, menu, cart, reservation, admin login, and Livewire returned 200.
+- The homepage still returned HTTP 500 because the local filesystem adapter attempted chmod on a Cloud Storage FUSE media file.
+- PR under review adds FILESYSTEM_SKIP_VISIBILITY, disabled by default and intended only for the Cloud Run mounted media runtime.
+- Render staging keeps the existing public filesystem visibility behavior.
+- /healthz remains a separate Cloud Run frontend 404 observation.
+
+Next step: merge the visibility fix, redeploy the new image with the Cloud Run-only flag, then repeat homepage and media smoke tests.

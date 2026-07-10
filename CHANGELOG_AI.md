@@ -1804,3 +1804,14 @@ Environment: Canada staging only. Status: Blocked pending PR #39.
 - Render staging and production were not changed.
 
 Next step: merge PR #39, rebuild and deploy the Cloud Run image, then repeat smoke tests and logs verification.
+
+## 2026-07-10 - Cloud Storage FUSE visibility blocker
+
+Environment: Canada staging only. Status: Blocked pending a focused runtime/configuration PR.
+
+- PR #39 fixed the Laravel file-cache directory; menu, cart, reservation, admin login, and Livewire now return 200.
+- Homepage requests still failed when Flysystem attempted to set visibility with chmod on the Cloud Storage FUSE mount.
+- Prepared a configuration-only switch, FILESYSTEM_SKIP_VISIBILITY, which defaults to disabled so Render behavior is unchanged.
+- /healthz remains separate from this issue because Cloud Run frontend returns 404 before the container.
+
+Next step: merge and deploy the visibility fix, then validate homepage, media upload/persistence, logs, and TTFB.

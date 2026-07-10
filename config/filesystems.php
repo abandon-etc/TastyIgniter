@@ -47,7 +47,10 @@ return [
             'driver' => 'local',
             'root' => storage_path('app/public'),
             'url' => env('APP_URL').'/storage',
-            'visibility' => 'public',
+            // Cloud Storage FUSE does not support chmod/setVisibility. Keep
+            // public local-disk permissions by default and allow Cloud Run
+            // to disable the visibility operation for mounted media.
+            'visibility' => env('FILESYSTEM_SKIP_VISIBILITY', false) ? null : 'public',
             'throw' => true,
         ],
 
