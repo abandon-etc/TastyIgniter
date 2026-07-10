@@ -17,6 +17,15 @@ server {
         return 200 "ok\n";
     }
 
+    # Cloud Run's canonical run.app frontend reserves the exact /healthz path
+    # before it reaches the container. Keep the slash variant for a
+    # container-level liveness probe; Render's existing /healthz stays intact.
+    location = /healthz/ {
+        access_log off;
+        default_type text/plain;
+        return 200 "ok\n";
+    }
+
     location = / {
         if ($request_method = HEAD) {
             return 200;

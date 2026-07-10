@@ -338,3 +338,16 @@ an explicit follow-up before final database architecture conclusions.
 Canada staging core runtime readiness is achieved for the current smoke-test
 scope. Full readiness remains pending the separate `/healthz` routing fix and
 the explicit connection-latency sample.
+
+## Health check routing decision
+
+The exact `/healthz` path on the canonical Cloud Run `run.app` URL is returned
+by the Google frontend before the request reaches the container. The container
+already has an exact `/healthz` Nginx response for Render and local runtime,
+but a Laravel route cannot override this Cloud Run frontend behavior.
+
+The focused Cloud Run workaround is `/healthz/`, which is served directly by
+Nginx as `200 ok` and will be used for the Cloud Run liveness probe. The
+canonical public `/healthz` observation remains documented separately and is
+not treated as an application failure. Render's existing `/healthz` path is
+unchanged.
