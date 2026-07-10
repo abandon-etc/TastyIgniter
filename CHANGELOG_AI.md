@@ -1875,3 +1875,36 @@ Environment: Canada staging only. Status: Open pending the focused routing PR.
   configuration will point to `/healthz/` after the image is deployed.
 - No production, Render service, database data, secrets, or business logic was
   changed during the investigation.
+
+## 2026-07-10 - Record Cloud Run health and database latency validation
+
+Environment: Canada staging only. Status: Resolved for the deployed liveness
+path and read-only latency measurement; the bare `/healthz` observation remains
+open separately.
+
+- Deployed git SHA `2796d2c6` from `Dockerfile.cloudrun` to the Canada Artifact
+  Registry image and Cloud Run revision `le-chateau-canada-staging-00010-fh9`.
+- Cloud Run liveness probe is `/healthz/`, with 100% traffic on the Ready
+  revision. `/healthz/` returned HTTP 200 and appeared in Cloud Run request
+  logs. Bare `/healthz` still returns the known Google frontend 404; Render's
+  health path was not changed.
+- Smoke checks returned HTTP 200 for `/`, `/default/menus`, `/cart`,
+  `/default/reservation`, `/admin/login`, and `/livewire/livewire.min.js`.
+  The existing staging test media object remained HTTP 200 and `image/png`
+  after redeploy.
+- Read-only sampling measured: PDO new connection average/p50/max
+  `140.85/16.81/349.62 ms`; PDO same connection `select 1`
+  `2.23/2.20/2.60 ms`; Laravel reconnect first `select 1`
+  `147.87/24.28/356.22 ms`; Laravel same connection `select 1`
+  `4.33/4.32/5.11 ms`.
+- Compared with the recorded Render averages (328/81/651/162 ms), the
+  approximate reductions are 57%, 97%, 77%, and 97%, respectively. These are
+  staging samples, not a production SLO.
+- The one-time latency Job was deleted after the sample. No migration, seed,
+  order, reservation, or other database write was performed. No secret,
+  binding, SQL value, or credential was recorded.
+- Render staging and DigitalOcean fallback resources remain available.
+
+Next step: repeat authenticated dashboard verification, then handle the bare
+Cloud Run `/healthz` routing observation as a separate focused task before
+production planning.
