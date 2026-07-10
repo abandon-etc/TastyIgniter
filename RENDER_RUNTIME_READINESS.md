@@ -983,3 +983,31 @@ Next gate:
 - User confirms permission to create Cloud Run, Cloud SQL, Cloud Storage, Artifact Registry and Secret Manager resources.
 - User enters secrets in Google Cloud UI / Secret Manager.
 - Only then proceed to `Create Google Cloud Canada staging resources`.
+
+## 2026-07-09 - Cloud Run Canada staging runtime readiness
+
+This stage records the minimum Cloud Run runtime adaptation before creating the
+Cloud Run service.
+
+Added:
+
+- `Dockerfile.cloudrun`
+- `docker/cloudrun/start.sh`
+- `CLOUD_RUN_CANADA_STAGING_RUNTIME.md`
+
+Render staging remains the fallback. `Dockerfile.render` and
+`docker/render/start.sh` are unchanged.
+
+Cloud Run readiness decisions:
+
+- Listen on Cloud Run `$PORT`, defaulting to `8080` only when absent.
+- Use the Cloud SQL connector socket path `/cloudsql/<INSTANCE_CONNECTION_NAME>`.
+- Bind database secrets through Secret Manager.
+- Mount the staging media bucket at `/var/www/html/storage/app/media`.
+- Preserve the current TastyIgniter media symlink structure.
+- Avoid recursive ownership changes under the Cloud Storage mount.
+- Build images under the Canada Artifact Registry repository:
+  `northamerica-northeast1-docker.pkg.dev/le-chateau-canada-staging/tastyigniter-staging/tastyigniter:<git-sha>`.
+
+No Cloud Run service was created in this stage. No service account key was
+created or downloaded. No production resources were changed.
