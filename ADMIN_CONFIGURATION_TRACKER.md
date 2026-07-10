@@ -937,3 +937,17 @@ Next gate:
 - Build and push the Cloud Run image only after user confirmation.
 - Create the Cloud Run service only after user confirms billable resource creation.
 - Bind secrets and Cloud SQL only through Google Cloud UI or approved deployment tooling.
+## 2026-07-09 - Cloud Run Canada staging initialization blocker
+
+Status: Blocked pending PR #39 and a new Cloud Run image.
+
+Environment: Canada staging only.
+
+- Cloud SQL staging schema was initialized without demo data.
+- A staging-only administrator account was created using a Secret Manager value; credentials are not recorded here.
+- Cloud Run static assets and Livewire JavaScript returned successfully.
+- Dynamic pages returned HTTP 500 because Laravel's file cache data directory was missing at startup.
+- PR #39 adds idempotent creation of `storage/framework/cache/data` to the Cloud Run start script.
+- Render staging remains unchanged and available as fallback.
+
+Next step: merge PR #39, rebuild/push the Canada staging image, deploy a new revision, and repeat dynamic page and admin smoke tests.

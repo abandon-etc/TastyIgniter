@@ -1792,3 +1792,15 @@
 - No production changes.
 - No real customer, order, reservation, payment, or menu data.
 - No destructive database commands.
+## 2026-07-09 - Cloud Run Canada staging runtime blocker
+
+Environment: Canada staging only. Status: Blocked pending PR #39.
+
+- Initialized the Canada staging Cloud SQL schema without demo seed data.
+- Created a staging-only administrator using a Secret Manager reference; no credential value was recorded.
+- Confirmed Livewire JavaScript and static assets were reachable.
+- Diagnosed dynamic HTTP 500 responses to a missing Laravel file-cache directory: `storage/framework/cache/data`.
+- Prepared PR #39 with the minimal Cloud Run start-script fix.
+- Render staging and production were not changed.
+
+Next step: merge PR #39, rebuild and deploy the Cloud Run image, then repeat smoke tests and logs verification.
