@@ -1011,3 +1011,31 @@ Cloud Run readiness decisions:
 
 No Cloud Run service was created in this stage. No service account key was
 created or downloaded. No production resources were changed.
+
+## 2026-07-10 - Cloud Run Canada staging validation
+
+The Canada staging service is deployed from git SHA `44940004` with the PR #40
+FUSE visibility compatibility fix. Cloud Run revision
+`le-chateau-canada-staging-00009-tvs` serves 100% of traffic, while Render
+staging remains the fallback.
+
+Validation summary:
+
+- `FILESYSTEM_SKIP_VISIBILITY=true` is enabled only on Canada staging.
+- `/`, `/default/menus`, `/cart`, `/default/reservation`, `/admin/login`, and
+  `/livewire/livewire.min.js` returned HTTP 200.
+- A non-business test image `IMG_2484.png` returned HTTP 200 with
+  `image/png` and remained available after redeploy. It was not committed.
+- Cloud Run logs contain no new FUSE visibility, chmod, storage permission,
+  Laravel cache, Cloud SQL, PHP-FPM, Nginx, fatal, exception, or 500 error.
+- Warm HTTP TTFB was approximately 0.60-0.66s for public dynamic pages and
+  0.39s for admin login. PDO/Laravel connection timings remain a separate
+  follow-up measurement.
+- `/healthz` remains an independent Cloud Run frontend 404 and is not part of
+  the FUSE visibility change.
+
+Current next steps:
+
+1. Create a focused `Fix Cloud Run health check routing` task.
+2. Run a separate approved PDO/Laravel connection-latency measurement.
+3. Keep Render staging available as the rollback and comparison environment.

@@ -301,3 +301,35 @@ all chmod/visibility operations used by Laravel's local filesystem adapter.
 For the Cloud Run staging runtime only, set FILESYSTEM_SKIP_VISIBILITY=true
 after the corresponding configuration change is deployed. The default remains
 disabled so Render staging keeps its existing public-disk behavior.
+
+## 2026-07-10 - Validation record
+
+PR #40 was deployed from git SHA `44940004` to Cloud Run Canada staging.
+Image: `northamerica-northeast1-docker.pkg.dev/le-chateau-canada-staging/tastyigniter-staging/tastyigniter:44940004`.
+Revision `le-chateau-canada-staging-00009-tvs` serves 100% of traffic at
+`https://le-chateau-canada-staging-j675sib2hq-nn.a.run.app` with
+`FILESYSTEM_SKIP_VISIBILITY=true`; Render staging was not changed.
+
+Observed results:
+
+- Homepage, menus, cart, reservation, admin login, and Livewire returned HTTP
+  200 after the redeploy.
+- Test object `media/uploads/IMG_2484.png` remained present after redeploy,
+  returned HTTP 200 with `image/png`, and was 109065 bytes. The image is not
+  stored in git.
+- The media response used `Cache-Control: public, max-age=604800`.
+- Cloud Run logs showed normal GCSFuse mount activity and no new visibility,
+  chmod, permission, cache-directory, Cloud SQL, PHP-FPM, Nginx, fatal,
+  exception, or 500 errors.
+- Warm HTTP TTFB was approximately 0.66s homepage, 0.60s menus, 0.60s cart,
+  0.62s reservation, 0.39s admin login, and 0.34s Livewire JavaScript.
+- `/healthz` remains a separate Cloud Run frontend 404. It requires a focused
+  health-check routing task and is not included in the FUSE change.
+
+PDO new-connection, same-connection, Laravel first-query, and Laravel
+reconnect timings were not inferred from the HTTP measurements. They remain
+an explicit follow-up before final database architecture conclusions.
+
+Canada staging core runtime readiness is achieved for the current smoke-test
+scope. Full readiness remains pending the separate `/healthz` routing fix and
+the explicit connection-latency sample.
