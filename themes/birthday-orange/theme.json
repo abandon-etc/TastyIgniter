@@ -1,0 +1,10 @@
+{
+    "code": "birthday-orange",
+    "name": "Birthday Orange Theme",
+    "description": "Birthday reservation page overrides for the Orange theme.",
+    "author": "Le Chateau des Enfants",
+    "parent": "igniter-orange",
+    "version": "1.0.0",
+    "source-path": "/resources/views",
+    "require": {}
+}
