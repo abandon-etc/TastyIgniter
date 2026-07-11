@@ -1965,3 +1965,30 @@ review.
 Next step: review and merge the implementation PR, then enable the flag only on
 Canada staging and execute migration, backend conflict, frontend, and smoke
 tests. Do not start payment, registration, or add-on work yet.
+
+## 2026-07-11 - Birthday reservation rules staging validation
+
+Environment: Canada staging only. Status: Resolved for Birthday rules; the
+telephone-widget follow-up remains open.
+
+- Synchronized merged PR #48 at SHA `0a19c37f`, built with
+  `Dockerfile.cloudrun`, and deployed revision
+  `le-chateau-canada-staging-00014-2kd` in Montréal. No `.env`, secret, or real
+  data was included.
+- `/healthz/`, homepage, menus, cart, reservation, admin login, Livewire, and
+  authenticated admin pages returned successfully. Recent Cloud Run error
+  filtering found no new fatal, exception, 500, storage permission, FUSE, or
+  cache-directory errors.
+- Staging-only service-side QA verified the two fixed slots, Toronto date
+  window (+2 through +60), positive guest compatibility, occupancy states,
+  cancellation release, database unique conflict handling, and a completed
+  two-task concurrent execution.
+- Synthetic records were cleaned up and all temporary Birthday QA Jobs were
+  deleted. No test order, real customer data, payment, mail, or production
+  operation was used.
+- Browser slot selection/display passed. Submission was blocked by the
+  existing telephone widget rejecting the synthetic number; no browser-created
+  reservation remains.
+
+Next step: merge the documentation record PR, then handle the telephone input
+widget as an independent small staging-only task if required.

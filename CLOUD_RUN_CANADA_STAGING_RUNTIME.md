@@ -438,3 +438,32 @@ After merge, Canada staging must be migrated only after confirming the target
 database, then smoke-tested for occupied/free slots, cancellation release,
 admin conflict rejection, concurrent duplicate prevention, and existing page
 regressions. No production action is included.
+
+## 2026-07-11 - Birthday reservation rules staging validation
+
+Environment: Canada staging only. PR #48 was deployed from SHA `0a19c37f` as
+revision `le-chateau-canada-staging-00014-2kd`; the existing runtime account,
+Cloud SQL connector, Secret Manager bindings, Cloud Storage mount, and liveness
+configuration were retained.
+
+Validation completed:
+
+- `/healthz/`, public pages, Livewire, admin login, dashboard, and the tested
+  admin management pages loaded successfully.
+- The Birthday form rendered only `12:00-16:00` and `16:00-20:00`, with the
+  Toronto-local date window from two through sixty days ahead.
+- Service-side QA verified slot occupancy, occupying/non-occupying status
+  behavior, cancellation release, the database unique guard, and a two-task
+  concurrent execution. Synthetic QA records were deleted.
+- Temporary Birthday QA Jobs were deleted. Cloud Run logs had no new matching
+  fatal, exception, 500, cache-directory, Cloud SQL, FUSE, or storage
+  permission errors.
+
+The browser telephone widget rejected the synthetic phone number before the
+reservation form could be submitted. No browser-created reservation remains.
+This is a separate UX/input follow-up. No real data, payment, mail, production
+configuration, or destructive database operation was used. Render staging and
+the DigitalOcean fallback remain available.
+
+Next step: review the validation record PR, then decide whether the telephone
+widget needs its own focused staging PR.
