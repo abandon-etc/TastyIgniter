@@ -4,6 +4,7 @@ namespace App\BirthdayBooking;
 
 use Carbon\CarbonImmutable;
 use Igniter\Reservation\Models\Reservation;
+use Illuminate\Database\QueryException;
 use Illuminate\Validation\ValidationException;
 
 final class BirthdayAvailabilityService
@@ -21,6 +22,7 @@ final class BirthdayAvailabilityService
         $occupied = Reservation::query()
             ->where('location_id', $locationId)
             ->whereDate('reserve_date', $normalizedDate)
+            ->where('birthday_booking', true)
             ->whereIn('status_id', $this->rules->occupyingStatusIds())
             ->whereNotNull('birthday_slot_code')
             ->pluck('birthday_slot_code')
@@ -46,6 +48,7 @@ final class BirthdayAvailabilityService
 
         $query = Reservation::query()
             ->where('location_id', $reservation->location_id)
+            ->where('birthday_booking', true)
             ->where('birthday_slot_key', $reservation->birthday_slot_key)
             ->whereIn('status_id', $this->rules->occupyingStatusIds());
 
@@ -71,5 +74,10 @@ final class BirthdayAvailabilityService
                 'slot' => trans('birthday_booking.invalid_slot'),
             ]);
         }
+    }
+
+    public static function isSlotConflict(QueryException $exception): bool
+    {
+        return str_contains(strtolower($exception->getMessage()), 'birthday_reservation_slot_unique');
     }
 }

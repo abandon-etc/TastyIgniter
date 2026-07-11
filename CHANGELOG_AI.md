@@ -1947,16 +1947,19 @@ review.
   plus-2 through plus-60 date validation, and a custom reservation flow that
   displays only those slots before reusing the existing customer form/save
   path.
-- Added `birthday_slot_code` and `birthday_slot_key` to the existing
-  reservations schema with a unique location/key index. Occupancy uses the
+- Added explicit `birthday_booking`, `birthday_slot_code`, and
+  `birthday_slot_key` fields to the existing reservations schema with a unique
+  location/key index. Occupancy uses the
   configured default and confirmed status IDs; non-occupying statuses clear the
   key while preserving the reservation record.
-- Added server-side availability and conflict checks, a table-independent
-  Birthday reservation guard, and an additive rollback migration.
+- Added server-side availability and conflict checks, a marker-scoped
+  table-independent Birthday reservation guard, admin marker field, and an
+  additive rollback migration. Status-only maintenance skips the creation date
+  window, and unique-key conflicts are converted to validation responses.
 - No vendor/core, order, payment, authentication, security, notification,
   takeout, production, or business-data changes were made.
 - Validation: all new PHP files linted, Dockerfile.cloudrun built successfully,
-  config cache succeeded, and Birthday rules tests passed with 4 tests and 11
+  config cache succeeded, and Birthday rules tests passed with 7 tests and 15
   assertions. Staging migration and concurrency testing remain pending.
 
 Next step: review and merge the implementation PR, then enable the flag only on

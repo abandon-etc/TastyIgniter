@@ -2,10 +2,15 @@
 
 namespace Tests\Feature\BirthdayBooking;
 
+use App\BirthdayBooking\BirthdayAvailabilityService;
+use App\BirthdayBooking\BirthdayReservationRules;
 use App\BirthdayBooking\BirthdayRules;
 use App\BirthdayBooking\BirthdaySlot;
 use Carbon\CarbonImmutable;
+use Igniter\Reservation\Models\Reservation;
+use Illuminate\Database\QueryException;
 use Illuminate\Validation\ValidationException;
+use RuntimeException;
 use Tests\TestCase;
 
 class BirthdayRulesTest extends TestCase
@@ -76,6 +81,63 @@ class BirthdayRulesTest extends TestCase
         (new BirthdayRules)->normalizeDate(
             '2026-09-09',
             CarbonImmutable::create(2026, 7, 10, 12, 0, 0, 'America/Toronto'),
+        );
+    }
+
+    public function test_non_birthday_reservation_is_ignored_when_rules_are_enabled(): void
+    {
+        $reservation = new Reservation;
+        $reservation->setRawAttributes([
+            'birthday_booking' => false,
+            'reserve_date' => '2026-07-11',
+            'reserve_time' => '12:05:00',
+            'duration' => 45,
+            'table_id' => 7,
+        ], true);
+        $before = $reservation->getAttributes();
+
+        $this->birthdayReservationRules()->handleSaving($reservation);
+
+        $this->assertSame($before, $reservation->getAttributes());
+    }
+
+    public function test_cancelled_birthday_reservation_releases_key_without_date_window_validation(): void
+    {
+        $reservation = new Reservation;
+        $reservation->setRawAttributes([
+            'birthday_booking' => 1,
+            'location_id' => 1,
+            'reserve_date' => '2026-07-11',
+            'reserve_time' => '12:00:00',
+            'status_id' => 999,
+            'birthday_slot_code' => '12-16',
+            'birthday_slot_key' => '1|2026-07-11|12-16',
+        ], true);
+        $reservation->exists = true;
+
+        $this->birthdayReservationRules()->handleSaving($reservation);
+
+        $this->assertNull($reservation->birthday_slot_key);
+        $this->assertSame('12-16', $reservation->birthday_slot_code);
+    }
+
+    public function test_birthday_unique_constraint_is_recognized_as_a_slot_conflict(): void
+    {
+        $exception = new QueryException(
+            'mysql',
+            'insert into reservations',
+            [],
+            new RuntimeException('Duplicate entry for key birthday_reservation_slot_unique'),
+        );
+
+        $this->assertTrue(BirthdayAvailabilityService::isSlotConflict($exception));
+    }
+
+    private function birthdayReservationRules(): BirthdayReservationRules
+    {
+        return new BirthdayReservationRules(
+            new BirthdayRules,
+            new BirthdayAvailabilityService(new BirthdayRules),
         );
     }
 }

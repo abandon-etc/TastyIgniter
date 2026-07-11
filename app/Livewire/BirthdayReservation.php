@@ -96,6 +96,7 @@ final class BirthdayReservation extends Component
         );
 
         $reservation = $this->manager->loadReservation();
+        $reservation->birthday_booking = true;
         $data = [
             'sdateTime' => $this->date.' '.$slot->start,
             'guest' => $this->guest,
@@ -157,7 +158,6 @@ final class BirthdayReservation extends Component
 
     private function isSlotConflict(QueryException $exception): bool
     {
-        return ($exception->errorInfo[1] ?? null) === 1062
-            || str_contains(strtolower($exception->getMessage()), 'birthday_reservation_slot_unique');
+        return BirthdayAvailabilityService::isSlotConflict($exception);
     }
 }

@@ -13,6 +13,8 @@ return [
     'guest_note' => 'Guest count is recorded for the reservation only and does not determine birthday slot availability.',
     'change_selection' => 'Change date or time slot',
     'no_slots' => 'There are no available birthday time slots for this date.',
+    'admin_birthday_booking' => 'Birthday booking',
+    'admin_birthday_booking_comment' => 'Enable the fixed birthday slot rules for this reservation.',
     'slots' => [
         '12_16' => '12:00 PM - 4:00 PM',
         '16_20' => '4:00 PM - 8:00 PM',

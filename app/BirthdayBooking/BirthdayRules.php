@@ -28,16 +28,7 @@ final class BirthdayRules
 
     public function normalizeDate(string|CarbonInterface $date, ?CarbonImmutable $now = null): CarbonImmutable
     {
-        if ($date instanceof CarbonInterface) {
-            $normalized = CarbonImmutable::instance($date)->setTimezone($this->timezone())->startOfDay();
-        } else {
-            $normalized = CarbonImmutable::createFromFormat('!Y-m-d', $date, $this->timezone());
-            if (! $normalized || $normalized->format('Y-m-d') !== $date) {
-                throw ValidationException::withMessages([
-                    'date' => trans('birthday_booking.invalid_date'),
-                ]);
-            }
-        }
+        $normalized = $this->parseDate($date);
 
         [$earliest, $latest] = $this->dateWindow($now);
         if ($normalized->lt($earliest) || $normalized->gt($latest)) {
@@ -47,6 +38,22 @@ final class BirthdayRules
                     'latest' => $latest->toDateString(),
                 ]),
             ]);
+        }
+
+        return $normalized;
+    }
+
+    public function parseDate(string|CarbonInterface $date): CarbonImmutable
+    {
+        if ($date instanceof CarbonInterface) {
+            $normalized = CarbonImmutable::instance($date)->setTimezone($this->timezone())->startOfDay();
+        } else {
+            $normalized = CarbonImmutable::createFromFormat('!Y-m-d', $date, $this->timezone());
+            if (! $normalized || $normalized->format('Y-m-d') !== $date) {
+                throw ValidationException::withMessages([
+                    'date' => trans('birthday_booking.invalid_date'),
+                ]);
+            }
         }
 
         return $normalized;

@@ -1097,13 +1097,16 @@ review and staging migration.
   does not render fine-grained time options and reuses the existing reservation
   customer form/save path.
 - Added nullable Birthday slot code/key fields and a unique
-  `(location_id, birthday_slot_key)` index to the existing reservations table.
+  `(location_id, birthday_slot_key)` index plus an explicit
+  `birthday_booking` marker to the existing reservations table.
   The key is populated only for the configured default and confirmed statuses;
   canceled, expired, rejected, and other non-occupying statuses release it.
 - Added server-side availability checks, explicit slot validation, and removal
-  of table assignments for Birthday reservations. The database unique index is
-  the final duplicate-prevention guard.
-- Automated Birthday rules tests pass: 4 tests, 11 assertions. Dockerfile.cloudrun
+  of table assignments for Birthday reservations. Only marked Birthday records
+  are processed; status-only maintenance does not reapply the creation window.
+  The database unique index is the final duplicate-prevention guard and its
+  conflict is converted to a readable validation response.
+- Automated Birthday rules tests pass: 7 tests, 15 assertions. Dockerfile.cloudrun
   build and config cache validation pass. No staging database or business data
   was changed.
 
