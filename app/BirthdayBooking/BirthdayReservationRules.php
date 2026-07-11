@@ -3,6 +3,7 @@
 namespace App\BirthdayBooking;
 
 use Igniter\Admin\Widgets\Form;
+use Igniter\Flame\Support\Facades\Igniter;
 use Igniter\Reservation\Models\Reservation;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Validation\ValidationException;
@@ -95,7 +96,7 @@ final class BirthdayReservationRules
 
     private function syncAdminMarker(Reservation $reservation): void
     {
-        if (! app()->runningInAdmin() || ! request()->has('reservation.birthday_booking')) {
+        if (! Igniter::runningInAdmin() || ! request()->has('reservation.birthday_booking')) {
             return;
         }
 
