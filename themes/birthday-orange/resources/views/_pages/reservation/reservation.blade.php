@@ -10,9 +10,5 @@ permalink: ':location/reservation'
         </div>
     </div>
 
-    @if(config('birthday_booking.enabled'))
-        <livewire:birthday-reservation />
-    @else
-        <livewire:igniter-orange::booking />
-    @endif
+    <livewire:birthday-reservation />
 </div>
