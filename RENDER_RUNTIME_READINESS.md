@@ -1085,3 +1085,24 @@ reservation requirements audit remains open.
 Production readiness has not started. The next gate is a business requirements
 decision for reservation behavior, followed by small staging-only changes and
 focused acceptance tests if needed.
+
+## 2026-07-10 - Birthday reservation rules implementation
+
+Environment: local build only. Status: Pending PR review and Canada staging
+validation.
+
+- Birthday rules are isolated behind `BIRTHDAY_BOOKING_RULES_ENABLED`, which is
+  false by default. Render staging must keep the flag disabled as fallback.
+- The implementation adds two fixed venue slots, a plus-2 through plus-60 date
+  window, server-side availability validation, and a unique reservation slot
+  key without modifying vendor or TastyIgniter core.
+- The additive migration changes only the existing reservations schema by
+  adding a `birthday_booking` boolean with default false, nullable Birthday
+  slot fields, and a location/key unique index.
+- Local PHP lint, Dockerfile.cloudrun build, config cache, and 7 automated
+  Birthday rules tests / 15 assertions passed. No staging deployment or
+  database migration was run in this stage.
+
+Next step: after PR review, migrate and enable the feature only on Canada
+staging, then verify frontend availability, admin conflict handling, and
+concurrent claims. Production readiness remains deferred.

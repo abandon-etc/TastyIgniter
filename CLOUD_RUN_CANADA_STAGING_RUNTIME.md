@@ -409,3 +409,32 @@ time rules, table/capacity behavior, conflict handling, customer details and
 notes, notifications, bilingual copy, and mobile validation. Any confirmed
 change should be a small, reversible staging-only PR and must not modify core,
 vendor, or unrelated order/payment/authentication logic.
+
+## 2026-07-10 - Birthday reservation rules implementation
+
+Environment: local build only. Status: Pending PR review and Canada staging
+deployment.
+
+- The feature flag `BIRTHDAY_BOOKING_RULES_ENABLED` defaults to false and must
+  be set to true only on Canada staging after the PR is merged. Render remains
+  false and unchanged.
+- The Cloud Run image build includes an additive migration for the
+  `birthday_booking` boolean field with default false, nullable
+  `birthday_slot_code` and `birthday_slot_key` fields, plus the unique
+  `(location_id, birthday_slot_key)` index on `reservations`.
+- The custom Birthday page exposes only `12:00-16:00` and `16:00-20:00`, uses
+  the venue timezone, validates the plus-2 through plus-60 window on the
+  server, and reuses the existing reservation customer form/save path without
+  entering payment, registration, or add-ons.
+- The Birthday model guard only processes records explicitly marked with
+  `birthday_booking`; non-Birthday reservations remain on the standard path.
+  Status-only maintenance does not reapply the creation date window, and the
+  unique slot conflict is returned as a readable validation error.
+- Local validation passed PHP lint, Dockerfile.cloudrun build, config cache,
+  and 7 Birthday rules tests/15 assertions. No Cloud Run deployment, migration,
+  staging write, or real notification was performed.
+
+After merge, Canada staging must be migrated only after confirming the target
+database, then smoke-tested for occupied/free slots, cancellation release,
+admin conflict rejection, concurrent duplicate prevention, and existing page
+regressions. No production action is included.
