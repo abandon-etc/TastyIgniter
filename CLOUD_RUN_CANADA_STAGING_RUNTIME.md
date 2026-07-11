@@ -418,8 +418,9 @@ deployment.
 - The feature flag `BIRTHDAY_BOOKING_RULES_ENABLED` defaults to false and must
   be set to true only on Canada staging after the PR is merged. Render remains
   false and unchanged.
-- The Cloud Run image build includes an additive migration for nullable
-  `birthday_booking`, `birthday_slot_code`, and `birthday_slot_key` fields plus the unique
+- The Cloud Run image build includes an additive migration for the
+  `birthday_booking` boolean field with default false, nullable
+  `birthday_slot_code` and `birthday_slot_key` fields, plus the unique
   `(location_id, birthday_slot_key)` index on `reservations`.
 - The custom Birthday page exposes only `12:00-16:00` and `16:00-20:00`, uses
   the venue timezone, validates the plus-2 through plus-60 window on the
@@ -430,7 +431,7 @@ deployment.
   Status-only maintenance does not reapply the creation date window, and the
   unique slot conflict is returned as a readable validation error.
 - Local validation passed PHP lint, Dockerfile.cloudrun build, config cache,
-  and 4 Birthday rules tests/11 assertions. No Cloud Run deployment, migration,
+  and 7 Birthday rules tests/15 assertions. No Cloud Run deployment, migration,
   staging write, or real notification was performed.
 
 After merge, Canada staging must be migrated only after confirming the target
