@@ -1109,19 +1109,22 @@ concurrent claims. Production readiness remains deferred.
 
 ## 2026-07-11 - Birthday reservation rules staging validation
 
-Canada staging validation for merged PR #48 completed on Cloud Run revision
-`le-chateau-canada-staging-00014-2kd` at SHA `0a19c37f`. `/healthz/` and the
-core public/admin pages remained healthy after deployment. The Birthday flow
-exposed only the two fixed venue slots and enforced the Toronto-local plus-2
-through plus-60 date window. Service-side QA verified occupancy, cancellation
-release, the database uniqueness guard, and a two-task concurrent execution;
-synthetic records and temporary QA Jobs were removed afterward.
+Canada staging service-side validation for merged PR #48 completed on Cloud Run
+revision `le-chateau-canada-staging-00014-2kd` at SHA `0a19c37f`.
+`/healthz/` and the core public/admin pages remained healthy after deployment.
+The Birthday flow exposed only the two fixed venue slots and enforced the
+Toronto-local plus-2 through plus-60 date window. In the two-task concurrent
+execution, one claim succeeded and one lost with the expected unique-conflict
+path; the final occupying-row count was one. Synthetic records and temporary
+QA Jobs were removed afterward.
 
 The browser telephone widget rejected the synthetic number before a form
 submission could create a record. This is a separate non-blocking input-widget
-follow-up and is not a failure of the Birthday availability rules. No real
-data, payment, mail, production, or destructive database operation was used.
-Render staging and the DigitalOcean fallback remain available.
+follow-up and is not a failure of the Birthday availability rules, but it means
+end-to-end browser submission remains pending. No real data, payment, mail,
+production, or destructive database operation was used. PR #45 was closed as
+superseded by PR #46 and subsequent staging fixes/validation. Render staging and
+the DigitalOcean fallback remain available.
 
 Next steps:
 

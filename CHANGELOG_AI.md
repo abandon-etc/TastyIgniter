@@ -1968,8 +1968,9 @@ tests. Do not start payment, registration, or add-on work yet.
 
 ## 2026-07-11 - Birthday reservation rules staging validation
 
-Environment: Canada staging only. Status: Resolved for Birthday rules; the
-telephone-widget follow-up remains open.
+Environment: Canada staging only. Status: Service-side Birthday rule
+validation resolved; end-to-end browser submission remains pending because the
+telephone-widget blocked the form.
 
 - Synchronized merged PR #48 at SHA `0a19c37f`, built with
   `Dockerfile.cloudrun`, and deployed revision
@@ -1980,15 +1981,20 @@ telephone-widget follow-up remains open.
   filtering found no new fatal, exception, 500, storage permission, FUSE, or
   cache-directory errors.
 - Staging-only service-side QA verified the two fixed slots, Toronto date
-  window (+2 through +60), positive guest compatibility, occupancy states,
-  cancellation release, database unique conflict handling, and a completed
-  two-task concurrent execution.
+  window (+2 through +60), positive guest compatibility, occupancy states, and
+  cancellation release. In the two-task concurrent execution, one claim
+  succeeded and one lost with the expected unique-conflict path; the final
+  occupying-row count was one. No SQL bindings or index details were exposed.
+  The browser-facing readable business validation message was not separately
+  exercised because the telephone widget blocked form submission.
 - Synthetic records were cleaned up and all temporary Birthday QA Jobs were
   deleted. No test order, real customer data, payment, mail, or production
   operation was used.
 - Browser slot selection/display passed. Submission was blocked by the
   existing telephone widget rejecting the synthetic number; no browser-created
   reservation remains.
+- PR #45 was closed as superseded by PR #46 and subsequent staging
+  fixes/validation.
 
 Next step: merge the documentation record PR, then handle the telephone input
 widget as an independent small staging-only task if required.

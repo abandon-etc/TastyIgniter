@@ -446,15 +446,21 @@ revision `le-chateau-canada-staging-00014-2kd`; the existing runtime account,
 Cloud SQL connector, Secret Manager bindings, Cloud Storage mount, and liveness
 configuration were retained.
 
-Validation completed:
+Service-side validation completed; end-to-end browser submission remains
+pending because the telephone widget blocked the form.
 
 - `/healthz/`, public pages, Livewire, admin login, dashboard, and the tested
   admin management pages loaded successfully.
 - The Birthday form rendered only `12:00-16:00` and `16:00-20:00`, with the
   Toronto-local date window from two through sixty days ahead.
 - Service-side QA verified slot occupancy, occupying/non-occupying status
-  behavior, cancellation release, the database unique guard, and a two-task
-  concurrent execution. Synthetic QA records were deleted.
+  behavior, and cancellation release. The two-task concurrent execution
+  produced one successful claim and one expected unique-conflict failure, with
+  one final occupying row. The losing write followed the service-side conflict
+  path; the browser-facing readable business validation message was not
+  separately exercised. SQL bindings and index details were not exposed.
+- PR #45 was closed as superseded by PR #46 and subsequent staging
+  fixes/validation. Synthetic QA records were deleted.
 - Temporary Birthday QA Jobs were deleted. Cloud Run logs had no new matching
   fatal, exception, 500, cache-directory, Cloud SQL, FUSE, or storage
   permission errors.
