@@ -1113,3 +1113,37 @@ review and staging migration.
 Next step: review the implementation PR, then run the additive migration and
 enable the feature only on Canada staging before browser/concurrency smoke
 tests. Render remains disabled and available as fallback.
+
+## 2026-07-11 - Birthday reservation rules staging validation
+
+Environment: Canada staging only. Status: Service-side Birthday rule
+validation resolved; end-to-end browser reservation submission remains pending
+because the telephone input widget blocked the form.
+
+- PR #48 was deployed as SHA `0a19c37f` to Cloud Run revision
+  `le-chateau-canada-staging-00014-2kd`. `/healthz/` and the public/admin smoke
+  pages returned HTTP 200.
+- Authenticated navigation verified dashboard, Orders, Reservations,
+  Categories, Menus, Media Manager, Settings, Extensions, Staff, and the
+  public reservation page without a page-level 5xx or same-origin asset
+  failure.
+- The Birthday flow displayed only `12:00-16:00` and `16:00-20:00`; the
+  Toronto-local date window was current date +2 through +60. Positive guest
+  counts remained compatible and did not control availability.
+- Service-side QA covered date boundaries, slot occupancy, occupying and
+  non-occupying status behavior, cancellation release, and the database unique
+  conflict guard. The two-task concurrent execution produced one successful
+  claim and one expected unique-conflict failure; the final occupying-row count
+  was one. The harness classified the losing write through the expected
+  service-side conflict path without exposing SQL bindings or index details.
+  Synthetic QA records and temporary Cloud Run Jobs were removed afterward.
+- The browser telephone widget rejected the synthetic number before
+  submission. No browser-created reservation remains; this is a separate
+  input-widget follow-up, not a Birthday availability failure.
+- No real customer, order, reservation, payment, mail, menu, or production
+  data was used. Render staging and the DigitalOcean fallback remain unchanged.
+- PR #45 was closed as superseded by PR #46 and subsequent staging
+  fixes/validation.
+
+Next step: review and merge the documentation PR, then decide separately
+whether to fix the telephone widget before further reservation UX work.
