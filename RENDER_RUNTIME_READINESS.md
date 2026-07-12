@@ -1134,3 +1134,36 @@ Next steps:
    later payment, registration, add-on, bilingual, and delivery work.
 4. Keep production readiness deferred until the remaining functional and
    operational gates are explicitly accepted.
+
+## 2026-07-12 - Birthday browser submission validation after PR #50
+
+Canada staging validation completed on Cloud Run revision
+`le-chateau-canada-staging-00016-2tj` after the PR #50 image deployment. The
+runtime remained in Montréal with the existing Cloud SQL connector, Secret
+Manager bindings, Cloud Storage media mount, and `/healthz/` liveness path.
+
+- The public Birthday form exposed only the two fixed slots and accepted one
+  synthetic browser reservation. The success page and authenticated admin
+  record were verified; the server normalized the telephone value to the
+  expected E.164-style representation.
+- The Pending record occupied the selected slot. Admin cancellation released
+  it, and the synthetic reservation was deleted afterward. No real customer,
+  order, payment, notification, or production data was used.
+- `/healthz/`, public pages, admin login, Livewire, dashboard, and retained
+  test media passed the regression checks. `IMG_2484.png` remained HTTP 200
+  with `image/png`. No localhost or old Render URL was present in tested HTML.
+- Recent Cloud Run error filtering found no new fatal, exception, 500, SQL,
+  cache-directory, FUSE, or storage-permission errors. Existing dashboard
+  Broadcast/configuration warnings remain non-blocking.
+- `MAIL_MAILER=log` is enabled only on Canada staging for notification-safe
+  synthetic testing; it does not send external mail. Render staging remains
+  the fallback and production readiness is still deferred.
+
+Next steps:
+
+1. Review the documentation-only Birthday browser validation PR.
+2. Keep payment, registration, add-ons, bilingual copy, and production work
+   separately scoped.
+3. Treat production readiness as deferred until notification configuration,
+   remaining functional requirements, and operational gates are explicitly
+   accepted.

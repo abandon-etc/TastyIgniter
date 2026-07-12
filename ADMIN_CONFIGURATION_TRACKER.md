@@ -1167,3 +1167,33 @@ review.
 
 Next step: review and merge the telephone-input PR, then deploy only to
 Canada staging and complete one synthetic browser reservation validation.
+
+## 2026-07-12 - Birthday browser submission validation after PR #50
+
+Environment: Canada staging only. Status: Resolved for the current Birthday
+reservation scope; production readiness remains deferred.
+
+- PR #50 was deployed from merge SHA `fceead8b` as Cloud Run revision
+  `le-chateau-canada-staging-00015-vnj`. A staging-only `MAIL_MAILER=log`
+  revision was then created as `le-chateau-canada-staging-00016-2tj` so the
+  synthetic validation could not contact an external SMTP server.
+- The public Birthday form displayed only the two fixed slots. A synthetic
+  browser submission reached the success page, and the admin Reservations
+  list displayed the new Birthday record with Pending status, no table, and
+  the expected fixed-slot duration. The telephone value was normalized by the
+  server to the expected E.164-style representation.
+- The occupied slot became unavailable in a fresh public form. After changing
+  the synthetic record to Canceled, the slot became available again. The
+  synthetic reservation was then deleted from the staging admin UI; no real
+  customer, order, payment, notification, or production data was used.
+- `/healthz/`, homepage, menus, cart, reservation, admin login, Livewire, and
+  retained test media remained available. Dashboard navigation and the logged-
+  in admin session remained usable. Recent Cloud Run error filtering found no
+  new fatal, exception, 500, SQL, cache-directory, FUSE, or storage-permission
+  error. Existing Broadcast/configuration warnings remain non-blocking.
+- Render staging and the DigitalOcean fallback remain unchanged.
+
+Next step: keep the synthetic validation record as documentation only, then
+move to separately scoped reservation enhancements. Payment, registration,
+add-ons, notifications, bilingual copy, and production work remain out of
+scope.

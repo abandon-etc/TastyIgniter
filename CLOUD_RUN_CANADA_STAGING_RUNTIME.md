@@ -473,3 +473,33 @@ the DigitalOcean fallback remain available.
 
 Next step: review the validation record PR, then decide whether the telephone
 widget needs its own focused staging PR.
+
+## 2026-07-12 - Birthday browser submission validation after PR #50
+
+Environment: Canada staging only. Status: Resolved for the Birthday browser
+validation gate.
+
+- PR #50 image SHA `fceead8b` was deployed as revision
+  `le-chateau-canada-staging-00015-vnj`. A follow-up staging-only configuration
+  revision `le-chateau-canada-staging-00016-2tj` uses `MAIL_MAILER=log` so the
+  synthetic test cannot send external mail.
+- `/healthz/`, the homepage, menus, cart, reservation entry, admin login,
+  Livewire JavaScript, and retained media passed HTTP smoke checks. The
+  retained non-business media object `IMG_2484.png` remained available as
+  `image/png` after the redeploy.
+- One synthetic browser Birthday reservation reached the success page and was
+  visible in the authenticated Reservations admin list as Pending. The
+  selected slot became unavailable, cancellation released it, and the record
+  was deleted through the admin UI after validation. No real data or payment
+  operation was involved.
+- The browser session had no error-level console entries. Cloud Run logs had
+  no new fatal, exception, 500, Cloud SQL, cache-directory, FUSE, or storage
+  permission error. Existing dashboard Broadcast/configuration warnings are
+  non-blocking and unrelated to Birthday rules.
+- The `/healthz/` liveness path remains `/healthz/`; the bare-path Google
+  frontend behavior remains a separate known observation. Render staging and
+  the DigitalOcean fallback were not changed.
+
+Next step: review the documentation-only validation PR, then continue with
+separate staging-only Birthday enhancements. Keep payment, registration,
+add-ons, notification delivery, and production changes out of scope.

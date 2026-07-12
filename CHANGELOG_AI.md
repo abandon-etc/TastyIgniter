@@ -2018,3 +2018,33 @@ review.
 
 Next step: review and merge the implementation PR, then build/deploy Canada
 staging and complete the browser-only synthetic Birthday reservation test.
+
+## 2026-07-12 - Record Birthday browser submission validation
+
+Environment: Canada staging only. Status: Resolved for the PR #50 validation
+gate.
+
+- Built the merged PR #50 image from SHA `fceead8b` and deployed it to Cloud
+  Run revision `le-chateau-canada-staging-00015-vnj`; the staging-only log
+  mailer configuration was subsequently deployed as revision
+  `le-chateau-canada-staging-00016-2tj`.
+- Rechecked `/healthz/`, the homepage, menus, cart, reservation entry, admin
+  login, and Livewire JavaScript; all returned HTTP 200. Retained test media
+  `IMG_2484.png` remained HTTP 200 with `image/png`. No localhost or old Render
+  URL appeared in the tested HTML.
+- Completed one synthetic browser Birthday reservation. The telephone input
+  accepted the test NANP value and server normalization produced the expected
+  E.164-style value. The success page and authenticated admin record were
+  both verified. The fixed slot was unavailable while Pending, was released
+  after Canceled, and the synthetic record was deleted through the admin UI.
+- Browser reservation logs had no error entries. Cloud Run error filtering
+  found no new fatal, exception, 500, SQL, cache-directory, FUSE, or storage
+  permission errors. Existing dashboard Broadcast/configuration warnings are
+  recorded as non-blocking.
+- No code, migration, vendor, core, production, payment, order, customer,
+  notification, or real-data change was made in this documentation update.
+  Render staging remains the fallback.
+
+Next step: review this documentation-only validation PR, then continue with
+small, explicitly scoped Birthday reservation enhancements. Do not begin
+payment, registration, add-ons, or production planning from this record.
