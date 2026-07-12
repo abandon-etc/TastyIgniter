@@ -1147,3 +1147,23 @@ because the telephone input widget blocked the form.
 
 Next step: review and merge the documentation PR, then decide separately
 whether to fix the telephone widget before further reservation UX work.
+
+## 2026-07-12 - Birthday reservation telephone input follow-up
+
+Environment: local build only; Canada staging not deployed. Status: Pending PR
+review.
+
+- Added a Birthday-specific telephone input so the birthday flow no longer
+  depends on the legacy Orange `intl-tel-input` browser widget.
+- Added server-authoritative Canada/US NANP validation and normalization for
+  common national and `+1` formats. Valid values are stored in normalized
+  `+1##########` form; invalid values remain rejected.
+- Kept the standard reservation telephone flow unchanged. No vendor, core,
+  payment, order, authentication, notification, or production configuration
+  was modified.
+- No staging deployment, reservation submission, notification, or real/test
+  customer data change was performed in this step. Render staging remains the
+  fallback.
+
+Next step: review and merge the telephone-input PR, then deploy only to
+Canada staging and complete one synthetic browser reservation validation.

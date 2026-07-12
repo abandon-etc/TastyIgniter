@@ -1998,3 +1998,23 @@ telephone-widget blocked the form.
 
 Next step: merge the documentation record PR, then handle the telephone input
 widget as an independent small staging-only task if required.
+
+## 2026-07-12 - Fix Birthday reservation telephone input
+
+Environment: local build only; Canada staging not deployed. Status: Pending PR
+review.
+
+- Replaced the Birthday flow's dependency on the legacy telephone picker with
+  a scoped native telephone field and lightweight client-side formatting.
+- Added app-level server validation/normalization for Canada/US NANP numbers,
+  including national, punctuation-separated, and `+1` forms. Normalized
+  values use the `+15145550100`-style representation without duplicating the
+  country code.
+- Added focused unit coverage for accepted formats, normalization, optional
+  empty values, and invalid/non-NANP inputs.
+- No vendor/core, standard reservation, payment, order, authentication,
+  notification, production, or real-data changes were made. Render staging
+  remains unchanged as fallback.
+
+Next step: review and merge the implementation PR, then build/deploy Canada
+staging and complete the browser-only synthetic Birthday reservation test.
