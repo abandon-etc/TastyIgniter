@@ -10,6 +10,8 @@ return [
     'invalid_slot_time' => 'Only the configured birthday booking times are available.',
     'slot_unavailable' => 'This birthday booking time is no longer available.',
     'process_failed' => 'The birthday reservation could not be completed.',
+    'telephone_invalid' => 'Enter a valid Canada or US telephone number.',
+    'telephone_placeholder' => '514-555-0100',
     'guest_note' => 'Guest count is recorded for the reservation only and does not determine birthday slot availability.',
     'change_selection' => 'Change date or time slot',
     'no_slots' => 'There are no available birthday time slots for this date.',

@@ -26,7 +26,7 @@
                         </h4>
                     </div>
                 </div>
-                @include('igniter-orange::includes.booking.booking-form')
+                @include('livewire.birthday-booking-form')
             </div>
         </div>
         <div class="card bg-white mt-1">

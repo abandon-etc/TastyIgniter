@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\BirthdayBooking\BirthdayAvailabilityService;
 use App\BirthdayBooking\BirthdayRules;
+use App\BirthdayBooking\BirthdayTelephone;
 use Igniter\Flame\Exception\ApplicationException;
 use Igniter\Local\Facades\Location;
 use Igniter\Orange\Livewire\Forms\BookingForm;
@@ -89,6 +90,7 @@ final class BirthdayReservation extends Component
         $this->validate([
             'guest' => ['required', 'integer', 'min:1'],
         ]);
+        $this->form->telephone = app(BirthdayTelephone::class)->normalize($this->form->telephone);
         $this->form->validate();
         $slot = app(BirthdayAvailabilityService::class)->assertDateAndSlot(
             $this->date,
