@@ -1197,3 +1197,29 @@ Next step: keep the synthetic validation record as documentation only, then
 move to separately scoped reservation enhancements. Payment, registration,
 add-ons, notifications, bilingual copy, and production work remain out of
 scope.
+
+## 2026-07-12 - Shared payment and Birthday checkout architecture audit
+
+Environment: docs/local audit only. Status: Design pending business decisions.
+
+- Confirmed PR #51 is merged on `4.x` at SHA `45730125`. No runtime code,
+  migration, payment gateway, webhook, order, reservation, customer, or
+  production change was made.
+- Audited the installed Order checkout, Reservation model, PayRegister
+  gateway registry, payment configuration, PaymentLog, PaymentProfile, Stripe
+  return/webhook flow, refund widget, and current Birthday Reservation flow.
+- Current `payments` is a gateway configuration table and current
+  `payment_logs` is Order-specific. Neither should be reused as the generic
+  Birthday transaction ledger.
+- Recommended separate app-level Birthday Booking, shared payment transaction
+  and webhook event records, durable idempotency, and a slot lock/hold layer.
+  Existing Reservations remain visible in the backend as the operational
+  record; payment state must remain separate from Reservation `status_id`.
+- Added `BIRTHDAY_PAYMENT_ARCHITECTURE_DESIGN.md` with boundaries, proposed
+  schema, state models, hold lifecycle, webhook/security design, tests,
+  rollback, and open business decisions.
+
+Next step: review the design PR and decide package, price, hold, account,
+gateway test-mode, tax, cancellation/refund, notification, and Reservation
+creation timing requirements. Do not enter payment secrets or connect a real
+gateway at this stage.

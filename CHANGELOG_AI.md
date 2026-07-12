@@ -2048,3 +2048,32 @@ gate.
 Next step: review this documentation-only validation PR, then continue with
 small, explicitly scoped Birthday reservation enhancements. Do not begin
 payment, registration, add-ons, or production planning from this record.
+
+## 2026-07-12 - Design shared payment infrastructure and Birthday checkout
+
+Environment: docs/local audit only. Status: Design pending business decisions.
+
+- Synchronized merged PR #51 at
+  `45730125929ee8afc5f5cde5cf8a8f7ac867d9c4` and created a design branch from
+  current `4.x`.
+- Audited the actual installed TastyIgniter Order checkout and PayRegister
+  implementation, including gateway registration, Payment/PaymentLog/
+  PaymentProfile models, Stripe PaymentIntent/Checkout Session behavior,
+  signed webhook handling, delayed webhook job, refund form, Order status
+  transitions, Reservation model, and the custom Birthday flow.
+- Design conclusion: keep existing Order checkout separate, introduce an
+  app-owned polymorphic payable boundary and payment transaction/event/refund
+  records, and keep Birthday Booking/slot holds separate from payment and
+  Reservation status. Do not repurpose the existing gateway configuration
+  `payments` table or Order-only `payment_logs` table.
+- Documented idempotency, webhook replay protection, raw-body/signature
+  handling, PCI boundary, price snapshots, hold lifecycle, state mapping,
+  registration and notification boundaries, refund research, test matrix,
+  rollback, and open business choices.
+- No PaymentIntent, gateway account, webhook endpoint, secret, migration, code,
+  vendor/core change, test order, test reservation, real email, or production
+  operation was performed.
+
+Next step: review and merge the documentation-only design PR, then confirm the
+open business decisions before creating any implementation PR. No payment
+secret is required for this review stage.
