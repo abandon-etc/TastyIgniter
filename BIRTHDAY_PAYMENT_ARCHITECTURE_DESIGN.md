@@ -229,6 +229,25 @@ deterministic `birthday_slot_locks` row keyed by location, date, and slot.
    idempotent transaction.
 8. Run explicit expired-hold cleanup; never use destructive reset commands.
 
+### Payment success after an invalid hold
+
+Payment success does not guarantee Booking confirmation. If a verified webhook
+arrives after the hold has expired, disappeared, or been reclaimed by another
+valid hold or Reservation:
+
+- do not confirm the Birthday Booking;
+- do not overwrite, cancel, or steal the other valid hold or Reservation;
+- keep the local Payment Transaction in `succeeded`;
+- move the Birthday Booking to `payment_exception` or `manual_review`;
+- record only a safe reconciliation reason such as `hold_expired`,
+  `hold_missing`, or `slot_reclaimed`;
+- emit an internal operations alert without exposing payment payloads; and
+- wait for an approved manual decision: full refund, customer coordination for
+  another slot, or another documented remedy.
+
+This is not a payment failure. Releasing the hold and stopping would lose the
+relationship between a successful payment and an unconfirmed Booking.
+
 The existing `birthday_slot_key` unique index remains a final compatibility
 guard, but must not be the only hold coordination mechanism. All public and
 admin claim paths use the same lock service. A provisional 10-15 minute hold
@@ -245,6 +264,7 @@ pending_payment -> expired
 held -> cancelled
 paid -> refund_pending -> refunded
 confirmed -> cancelled (only after approved policy)
+paid -> payment_exception -> manual_review
 ```
 
 ### Payment state
@@ -271,6 +291,7 @@ Recommended mapping:
 | Payment failure/expiry | Release hold and cancel/remove provisional record per final schema |
 | Approved cancellation | Use existing canceled Reservation status |
 | Refund state | Keep separate; do not overload Reservation `status_id` |
+| Verified payment with invalid/reclaimed hold | Keep payment `succeeded`, move Booking to `payment_exception`/`manual_review`, and alert operations |
 
 Do not invent Reservation statuses just to express payment states. A separate
 Birthday Booking state is safer.
@@ -301,7 +322,8 @@ select date/slot/package/add-ons
   -> unique event is recorded once
   -> provider object, amount, currency, and payable are verified
   -> transaction, Booking, and slot are locked
-  -> payment and Booking/Reservation states commit
+  -> valid hold: payment and Booking/Reservation states commit
+  -> invalid hold: payment stays succeeded, Booking enters manual review
   -> post-commit notification event
 ```
 
@@ -321,6 +343,12 @@ The installed Stripe adapter already verifies signatures and supports payment
 intent and checkout-session events, but its current queue job resolves
 `order_id` and has no generic event ledger. Wrap or replace it behind the shared
 boundary; do not copy its Order assumptions into Birthday code.
+
+When a duplicate webhook arrives while a Booking is in `payment_exception` or
+`manual_review`, event-id deduplication must make it a no-op. It must not retry
+Booking confirmation blindly, release another user's slot, or change the
+successful Payment Transaction to failed. Manual reconciliation is a separate
+state transition with its own audit record.
 
 Use hosted checkout or a tokenized Payment Element. The application may retain
 provider references and non-sensitive brand/last four only. PaymentProfile
@@ -349,8 +377,10 @@ booking reference, contact snapshot, date/slot, package/add-ons, immutable
 price breakdown, booking/payment/refund/notification states, safe transaction
 reference, and timestamps. Payment views should show source (`birthday` or
 `order`), payable reference, gateway, amount/currency, safe external reference,
-and timestamps. Never show complete card data, CVC, secrets, signatures, or
-raw provider payloads.
+and timestamps. They must also show a safe reconciliation reason, manual-review
+state, alert status, and approved recovery action when payment succeeded but
+Booking confirmation failed. Never show complete card data, CVC, secrets,
+signatures, or raw provider payloads.
 
 ## 16. Recommended PR Sequence
 
@@ -360,15 +390,19 @@ raw provider payloads.
 | B | Birthday Booking domain, server pricing and snapshot | No | Additive/reversible |
 | C | Slot hold/lock, expiry cleanup and concurrency tests | No | Additive/reversible |
 | D | Shared transactions, gateway adapter, event ledger, idempotency and refund interfaces | No live gateway | Additive/reversible |
-| E | Staging test-mode checkout with fake/local gateway | Test mode only | Per D |
 | F | Registration gate and checkout-state restore | No new gateway | Maybe |
+| E | Staging test-mode checkout with fake/local gateway | Test mode only | Per D |
 | G | Post-commit notification preferences and log/no-op delivery | No external delivery | Maybe |
 | H | Quebec cancellation/refund research | No runtime code | No |
 | I | Compliant refund implementation after H | After approval | Additive/reversible |
 | J | Reuse shared payment layer in Order checkout | Staging first | Maybe |
 
-Recommended order is A -> B -> C -> D -> E -> F -> G, with H before I. J
+Recommended order is A -> B -> C -> D -> F -> E -> G, with H before I. J
 follows a stable Birthday test-mode path and must not regress Order checkout.
+F must complete before E exposes any customer-facing payment flow. If E is
+implemented earlier, it may only be an internal automated fake-gateway harness:
+no public customer checkout, no final-user payment page, and no customer may
+enter a payment flow before F is complete.
 
 ## 17. Test Matrix
 
@@ -378,7 +412,10 @@ idempotency, duplicate/out-of-order events, amount/currency mismatch, refunds.
 Integration: same-slot claims, hold versus Reservation race, test success,
 failure/expiry release, duplicate webhook no-op, browser-before-webhook pending,
 webhook-before-browser exactly-once confirmation, provider retry, and existing
-Order checkout regression.
+Order checkout regression. Also cover payment success after hold expiry,
+payment success after slot reclaim, duplicate webhook during manual review,
+refund retry after payment exception, and no automatic Booking confirmation
+when the hold is invalid.
 
 Browser: package/add-on selection, registration restore, test success/failure,
 refresh/back behavior, hold expiry, mobile layout, and existing menu/cart flow.
@@ -392,7 +429,11 @@ access control.
 This PR rolls back with a Git revert. Future PRs require feature flags,
 additive reversible migrations, no destructive reset, provider-independent
 local state, disable switches preserving existing Reservations/Order checkout,
-and Render staging fallback.
+and Render staging fallback. A payment exception is reconciled, not rolled back
+by deleting records: preserve the succeeded Payment Transaction, safe reason,
+and event audit, and require an approved refund, alternate-slot coordination,
+or other manual recovery. Refund retries use a durable provider refund
+ID/idempotency key and must not duplicate a successful refund.
 
 Business decisions required before implementation:
 
@@ -413,7 +454,32 @@ Business decisions required before implementation:
 
 No secret is needed to answer these business questions.
 
-## 19. Current Conclusion
+## 19. Risk and Mitigation Matrix
+
+| Risk | Failure mode | Mitigation | Automated test | Staging gate | Rollback/manual recovery |
+| --- | --- | --- | --- | --- | --- |
+| Duplicate webhook | Same provider event repeats | Unique provider event ID and idempotent handler | Duplicate event no-op | Replay safe test event | No-op; inspect audit |
+| Out-of-order webhook | Events arrive in unsafe order | State guards and provider re-read | Out-of-order event | Approved fake sequence | Preserve state; review |
+| Payment succeeded but confirmation failed | Local confirmation transition fails | Keep `succeeded`; set `payment_exception`/`manual_review`; alert | Success/confirmation failure | Admin sees exception | Refund or alternate slot |
+| Payment succeeded after hold expiry | Webhook arrives after expiry | Lock and expiry check; never steal slot | Expired-hold success | No confirmation or slot theft | Full refund/coordination |
+| Slot hold expiry race | Cleanup overlaps success | Row lock and atomic transition | Expiry/payment race | Repeated concurrent run | Preserve evidence; review |
+| Same-slot double-sale | Two claims overlap | Unified slot lock and unique Reservation guard | Concurrent claims | One success maximum | Reconcile loser |
+| Amount mismatch | Client/provider amount differs | Server snapshot and provider verification | Amount mismatch | Tampered amount rejected | Pending/exception review |
+| Currency mismatch | Provider currency differs | Verify ISO currency | Currency mismatch | Wrong currency rejected | Refund/review |
+| Payable identity mismatch | Event points to another payable | Verify type, ID, gateway and transaction | Payable mismatch | Cross-payable event rejected | Security review |
+| Price/add-on tampering | Browser changes total or quantity | Recompute server-side | Payload tampering | Server total wins | Reject checkout |
+| Duplicate refund | Refund request repeats | Unique provider refund ID/idempotency | Duplicate refund | Repeat request is safe | Provider reconciliation |
+| Partial refund retry | Timeout hides refund result | Query provider before retry | Partial refund retry | One provider result | Manual review |
+| Staging/production secret mix-up | Wrong secret selected | Separate Secret Manager names and environment guard | Isolation test | Staging-only refs | Disable/rotate via UI |
+| Cross-environment webhook | Foreign event accepted | Environment-scoped secret and identity checks | Cross-env rejection | Event rejected | Security incident review |
+| Real Email/SMS from staging | Test notification leaves staging | `MAIL_MAILER=log`; no external credentials | Notification no-op | No external delivery | Disable and rotate |
+| Existing Order regression | Shared layer changes Order flow | Order adapter and regression suite | Order checkout tests | Menu/cart smoke test | Disable new adapter |
+| Cloud Run multi-instance race | Requests hit separate instances | DB locks/unique constraints, no process memory | Multi-instance claims | Concurrent staging run | Stop flow; reconcile |
+| Tax uncertainty | Wrong Quebec tax basis | Legal/business decision before code | Tax fixtures after decision | Approved examples only | Disable pricing release |
+| Quebec refund uncertainty | Policy conflicts with law | Research PR and manual refund | Policy matrix after decision | Legal/business gate | No automatic deduction |
+| Sensitive metadata leakage | Raw provider data reaches logs/DB | Redaction and safe summaries | Leakage scan | Cloud Run log/table review | Stop, redact, investigate |
+
+## 20. Current Conclusion
 
 The installed PayRegister extension is reusable as a gateway adapter, but its
 Order-specific PaymentLog, Order metadata, and current webhook job must not

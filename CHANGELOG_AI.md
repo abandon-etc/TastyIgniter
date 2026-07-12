@@ -2077,3 +2077,25 @@ Environment: docs/local audit only. Status: Design pending business decisions.
 Next step: review and merge the documentation-only design PR, then confirm the
 open business decisions before creating any implementation PR. No payment
 secret is required for this review stage.
+
+## 2026-07-12 - Refine PR #52 payment exception and delivery order design
+
+Environment: docs/local audit only. Status: Design update pending review.
+
+- Added the exception path where a signed webhook verifies payment success but
+  the Birthday hold is expired, missing, or reclaimed. The payment remains
+  `succeeded`; Booking moves to `payment_exception`/`manual_review`; no valid
+  slot is overwritten; a safe reconciliation reason and internal alert are
+  required; manual recovery chooses refund or alternate-slot coordination.
+- Added this path to the hold lifecycle, state model, payment/webhook sequence,
+  webhook idempotency, admin requirements, rollback/reconciliation guidance,
+  and integration tests. Added tests for expiry, reclaim, duplicate webhook
+  during review, refund retry, and no automatic confirmation.
+- Changed the recommended order to A -> B -> C -> D -> F -> E -> G. E before F
+  is allowed only as an internal fake-gateway harness with no public customer
+  checkout or payment page.
+- Added a 20-item Risk and Mitigation Matrix with failure mode, mitigation,
+  automated test, staging gate, and rollback/manual recovery.
+- This is still a documentation-only update. No runtime code, migration,
+  vendor/core, gateway, webhook, secret, production, order, reservation,
+  notification, or real-data operation was performed.

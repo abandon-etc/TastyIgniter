@@ -1223,3 +1223,29 @@ Next step: review the design PR and decide package, price, hold, account,
 gateway test-mode, tax, cancellation/refund, notification, and Reservation
 creation timing requirements. Do not enter payment secrets or connect a real
 gateway at this stage.
+
+## 2026-07-12 - PR #52 payment exception and implementation-order clarification
+
+Environment: docs/local audit only. Status: Design update pending review.
+
+- Extended the design for verified payment success after an expired, missing,
+  or reclaimed Birthday slot hold. The Payment Transaction remains
+  `succeeded`; the Booking enters `payment_exception` or `manual_review`, no
+  other hold/Reservation is changed, and operations must choose refund,
+  alternate-slot coordination, or another approved remedy.
+- Added duplicate-webhook behavior during manual review, refund retry rules,
+  admin reconciliation fields, rollback/reconciliation guidance, and the
+  required integration cases.
+- Confirmed implementation order is A -> B -> C -> D -> F -> E -> G. E may
+  precede F only as an internal fake-gateway harness with no public payment
+  page or customer payment flow.
+- Added the independent 20-item Risk and Mitigation Matrix covering webhook,
+  hold, payment consistency, refunds, secrets, notification isolation,
+  multi-instance concurrency, tax/legal uncertainty, and metadata leakage.
+- This remains documentation only. No runtime code, migration, vendor/core,
+  payment gateway, webhook, secret, production, order, reservation, or real
+  data change was made.
+
+Next step: request review of PR #52, then confirm the business decisions before
+starting packages, migrations, slot holds, payment gateway, or registration
+implementation.
