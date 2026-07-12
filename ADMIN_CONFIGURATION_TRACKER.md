@@ -1197,3 +1197,55 @@ Next step: keep the synthetic validation record as documentation only, then
 move to separately scoped reservation enhancements. Payment, registration,
 add-ons, notifications, bilingual copy, and production work remain out of
 scope.
+
+## 2026-07-12 - Shared payment and Birthday checkout architecture audit
+
+Environment: docs/local audit only. Status: Design pending business decisions.
+
+- Confirmed PR #51 is merged on `4.x` at SHA `45730125`. No runtime code,
+  migration, payment gateway, webhook, order, reservation, customer, or
+  production change was made.
+- Audited the installed Order checkout, Reservation model, PayRegister
+  gateway registry, payment configuration, PaymentLog, PaymentProfile, Stripe
+  return/webhook flow, refund widget, and current Birthday Reservation flow.
+- Current `payments` is a gateway configuration table and current
+  `payment_logs` is Order-specific. Neither should be reused as the generic
+  Birthday transaction ledger.
+- Recommended separate app-level Birthday Booking, shared payment transaction
+  and webhook event records, durable idempotency, and a slot lock/hold layer.
+  Existing Reservations remain visible in the backend as the operational
+  record; payment state must remain separate from Reservation `status_id`.
+- Added `BIRTHDAY_PAYMENT_ARCHITECTURE_DESIGN.md` with boundaries, proposed
+  schema, state models, hold lifecycle, webhook/security design, tests,
+  rollback, and open business decisions.
+
+Next step: review the design PR and decide package, price, hold, account,
+gateway test-mode, tax, cancellation/refund, notification, and Reservation
+creation timing requirements. Do not enter payment secrets or connect a real
+gateway at this stage.
+
+## 2026-07-12 - PR #52 payment exception and implementation-order clarification
+
+Environment: docs/local audit only. Status: Design update pending review.
+
+- Extended the design for verified payment success after an expired, missing,
+  or reclaimed Birthday slot hold. The Payment Transaction remains
+  `succeeded`; the Booking enters `payment_exception` or `manual_review`, no
+  other hold/Reservation is changed, and operations must choose refund,
+  alternate-slot coordination, or another approved remedy.
+- Added duplicate-webhook behavior during manual review, refund retry rules,
+  admin reconciliation fields, rollback/reconciliation guidance, and the
+  required integration cases.
+- Confirmed implementation order is A -> B -> C -> D -> F -> E -> G. E may
+  precede F only as an internal fake-gateway harness with no public payment
+  page or customer payment flow.
+- Added the independent 20-item Risk and Mitigation Matrix covering webhook,
+  hold, payment consistency, refunds, secrets, notification isolation,
+  multi-instance concurrency, tax/legal uncertainty, and metadata leakage.
+- This remains documentation only. No runtime code, migration, vendor/core,
+  payment gateway, webhook, secret, production, order, reservation, or real
+  data change was made.
+
+Next step: request review of PR #52, then confirm the business decisions before
+starting packages, migrations, slot holds, payment gateway, or registration
+implementation.
