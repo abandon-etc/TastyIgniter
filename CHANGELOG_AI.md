@@ -2097,5 +2097,29 @@ Environment: docs/local audit only. Status: Design update pending review.
 - Added a 20-item Risk and Mitigation Matrix with failure mode, mitigation,
   automated test, staging gate, and rollback/manual recovery.
 - This is still a documentation-only update. No runtime code, migration,
-  vendor/core, gateway, webhook, secret, production, order, reservation,
-  notification, or real-data operation was performed.
+vendor/core, gateway, webhook, secret, production, order, reservation,
+notification, or real-data operation was performed.
+
+## 2026-07-15 - Add Birthday packages and add-ons management
+
+Environment: local/docs implementation branch only. Status: Pending PR review;
+no staging deployment or migration execution.
+
+- Added the app-owned `abandon.birthday` extension, root Composer autoload
+  mapping, admin navigation, translations, and separate package/add-on
+  permissions.
+- Added reversible additive migrations for `birthday_packages` and
+  `birthday_addons`. Prices are validated as non-negative CAD decimal input
+  and persisted as integer `price_minor`; no float is used as the authority.
+- Added package/add-on models and services, default-package invariant, archive
+  and restore operations, and admin list/form controllers. Archive is the
+  available admin removal operation; no destructive delete control is exposed.
+- Added focused unit coverage for minor-unit conversion and catalog model
+  accessors. PHP/Composer execution was not available in the local shell, so
+  runtime tests and migration execution remain pending in CI/staging.
+- Scope remains limited to catalog management. No payment, webhook, slot hold,
+  registration, Reservation flow, vendor/core, Render, Cloud Run, production,
+  or real data change is included.
+
+Next step: review the Draft PR, merge only after CI passes, then apply the
+additive migration in Canada staging and perform admin permission/CRUD checks.

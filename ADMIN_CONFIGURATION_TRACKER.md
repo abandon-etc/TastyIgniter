@@ -1249,3 +1249,28 @@ Environment: docs/local audit only. Status: Design update pending review.
 Next step: request review of PR #52, then confirm the business decisions before
 starting packages, migrations, slot holds, payment gateway, or registration
 implementation.
+
+## 2026-07-15 - Birthday packages and add-ons management
+
+Environment: local/docs implementation branch only. Status: Pending PR review;
+no staging migration or deployment performed.
+
+- Added an app-owned `abandon.birthday` extension with separate admin pages for
+  Birthday Packages and Birthday Add-ons under the restaurant navigation.
+- Added separate permissions `Admin.BirthdayPackages` and
+  `Admin.BirthdayAddons`; access is not granted to staff unless an existing
+  administrator explicitly assigns the permission.
+- Packages and add-ons use additive tables, CAD-only integer minor-unit prices,
+  stable sort order, enabled state, and `archived_at` archive/restore behavior.
+  Package included items are catalog text and are not menu items or order
+  lines. Add-ons have no quantity field.
+- Package default selection is protected by a database unique guard plus an
+  application transaction lock. A default package must remain enabled and
+  unarchived; restoring a package does not automatically make it default.
+- This branch does not change the existing Reservation form/submit flow,
+  orders, payments, registration, slot holds, Render configuration, Cloud Run,
+  production, or staging data.
+
+Next step: review the implementation PR. After merge, run the additive
+migration only against the empty/test Canada staging database, then verify
+permissions and admin CRUD before planning Birthday Booking package snapshots.
