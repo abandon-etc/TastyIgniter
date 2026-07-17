@@ -6,7 +6,9 @@ namespace Tests\Feature\BirthdayBooking;
 
 use Abandon\Birthday\Extension;
 use Abandon\Birthday\Services\BirthdayAddonService;
+use Abandon\Birthday\Services\BirthdayBookingService;
 use Abandon\Birthday\Services\BirthdayPackageService;
+use Abandon\Birthday\Services\BirthdayPricingSnapshotService;
 use Igniter\Flame\Support\Facades\Igniter;
 use Igniter\System\Classes\ExtensionManager;
 use Igniter\System\Classes\PackageManifest;
@@ -41,12 +43,16 @@ final class BirthdayCatalogExtensionTest extends TestCase
 
         $this->assertSame('Birthday Packages', $navigation['birthday_packages']['title']);
         $this->assertSame('Birthday Add-ons', $navigation['birthday_addons']['title']);
+        $this->assertSame('Birthday Bookings', $navigation['birthday_bookings']['title']);
+        $this->assertSame('Admin.BirthdayBookings', $navigation['birthday_bookings']['permission']);
         $this->assertSame(
-            ['Admin.BirthdayPackages', 'Admin.BirthdayAddons'],
+            ['Admin.BirthdayPackages', 'Admin.BirthdayAddons', 'Admin.BirthdayBookings'],
             array_keys($extension->registerPermissions()),
         );
         $this->assertSame(app(BirthdayPackageService::class), app(BirthdayPackageService::class));
         $this->assertSame(app(BirthdayAddonService::class), app(BirthdayAddonService::class));
+        $this->assertSame(app(BirthdayBookingService::class), app(BirthdayBookingService::class));
+        $this->assertSame(app(BirthdayPricingSnapshotService::class), app(BirthdayPricingSnapshotService::class));
         $this->assertArrayHasKey('abandon.birthday', Igniter::migrationPath());
     }
 }

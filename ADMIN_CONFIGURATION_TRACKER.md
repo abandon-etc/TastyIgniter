@@ -1363,3 +1363,56 @@ Canada staging database and must be handled in a separate PR.
 Next step: review and merge the final documentation PR. Only after that gate
 may work begin on the separately scoped Birthday Booking domain and immutable
 price snapshot.
+
+## 2026-07-17 - Birthday Booking catalog-price snapshot domain
+
+Environment: local Docker/MySQL validation only. Status: Pending Draft PR
+review; Canada staging and production are unchanged.
+
+- Added the independent `BirthdayBooking` domain with only `catalog_priced`
+  and terminal `cancelled` states. A catalog-priced Booking records a customer
+  selection and immutable catalog subtotal; it is not a Reservation, Order,
+  Payment, slot hold, or confirmed booking and does not affect availability.
+- Added reversible, additive `birthday_bookings` and
+  `birthday_booking_addons` tables. The migration does not modify existing
+  Reservation, Order, Payment, Customer, Location, package, or add-on tables;
+  same-location/date/slot catalog-priced Bookings intentionally remain
+  non-unique until the separately scoped hold phase.
+- The transactional service reuses the Toronto plus-2 through plus-60 date
+  window and fixed `12-16` / `16-20` slot definitions, computes UTC start/end
+  times server-side, requires one enabled/unarchived CAD default package, and
+  locks selected catalog rows in stable order. Guest count is informational
+  only and does not affect price or capacity.
+- Booking records retain Customer and Location references plus immutable
+  contact, package, included-item, add-on, and integer minor-unit price
+  snapshots. `catalog_subtotal_minor` is package plus selected add-ons only;
+  it is not a tax-inclusive or final payable amount. Catalog edits and archive
+  changes do not alter historical snapshots, and add-ons have no quantity.
+- Model events reject persisted snapshot edits, physical Booking deletion,
+  and individual add-on snapshot edits/deletes. Cancellation changes only
+  status and cancellation time. Direct query-builder/bulk updates bypass model
+  events and therefore remain outside the supported application boundary;
+  future code must use `BirthdayBookingService` rather than mutate snapshot
+  tables directly.
+- Added read-only `Birthday > Bookings` list/detail pages protected by the
+  independent `Admin.BirthdayBookings` permission. They expose historical
+  snapshot values and formatted CAD subtotals without Create, Edit, Delete,
+  Reservation, confirmation, or payment actions.
+- Local MySQL migration up/down/up, focused domain/admin/migration tests,
+  existing Birthday rules/catalog/admin/concurrency regression tests, PHP 8.3
+  lint, Pint, Composer validation, config/route/view caches, route discovery,
+  and clean Cloud Run/Render Docker builds passed. The test harness retains its
+  known PHPUnit XML deprecation warning.
+- This phase does not integrate the public reservation form, create test or
+  real Bookings, deploy or migrate Canada staging, add holds/payments/webhooks,
+  change registration, calculate tax/discounts, send notifications, or touch
+  production/secrets. Render/DigitalOcean remain unchanged fallbacks.
+
+Known independent issue: the existing full fresh-install migration ordering
+can still run the root Birthday reservation migration before its Reservation
+extension dependency. Validation used a dependency-ordered isolated schema;
+this PR does not broaden scope to that issue.
+
+Next step: review the Draft Birthday Booking snapshot PR. Do not merge,
+deploy, or run the Canada staging migration until that review gate passes;
+the 15-minute slot-hold phase starts only after merge and staging acceptance.
