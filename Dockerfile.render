@@ -41,6 +41,7 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 WORKDIR /var/www/html
 
 COPY composer.* ./
+COPY extensions/Abandon/Birthday/composer.json ./extensions/Abandon/Birthday/composer.json
 RUN composer config --no-plugins --no-scripts "preferred-install.tastyigniter/*" source \
     && composer install \
     --no-dev \

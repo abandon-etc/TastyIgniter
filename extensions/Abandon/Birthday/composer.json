@@ -1,0 +1,17 @@
+{
+    "name": "abandon-etc/ti-ext-birthday",
+    "type": "tastyigniter-package",
+    "description": "Birthday package and add-on catalog for the application",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Abandon\\Birthday\\": "src/"
+        }
+    },
+    "extra": {
+        "tastyigniter-extension": {
+            "code": "abandon.birthday",
+            "name": "Birthday catalog"
+        }
+    }
+}

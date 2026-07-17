@@ -2099,3 +2099,42 @@ Environment: docs/local audit only. Status: Design update pending review.
 - This is still a documentation-only update. No runtime code, migration,
   vendor/core, gateway, webhook, secret, production, order, reservation,
   notification, or real-data operation was performed.
+
+## 2026-07-17 - Address PR #53 Birthday catalog review blockers
+
+Environment: local Docker/MySQL validation only. Status: Pending renewed PR
+review; no staging deployment or migration execution.
+
+- Converted `abandon.birthday` to a root-required Composer path package,
+  committed `composer.lock`, pinned Composer's PHP platform to 8.3, and made
+  both runtime Dockerfiles copy the extension manifest before dependency
+  installation. Clean Composer install, TastyIgniter discovery, and admin route
+  registration now have executable coverage.
+- Moved default-package switching out of model side effects and into the
+  package service transaction. Candidate rows are locked in deterministic
+  primary-key order, the unique `default_guard` remains the database invariant,
+  and duplicate-key races become a field-level validation error without SQL
+  details.
+- Added the shared overflow-safe Birthday price rule with an exact CAD maximum
+  of `42949672.95`, then applied it to both admin request classes and service
+  saves. Maximum, maximum-plus-one, and huge inputs are tested.
+- Corrected FormController integration for package save, archived-record
+  lookup, archive/restore, and archived-list filtering. Added functional tests
+  for extension discovery, schema/indexes, service behavior, permissions,
+  admin create/edit/archive/filter/restore, oversized inputs, and a true
+  two-process concurrency barrier.
+- Validation passed on PHP 8.3 and MySQL 8.4: Pint on 21 files, PHP syntax
+  checks, 39 focused tests with 173 assertions, additive extension migration
+  down/up, config/route/view cache commands, two Birthday admin routes,
+  Composer strict validation, and a clean `Dockerfile.cloudrun` build. The test
+  harness still reports one existing PHPUnit deprecation.
+- A full empty-database `igniter:up` remains affected by the pre-existing root
+  Birthday reservation migration running before the Reservation extension
+  creates its table. PR #53 does not alter that unrelated migration; catalog
+  migration validation used a dependency-ordered disposable base schema.
+- No payment, webhook, slot hold, Booking, registration, Reservation/Order
+  logic, vendor/core, secret, staging data, production, or real-data operation
+  was performed. Render and DigitalOcean fallback resources are unchanged.
+
+Next step: request renewed review of Draft PR #53. Do not merge, deploy, or run
+the Canada staging migration until the review gate is approved.
