@@ -1280,3 +1280,36 @@ review; no Canada staging migration or deployment performed.
 
 Next step: request renewed review of Draft PR #53. Merge and Canada staging
 migration remain blocked on approval; do not deploy from this local validation.
+
+## 2026-07-17 - Canada staging Birthday catalog deployment and navigation blocker
+
+Environment: Canada staging. Status: Runtime validation passed except for an
+untranslated admin navigation label; a separate fix PR is required.
+
+- Deployed PR #53 merge SHA `ac20afa4853694d5fe4572492e55baf12a694035`
+  as Cloud Run revision `le-chateau-canada-staging-00017-t64`; the revision is
+  Ready and serves 100% of Canada staging traffic. The previous stable revision
+  remains available for rollback.
+- Ran the existing-schema preflight and confirmed no pending root migrations.
+  `igniter:up` then applied only the additive
+  `abandon.birthday::2026_07_15_000000_create_birthday_catalog_tables`
+  migration. Postflight checks confirmed the two catalog tables, required
+  columns, available indexes, unique default guard, migration record, and
+  unchanged Reservation/Order/Payment/Customer table structures.
+- Super-admin browser validation passed for package and add-on create/edit,
+  CAD minor-unit boundaries, invalid-price handling, default switching,
+  no-default archive safety, archived filtering, restore, add-on disable, and
+  absence of quantity fields. Automated tests remain the permission-isolation
+  evidence; no real staff role was modified.
+- Public/admin smoke checks, Livewire, retained test media, existing Birthday
+  reservation date/slot behavior, browser console, and Cloud Run 5xx/error
+  filtering passed. Six package/add-on QA records were removed and all four
+  temporary validation jobs were deleted.
+- The Restaurant navigation currently renders the raw Birthday translation
+  keys. Root cause is that the extension passes translation keys directly
+  instead of resolving them with `lang(...)`; no container hotfix was applied.
+
+Next step: review and merge the focused Birthday navigation-label fix, redeploy
+Canada staging, verify the two labels, and then create the documentation-only
+final validation PR. Render/DigitalOcean fallback and production remain
+unchanged.

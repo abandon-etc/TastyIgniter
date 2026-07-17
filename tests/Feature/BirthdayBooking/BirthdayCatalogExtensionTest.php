@@ -37,8 +37,10 @@ final class BirthdayCatalogExtensionTest extends TestCase
         $extension = app(ExtensionManager::class)->loadExtensions()['abandon.birthday'];
         $extension->bootingExtension();
 
-        $this->assertArrayHasKey('birthday_packages', $extension->registerNavigation()['restaurant']['child']);
-        $this->assertArrayHasKey('birthday_addons', $extension->registerNavigation()['restaurant']['child']);
+        $navigation = $extension->registerNavigation()['restaurant']['child'];
+
+        $this->assertSame('Birthday Packages', $navigation['birthday_packages']['title']);
+        $this->assertSame('Birthday Add-ons', $navigation['birthday_addons']['title']);
         $this->assertSame(
             ['Admin.BirthdayPackages', 'Admin.BirthdayAddons'],
             array_keys($extension->registerPermissions()),

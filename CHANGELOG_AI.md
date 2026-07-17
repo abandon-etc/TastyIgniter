@@ -2138,3 +2138,38 @@ review; no staging deployment or migration execution.
 
 Next step: request renewed review of Draft PR #53. Do not merge, deploy, or run
 the Canada staging migration until the review gate is approved.
+
+## 2026-07-17 - Deploy PR #53 and isolate Birthday navigation label regression
+
+Environment: Canada staging. Status: Deployment and catalog behavior passed;
+focused navigation-label fix pending review.
+
+- Built full-SHA image
+  `northamerica-northeast1-docker.pkg.dev/le-chateau-canada-staging/tastyigniter-staging/tastyigniter:ac20afa4853694d5fe4572492e55baf12a694035`
+  with Cloud Build `aec22814-3f81-46f7-a74c-12aaa7edff7d`. Composer package,
+  TastyIgniter discovery, and route build gates passed before deployment.
+- Deployed Ready revision `le-chateau-canada-staging-00017-t64` at 100% traffic,
+  preserving the prior revision and all service account, Cloud SQL, Secret
+  Manager, Cloud Storage, health-check, scaling, and staging-only settings.
+- A read-only preflight confirmed the existing Canada schema and no pending
+  root migration. The additive Birthday catalog migration completed, and
+  postflight checks confirmed catalog schema/indexes/migration tracking while
+  existing business-table structures remained unchanged.
+- Browser QA covered package/add-on CRUD, exact CAD maximum `42949672.95`,
+  invalid and oversized values, integer minor units, deterministic default
+  switching, default archival, archive filters, restore, enabled state, and no
+  quantity fields. The existing Birthday reservation UI retained its two fixed
+  slots and Toronto +2/+60 date window; packages/add-ons were not exposed on
+  the public flow.
+- Public/admin pages, `/healthz/`, Livewire, retained media, browser console,
+  and Cloud Run error/5xx checks passed. Three QA packages and three QA add-ons
+  were deleted; temporary preflight, migration, read-only QA, and cleanup jobs
+  were deleted. No Order, Reservation, Payment, Customer, real data, secret,
+  Render fallback, DigitalOcean fallback, or production change was made.
+- Staging exposed one focused regression: Restaurant navigation displayed the
+  raw `abandon.birthday` translation keys. The project extension must resolve
+  those two titles with `lang(...)`; the runtime container was not hotfixed.
+
+Next step: merge and redeploy the independent navigation-label fix, verify the
+labels, then record final Birthday catalog staging acceptance in a pure
+documentation PR.
