@@ -503,3 +503,48 @@ validation gate.
 Next step: review the documentation-only validation PR, then continue with
 separate staging-only Birthday enhancements. Keep payment, registration,
 add-ons, notification delivery, and production changes out of scope.
+
+## 2026-07-17 - Birthday catalog navigation and final runtime acceptance
+
+Environment: Canada staging only. Status: Catalog runtime gate resolved.
+
+- PR #53 merge SHA `ac20afa4853694d5fe4572492e55baf12a694035`
+  produced the initial catalog deployment through Cloud Build
+  `aec22814-3f81-46f7-a74c-12aaa7edff7d` and revision
+  `le-chateau-canada-staging-00017-t64`.
+- PR #54 merge SHA `53960a9e705b271823e375056c2bfce93dcc95d1` was
+  built with Cloud Build `50de4c46-c51e-4cd4-86c0-723ce7d712f7` as the
+  full-SHA Artifact Registry image and deployed as revision
+  `le-chateau-canada-staging-00018-neb`.
+- The new revision was Ready at 0% traffic, returned `200 ok` from its tagged
+  `/healthz/` route, and then received 100% traffic. Runtime service account,
+  Cloud SQL connector, Secret Manager bindings, Cloud Storage mount, liveness,
+  environment, scaling, ingress, and resource settings were preserved, as
+  confirmed by matching configuration fingerprints.
+- Restaurant navigation renders `Birthday Packages` and `Birthday Add-ons`
+  exactly once and both routes work. The list/create pages retain CAD currency,
+  intended fields, Archived filters, no quantity field, and no destructive
+  Delete action. Raw translation keys are no longer visible.
+- No migration ran. A temporary read-only Job used the application runtime
+  account to confirm both catalog tables and the extension migration record,
+  then was deleted. No catalog or business row was created or changed.
+- Public/admin smoke, Livewire, retained media, two fixed Birthday slots,
+  Toronto plus-2/plus-60 bounds, telephone input, and both browser consoles
+  passed. Packages, add-ons, prices, Booking, hold, and payment remain absent
+  from the public Birthday flow.
+- The current-revision audit found zero error-severity entries, HTTP 5xx,
+  fatal/unhandled exceptions, translation/language failures, package/route
+  errors, Cloud SQL failures, or FUSE/storage/cache permission errors. Container
+  logs recorded successful `/healthz/` requests.
+- Rollback remains available through Ready revisions `00017-t64` and
+  `00016-2tj`, with Render and DigitalOcean unchanged. Production, real data,
+  payment, outbound notification, secrets, and service-account keys were not
+  changed.
+
+Known separate issue: the full fresh-install migration order can run the root
+Birthday reservation migration before its Reservation extension dependency.
+It does not block the initialized Canada staging schema and must not be mixed
+into this documentation-only acceptance PR.
+
+Next step: review and merge the final catalog validation record, then begin the
+separately scoped Birthday Booking domain and immutable price snapshot phase.

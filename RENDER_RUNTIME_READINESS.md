@@ -1167,3 +1167,30 @@ Next steps:
 3. Treat production readiness as deferred until notification configuration,
    remaining functional requirements, and operational gates are explicitly
    accepted.
+
+## 2026-07-17 - Canada Birthday catalog final validation
+
+Canada staging deployed PR #54 merge SHA
+`53960a9e705b271823e375056c2bfce93dcc95d1` as Ready revision
+`le-chateau-canada-staging-00018-neb` after Cloud Build
+`50de4c46-c51e-4cd4-86c0-723ce7d712f7`. The revision passed a direct tagged
+`/healthz/` check before receiving 100% traffic, and its runtime configuration
+fingerprint matched the prior service configuration. Revisions
+`le-chateau-canada-staging-00017-t64` and
+`le-chateau-canada-staging-00016-2tj` remain Ready rollback targets.
+
+Final browser validation resolved the raw Birthday navigation keys: Restaurant
+now contains working `Birthday Packages` and `Birthday Add-ons` links. Catalog
+list/create pages, CAD fields, Archived filters, Livewire, public/admin pages,
+retained media, the two-slot Birthday form, Toronto plus-2/plus-60 bounds, and
+browser consoles passed regression checks. A read-only runtime-account check
+confirmed the two catalog tables and migration record; no migration or schema
+change ran. Current-revision error, 5xx, fatal, exception, translation, route,
+Cloud SQL, FUSE, and permission counts were zero, and the disposable read-only
+Job was deleted.
+
+Render staging and DigitalOcean remain unchanged fallbacks; production
+readiness has not started. The unrelated fresh-install migration ordering issue
+remains open for a separate PR. The next approved functional phase, after this
+documentation record is reviewed, is the Birthday Booking domain and immutable
+price snapshot.
