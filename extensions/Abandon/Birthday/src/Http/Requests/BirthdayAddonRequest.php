@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Abandon\Birthday\Http\Requests;
 
+use Abandon\Birthday\Rules\BirthdayPrice;
 use Igniter\System\Classes\FormRequest;
 use Override;
 
@@ -25,7 +26,7 @@ class BirthdayAddonRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'between:2,255'],
             'description' => ['nullable', 'string', 'max:2000'],
-            'price' => ['required', 'regex:/^(?:0|[1-9]\d*)(?:\.\d{1,2})?$/'],
+            'price' => ['required', new BirthdayPrice],
             'currency' => ['nullable', 'in:CAD'],
             'is_enabled' => ['boolean'],
             'sort_order' => ['integer', 'min:0', 'max:2147483647'],

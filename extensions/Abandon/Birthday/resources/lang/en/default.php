@@ -29,8 +29,9 @@ return [
     'restore_not_archived' => 'This catalog item is not archived.',
     'error_default_must_be_enabled' => 'The default package must be enabled and not archived.',
     'error_default_requires_replacement' => 'Choose another default package before disabling the current default.',
+    'error_default_conflict' => 'Another package became the default at the same time. Review the current default and try again.',
     'validation' => [
-        'price' => 'Price must be a valid non-negative CAD amount with no more than two decimal places.',
+        'price' => 'Price must be a non-negative CAD amount up to :max with no more than two decimal places.',
         'currency' => 'Birthday catalog prices must use CAD.',
     ],
 ];

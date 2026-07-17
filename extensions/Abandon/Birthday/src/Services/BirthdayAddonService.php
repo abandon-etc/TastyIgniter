@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace Abandon\Birthday\Services;
 
 use Abandon\Birthday\Models\BirthdayAddon;
+use Abandon\Birthday\Models\PriceValue;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+use InvalidArgumentException;
 
 final class BirthdayAddonService
 {
@@ -21,6 +24,25 @@ final class BirthdayAddonService
                 'is_enabled' => false,
                 'archived_at' => now(),
             ])->save();
+        });
+    }
+
+    public function save(BirthdayAddon $addon, array $attributes): BirthdayAddon
+    {
+        return DB::transaction(function () use ($addon, $attributes): BirthdayAddon {
+            try {
+                $addon->fill($attributes);
+            } catch (InvalidArgumentException) {
+                throw ValidationException::withMessages([
+                    'price' => trans('abandon.birthday::default.validation.price', [
+                        'max' => PriceValue::MAX_AMOUNT,
+                    ]),
+                ]);
+            }
+
+            $addon->save();
+
+            return $addon->refresh();
         });
     }
 

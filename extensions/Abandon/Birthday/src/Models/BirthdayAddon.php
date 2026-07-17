@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace Abandon\Birthday\Models;
 
-use Illuminate\Database\Eloquent\Builder;
 use Igniter\Flame\Database\Model;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Validation\ValidationException;
 
 class BirthdayAddon extends Model
 {
@@ -20,6 +21,8 @@ class BirthdayAddon extends Model
 
     protected $primaryKey = 'birthday_addon_id';
 
+    public $timestamps = true;
+
     protected $guarded = [];
 
     protected $casts = [
@@ -33,7 +36,7 @@ class BirthdayAddon extends Model
     {
         static::saving(function (self $addon): void {
             if (strtoupper((string) $addon->currency) !== 'CAD') {
-                throw \Illuminate\Validation\ValidationException::withMessages([
+                throw ValidationException::withMessages([
                     'currency' => trans('abandon.birthday::default.validation.currency'),
                 ]);
             }

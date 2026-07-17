@@ -11,6 +11,7 @@ use Igniter\Admin\Classes\AdminController;
 use Igniter\Admin\Facades\AdminMenu;
 use Igniter\Admin\Http\Actions\FormController;
 use Igniter\Admin\Http\Actions\ListController;
+use Igniter\Admin\Widgets\Lists;
 use Illuminate\Http\RedirectResponse;
 
 class Addons extends AdminController
@@ -66,9 +67,23 @@ class Addons extends AdminController
             : $query->whereNull('archived_at');
     }
 
+    public function listExtendColumns(Lists $list): void
+    {
+        if (request()->boolean('show_archived')) {
+            $list->getColumn('edit')->attributes['href'] .= '?show_archived=1';
+        }
+    }
+
+    public function formExtendQuery($query): void
+    {
+        request()->boolean('show_archived')
+            ? $query->whereNotNull('archived_at')
+            : $query->whereNull('archived_at');
+    }
+
     public function edit_onArchive(string $context, string $recordId): RedirectResponse
     {
-        $addon = $this->formFindModelObject($recordId);
+        $addon = $this->asExtension(FormController::class)->formFindModelObject($recordId);
         app(BirthdayAddonService::class)->archive($addon);
         flash()->success(trans('abandon.birthday::default.archive_success'));
 
@@ -89,5 +104,4 @@ class Addons extends AdminController
 
         return $this->redirect('abandon/birthday/addons?show_archived=1');
     }
-
 }

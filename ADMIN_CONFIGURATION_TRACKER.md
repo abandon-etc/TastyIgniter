@@ -1250,27 +1250,33 @@ Next step: request review of PR #52, then confirm the business decisions before
 starting packages, migrations, slot holds, payment gateway, or registration
 implementation.
 
-## 2026-07-15 - Birthday packages and add-ons management
+## 2026-07-17 - PR #53 Birthday catalog review fixes
 
-Environment: local/docs implementation branch only. Status: Pending PR review;
-no staging migration or deployment performed.
+Environment: local Docker/MySQL validation only. Status: Pending renewed PR
+review; no Canada staging migration or deployment performed.
 
-- Added an app-owned `abandon.birthday` extension with separate admin pages for
-  Birthday Packages and Birthday Add-ons under the restaurant navigation.
-- Added separate permissions `Admin.BirthdayPackages` and
-  `Admin.BirthdayAddons`; access is not granted to staff unless an existing
-  administrator explicitly assigns the permission.
-- Packages and add-ons use additive tables, CAD-only integer minor-unit prices,
-  stable sort order, enabled state, and `archived_at` archive/restore behavior.
-  Package included items are catalog text and are not menu items or order
-  lines. Add-ons have no quantity field.
-- Package default selection is protected by a database unique guard plus an
-  application transaction lock. A default package must remain enabled and
-  unarchived; restoring a package does not automatically make it default.
-- This branch does not change the existing Reservation form/submit flow,
-  orders, payments, registration, slot holds, Render configuration, Cloud Run,
-  production, or staging data.
+- Registered the app-owned Birthday extension as a Composer path package,
+  committed the reproducible lock file, and updated both runtime Dockerfiles so
+  clean builds can install the package before the full source copy. Composer
+  and TastyIgniter package discovery both resolve `abandon.birthday`.
+- Kept package and add-on permissions separate. Functional admin tests cover
+  index/create/edit/archive/filter/restore behavior and verify that one catalog
+  permission does not grant access to the other catalog.
+- Default-package changes now run through one service transaction with
+  deterministic row locking and the database unique guard. Rollback, no-default
+  archive/restore behavior, a forced unique conflict, and two independent
+  process/transaction writers are covered; concurrent writes leave one winner
+  and return a readable `is_default` error to the loser.
+- CAD prices are limited to the unsigned integer storage ceiling of
+  `42949672.95`. Exact maximum, maximum plus one, and very large values are
+  covered without exposing SQL or internal exception details.
+- PHP 8.3 lint, Pint, 39 focused tests with 173 assertions, extension migration
+  down/up, config/route/view caches, route discovery, Composer validation, and
+  a clean Cloud Run Docker build passed. One existing PHPUnit deprecation is
+  still reported by the project test harness.
+- No payment, slot-hold, Booking, registration, Reservation, Order, vendor/core,
+  production, secret, or real-data change is included. Render staging remains
+  the fallback and Canada staging is unchanged.
 
-Next step: review the implementation PR. After merge, run the additive
-migration only against the empty/test Canada staging database, then verify
-permissions and admin CRUD before planning Birthday Booking package snapshots.
+Next step: request renewed review of Draft PR #53. Merge and Canada staging
+migration remain blocked on approval; do not deploy from this local validation.

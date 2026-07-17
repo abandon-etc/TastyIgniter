@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Abandon\Birthday\Models;
 
-use Illuminate\Database\Eloquent\Builder;
 use Igniter\Flame\Database\Model;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Validation\ValidationException;
 
 class BirthdayPackage extends Model
@@ -22,6 +22,8 @@ class BirthdayPackage extends Model
 
     protected $primaryKey = 'birthday_package_id';
 
+    public $timestamps = true;
+
     protected $guarded = [];
 
     protected $casts = [
@@ -36,6 +38,14 @@ class BirthdayPackage extends Model
     protected static function booted(): void
     {
         static::saving(function (self $package): void {
+            if ($package->is_default && (! $package->is_enabled || $package->archived_at !== null)) {
+                throw ValidationException::withMessages([
+                    'is_default' => trans('abandon.birthday::default.error_default_must_be_enabled'),
+                ]);
+            }
+
+            $package->default_guard = $package->is_default ? 1 : null;
+
             if (strtoupper((string) $package->currency) !== 'CAD') {
                 throw ValidationException::withMessages([
                     'currency' => trans('abandon.birthday::default.validation.currency'),
@@ -43,26 +53,6 @@ class BirthdayPackage extends Model
             }
 
             $package->currency = 'CAD';
-
-            if ($package->is_default && (! $package->is_enabled || $package->archived_at !== null)) {
-                throw ValidationException::withMessages([
-                    'is_default' => trans('abandon.birthday::default.error_default_must_be_enabled'),
-                ]);
-            }
-
-            if ($package->is_default) {
-                static::query()
-                    ->where('is_default', true)
-                    ->where('is_enabled', true)
-                    ->whereNull('archived_at')
-                    ->when($package->exists, fn(Builder $query) => $query->where($package->getKeyName(), '!=', $package->getKey()))
-                    ->lockForUpdate()
-                    ->update(['is_default' => false, 'default_guard' => null]);
-
-                $package->default_guard = 1;
-            } else {
-                $package->default_guard = null;
-            }
         });
     }
 
