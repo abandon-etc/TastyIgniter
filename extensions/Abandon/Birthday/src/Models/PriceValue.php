@@ -31,4 +31,32 @@ final class PriceValue
 
         return (int) $minor;
     }
+
+    public static function addMinorUnits(int ...$amounts): int
+    {
+        $total = 0;
+        foreach ($amounts as $amount) {
+            if ($amount < 0 || $total > PHP_INT_MAX - $amount) {
+                throw new InvalidArgumentException('Price subtotal is outside the supported range.');
+            }
+
+            $total += $amount;
+        }
+
+        return $total;
+    }
+
+    public static function formatMinorUnits(int $minor): string
+    {
+        if ($minor < 0) {
+            throw new InvalidArgumentException('Price cannot be negative.');
+        }
+
+        return intdiv($minor, 100).'.'.str_pad((string) ($minor % 100), 2, '0', STR_PAD_LEFT);
+    }
+
+    public static function formatCad(int $minor): string
+    {
+        return '$'.self::formatMinorUnits($minor);
+    }
 }

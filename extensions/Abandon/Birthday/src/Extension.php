@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Abandon\Birthday;
 
 use Abandon\Birthday\Services\BirthdayAddonService;
+use Abandon\Birthday\Services\BirthdayBookingService;
 use Abandon\Birthday\Services\BirthdayPackageService;
+use Abandon\Birthday\Services\BirthdayPricingSnapshotService;
 use Igniter\System\Classes\BaseExtension;
 use Override;
 
@@ -17,7 +19,9 @@ class Extension extends BaseExtension
         parent::register();
 
         $this->app->singleton(BirthdayAddonService::class);
+        $this->app->singleton(BirthdayBookingService::class);
         $this->app->singleton(BirthdayPackageService::class);
+        $this->app->singleton(BirthdayPricingSnapshotService::class);
     }
 
     #[Override]
@@ -40,6 +44,13 @@ class Extension extends BaseExtension
                         'title' => lang('abandon.birthday::default.text_addons'),
                         'permission' => 'Admin.BirthdayAddons',
                     ],
+                    'birthday_bookings' => [
+                        'priority' => 72,
+                        'class' => 'birthday_bookings',
+                        'href' => admin_url('abandon/birthday/bookings'),
+                        'title' => lang('abandon.birthday::default.text_bookings'),
+                        'permission' => 'Admin.BirthdayBookings',
+                    ],
                 ],
             ],
         ];
@@ -55,6 +66,10 @@ class Extension extends BaseExtension
             ],
             'Admin.BirthdayAddons' => [
                 'label' => 'abandon.birthday::default.permission_addons',
+                'group' => 'igniter::admin.permissions.name',
+            ],
+            'Admin.BirthdayBookings' => [
+                'label' => 'abandon.birthday::default.permission_bookings',
                 'group' => 'igniter::admin.permissions.name',
             ],
         ];

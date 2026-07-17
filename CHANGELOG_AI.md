@@ -2220,3 +2220,56 @@ The pre-existing fresh-install migration ordering issue remains separately
 tracked and does not block the already-initialized Canada staging database.
 Next step: review and merge this documentation-only record before starting the
 separate Birthday Booking domain and immutable price snapshot phase.
+
+## 2026-07-17 - Implement Birthday Booking immutable catalog snapshots
+
+Environment: local Docker/MySQL validation only. Status: Draft PR pending
+review; no staging deployment or production change.
+
+- Added additive `birthday_bookings` and `birthday_booking_addons` schema,
+  domain models, `catalog_priced` / terminal `cancelled` status constants, and
+  model-level immutable-history protections. Current Customer and Location
+  primary-key types were verified against the final TastyIgniter schema before
+  adding restrictive foreign keys; migration down removes child then parent.
+- Added `BirthdayBookingService` and `BirthdayPricingSnapshotService`. One
+  transaction validates persisted Customer/Location records, Toronto date and
+  fixed slot rules, informational guest count, contact email/telephone, the
+  sole available CAD default package, and selected available CAD add-ons. It
+  locks catalog rows in deterministic order, computes UTC times, uses
+  overflow-checked integer minor-unit addition, and rolls back Booking plus all
+  add-on snapshots on any failure.
+- Persisted snapshots include contact details, package text/included items,
+  selected add-on text/order, source IDs, CAD prices, and pricing version 1.
+  Later catalog/customer edits or archives do not change history. No quantity,
+  tax, discount, payment fee, tip, or final payable amount is represented;
+  `catalog_subtotal_minor` means only package plus selected add-ons.
+- Added read-only Birthday Booking admin list/detail pages and the independent
+  `Admin.BirthdayBookings` permission. Navigation resolves through `lang()`;
+  pages display snapshot values and CAD formatting and expose no create, edit,
+  delete, Reservation, confirmation, or collection action.
+- Added coverage for valid/invalid package and add-on states, duplicate IDs,
+  empty add-ons, immutable history, cancellation, invalid state transitions,
+  customer/contact snapshots, Toronto DST and date bounds, both slots,
+  same-slot non-occupancy, unrelated-object non-creation, forced partial-row
+  rollback, schema/index scope, admin snapshot rendering, permissions, and
+  hidden mutation actions. Existing Birthday catalog/rules/concurrency/admin
+  regressions also passed in the isolated MySQL schema.
+- Validation passed for migration up/down/up, PHP 8.3 syntax, Pint, Composer
+  strict validation, config/route/view caches, extension/admin route discovery,
+  and clean `Dockerfile.cloudrun` and `Dockerfile.render` builds. Existing npm
+  dependency notices and the PHPUnit XML deprecation remain non-blocking and
+  were not introduced here.
+- Direct query-builder updates bypass Eloquent model events; this is an
+  explicit unsupported boundary, not a database-trigger guarantee. Application
+  code must create/cancel through the Booking service and must never bulk-edit
+  snapshot tables.
+- No slot hold, availability lock, payment, webhook, Reservation, Order,
+  registration/public-flow integration, tax, coupon, notification, real data,
+  secret, Canada staging migration/deployment, or production operation is
+  included. Render and DigitalOcean remain available unchanged fallbacks.
+
+The pre-existing full fresh-install migration ordering issue remains a
+separate tracked problem; this work used a dependency-ordered isolated schema
+and does not modify that root migration. Next step: review the Draft PR, then
+merge and perform Canada staging migration/acceptance before starting the
+separate 15-minute slot-hold phase.

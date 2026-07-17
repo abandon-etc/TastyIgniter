@@ -69,4 +69,25 @@ final class PriceValueTest extends TestCase
 
         $this->assertFalse($validator->fails());
     }
+
+    public function test_minor_unit_addition_and_display_do_not_use_float_math(): void
+    {
+        $this->assertSame(28575, PriceValue::addMinorUnits(25000, 1550, 2025));
+        $this->assertSame(0, PriceValue::addMinorUnits());
+        $this->assertSame('250.00', PriceValue::formatMinorUnits(25000));
+        $this->assertSame('$250.00', PriceValue::formatCad(25000));
+        $this->assertSame('$0.01', PriceValue::formatCad(1));
+    }
+
+    public function test_minor_unit_addition_rejects_negative_values_and_overflow(): void
+    {
+        foreach ([[-1], [PHP_INT_MAX, 1]] as $values) {
+            try {
+                PriceValue::addMinorUnits(...$values);
+                $this->fail('Expected minor-unit addition to reject the values.');
+            } catch (InvalidArgumentException) {
+                $this->addToAssertionCount(1);
+            }
+        }
+    }
 }
