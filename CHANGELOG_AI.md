@@ -2173,3 +2173,50 @@ focused navigation-label fix pending review.
 Next step: merge and redeploy the independent navigation-label fix, verify the
 labels, then record final Birthday catalog staging acceptance in a pure
 documentation PR.
+
+## 2026-07-17 - Finalize Birthday catalog on Canada staging
+
+Environment: Canada staging. Status: Runtime validation resolved; final
+documentation PR pending review.
+
+- Confirmed PR #53 merge SHA `ac20afa4853694d5fe4572492e55baf12a694035`
+  and its initial Cloud Build `aec22814-3f81-46f7-a74c-12aaa7edff7d` / Ready
+  revision `le-chateau-canada-staging-00017-t64` catalog deployment.
+- Built PR #54 merge SHA `53960a9e705b271823e375056c2bfce93dcc95d1`
+  as
+  `northamerica-northeast1-docker.pkg.dev/le-chateau-canada-staging/tastyigniter-staging/tastyigniter:53960a9e705b271823e375056c2bfce93dcc95d1`
+  with Cloud Build `50de4c46-c51e-4cd4-86c0-723ce7d712f7`. Composer package
+  discovery, TastyIgniter package discovery, and both Birthday admin route
+  gates passed.
+- Created revision `le-chateau-canada-staging-00018-neb` at 0% traffic, verified
+  the tagged revision returned `200 ok` from `/healthz/`, then routed 100% of
+  Canada staging traffic to it. The before/after runtime configuration
+  fingerprint matched; `00017-t64` and `00016-2tj` remain Ready rollback
+  revisions.
+- Browser acceptance confirmed resolved `Birthday Packages` and
+  `Birthday Add-ons` navigation labels, exact list links, no raw translation
+  keys or duplicate entries, working list/create pages, CAD fields, Archived
+  filters, no quantity input, and no destructive Delete action. Previous PR
+  #53 CRUD, price-boundary, default-switching, archive/restore, enabled-state,
+  and permission-isolation results remain the catalog behavior baseline.
+- No migration was run. A disposable read-only Job using the application
+  runtime account confirmed both catalog tables and the extension migration
+  record remain present; the Job was deleted. No schema or catalog data changed.
+- `/healthz/`, homepage, menus, cart, reservation entry, admin login and core
+  admin pages, Livewire JavaScript, and retained media returned successfully.
+  The Birthday form retained two fixed slots, the Toronto plus-2/plus-60 date
+  bounds, and telephone input without exposing packages, add-ons, prices,
+  Booking, hold, or payment UI. Browser error-level console entries were zero.
+- Current-revision log audit covered 275 entries: error severity, HTTP 5xx,
+  fatal, unhandled exception, translation/language, package discovery, route,
+  Cloud SQL, FUSE/storage/cache permission, and permission-trace counts were
+  all zero. Three `/healthz/` requests were observed as container HTTP 200.
+- The previously removed three QA packages, three QA add-ons, and four
+  validation Jobs remain absent; this phase left no temporary Job or business
+  record. Render, DigitalOcean, production, real data, payment, notification,
+  secrets, and service-account keys were unchanged.
+
+The pre-existing fresh-install migration ordering issue remains separately
+tracked and does not block the already-initialized Canada staging database.
+Next step: review and merge this documentation-only record before starting the
+separate Birthday Booking domain and immutable price snapshot phase.

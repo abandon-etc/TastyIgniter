@@ -1313,3 +1313,53 @@ Next step: review and merge the focused Birthday navigation-label fix, redeploy
 Canada staging, verify the two labels, and then create the documentation-only
 final validation PR. Render/DigitalOcean fallback and production remain
 unchanged.
+
+## 2026-07-17 - Final Canada staging Birthday catalog acceptance
+
+Environment: Canada staging. Status: Resolved; final documentation review
+pending.
+
+- PR #53 merge SHA `ac20afa4853694d5fe4572492e55baf12a694035`
+  introduced the app-owned Birthday package/add-on catalog. Its initial image
+  was built by Cloud Build `aec22814-3f81-46f7-a74c-12aaa7edff7d` and deployed
+  as Ready revision `le-chateau-canada-staging-00017-t64`.
+- PR #54 merge SHA `53960a9e705b271823e375056c2bfce93dcc95d1` was
+  built as the full-SHA Canada image with Cloud Build
+  `50de4c46-c51e-4cd4-86c0-723ce7d712f7`. Revision
+  `le-chateau-canada-staging-00018-neb` passed its tagged `/healthz/` check
+  before receiving 100% traffic. The runtime configuration fingerprint was
+  unchanged, and revisions `00017-t64` and `00016-2tj` remain Ready for
+  rollback.
+- Restaurant navigation now shows exactly one `Birthday Packages` and one
+  `Birthday Add-ons` entry. Both links open the expected list routes; raw
+  translation keys, blank titles, duplicates, 404s, and 500s were not present.
+- Read-only package/add-on regression confirmed empty lists, create forms,
+  CAD currency, required catalog fields, Archived filters, no quantity field,
+  and no destructive Delete action. The earlier CRUD, CAD minor-unit/maximum,
+  invalid-price, deterministic default, archive/restore, enabled-state, and
+  permission-isolation evidence remains valid.
+- No migration ran in this deployment. A one-time read-only check using the
+  application runtime account confirmed `birthday_packages`,
+  `birthday_addons`, and the catalog migration record remain present. The job
+  was deleted after the check and the existing business schema was unchanged.
+- `/healthz/`, public pages, admin login/pages, Livewire, retained test media,
+  browser consoles, and current-revision logs passed. The Birthday form still
+  exposes only the two fixed slots, the Toronto-local plus-2 through plus-60
+  date window, and the telephone field; it does not expose catalog prices,
+  payment, hold, or Booking behavior.
+- The prior three QA packages, three QA add-ons, and four catalog-validation
+  Jobs remain removed. This validation created no package, add-on,
+  Reservation, Booking, Order, Payment, or Customer record and left no
+  temporary Job.
+- Render and DigitalOcean remain unchanged fallbacks. Production, real data,
+  real payment, outbound notification, secrets, and service-account keys were
+  not touched.
+
+Known independent issue: full fresh-install migration ordering still allows
+the root Birthday reservation migration to run before the Reservation
+extension creates its dependency. It is not a blocker for the already-migrated
+Canada staging database and must be handled in a separate PR.
+
+Next step: review and merge the final documentation PR. Only after that gate
+may work begin on the separately scoped Birthday Booking domain and immutable
+price snapshot.
