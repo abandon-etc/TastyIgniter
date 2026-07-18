@@ -1194,3 +1194,28 @@ readiness has not started. The unrelated fresh-install migration ordering issue
 remains open for a separate PR. The next approved functional phase, after this
 documentation record is reviewed, is the Birthday Booking domain and immutable
 price snapshot.
+
+## 2026-07-17 - Canada Birthday Booking snapshot validation
+
+PR #57 merge SHA `e2ca19d4407064bb9d34d4fe8fe947cd1624c5c2` was
+built by Cloud Build `2392136c-e2ce-44d7-bced-7b33450958cb` and deployed as
+Ready Canada revision `le-chateau-canada-staging-00024-dof` at 100% traffic.
+The tagged `/healthz/` check passed before cutover, and the runtime
+configuration fingerprint matched accepted revision `00018-neb`.
+
+No migration ran. Cloud Run/Cloud SQL staging QA confirmed UTC hydration and
+Toronto daylight-saving/standard-time conversion, deterministic add-on
+snapshot order, immutable contact/catalog history, integer CAD subtotals,
+terminal cancellation, transaction rollback, and deliberate same-slot
+non-occupancy. Authenticated read-only Birthday Booking admin pages and core
+public/admin/media regressions passed with no browser console error or current
+revision fatal/5xx/SQL/FUSE/cache error.
+
+Synthetic data and all temporary Jobs were removed; Reservation, Order,
+Payment, and Payment Log baselines were unchanged, and no slot-hold table was
+created. Q-007 and Q-008 are resolved. Render and DigitalOcean remain unchanged
+fallbacks, production remains unchanged, and the separate fresh-install
+migration-order issue remains open.
+
+Next gate: review and merge the documentation-only validation record. Only
+after that approval may the separately scoped 15-minute slot-hold phase begin.

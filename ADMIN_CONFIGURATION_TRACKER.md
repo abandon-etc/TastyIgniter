@@ -145,8 +145,8 @@
 | Q-004 | 前台首页 | 第一批已关闭或后置 Delivery，但首页仍显示 delivery address 搜索入口；菜单页显示 Pickup，不显示 Delivery。 | Yes | 主题改造 | 已通过项目级 Orange 视图覆盖隐藏首页 local search / delivery address 搜索区域，并替换为按当前语言显示的点单和预约入口按钮；未修改 core、`vendor/` 或数据库。 | Resolved |
 | Q-005 | 前台首页、菜单页、预约页、购物车入口 | `<html lang>` 已可在 `fr_CA` / `en_CA` 间切换，但前台仍有未完整本地化内容。 | Yes | 翻译配置 / 主题改造 | 已新增少量 `lang/vendor` 覆盖并将首页 CTA 改为语言 key：`fr_CA` 显示法语单语，`en_CA` 显示英语单语；已部分覆盖导航、Pickup、预约和购物车关键文案。完整站点翻译、后台 demo content 和未覆盖主题文案仍需后续处理。 | Open |
 | Q-006 | 菜单页 / 购物车 / 结账入口 | 初次验证时当前本地时间不在营业时间内，前台显示 `CLOSED`，导致无法完成加入购物车和 checkout 验证。临时打开本地营业时间后，测试商品可加入购物车，数量可增加 / 减少，可移除商品，并可进入 checkout 表单。 | No | 前台流程 / 后台配置 | 已确认原因是测试时段不在营业时间内；测试后已从 `.local/backups/q006-before-temp-open-20260708-102353.json` 恢复原始营业时间和 collection 配置。未提交订单，未提交预约，未配置真实支付。 | Resolved |
-| Q-007 | Canada staging / Birthday Booking snapshot validation | UTC booking instants are stored correctly, but the default Eloquent `datetime` cast reinterprets them in the Toronto application timezone when records are reloaded, shifting the displayed instant by four hours during daylight-saving time. | Yes | Birthday extension / datetime persistence | Use an app-owned UTC datetime cast for Booking instant fields and add a database round-trip regression test under `America/Toronto`. Canada staging traffic was returned to the last accepted revision while the fix is reviewed. | Open |
-| Q-008 | Birthday Booking add-on snapshot hydration | Add-on snapshots are written in catalog sort order, but the Booking relationship has no explicit ordering; MySQL may return them in source add-on ID index order instead of historical `sort_order_snapshot` order. | Yes | Birthday extension / snapshot presentation | Order the app-owned Booking add-on relationship by immutable `sort_order_snapshot`, then snapshot row ID, and retain the existing stable-order regression test. | Open |
+| Q-007 | Canada staging / Birthday Booking snapshot validation | UTC booking instants were stored correctly, but the default Eloquent `datetime` cast reinterpreted them in the Toronto application timezone after reload. | No | Birthday extension / datetime persistence | Resolved by PR #57 with the extension-owned `UtcDateTime` cast. Canada staging database round trips verified UTC hydration plus correct Toronto daylight-saving and standard-time display for start/end, priced, and cancelled instants. | Resolved |
+| Q-008 | Birthday Booking add-on snapshot hydration | Add-on snapshots could reload in source add-on ID order because the Booking relationship lacked an explicit historical ordering. | No | Birthday extension / snapshot presentation | Resolved by PR #57. The relationship now orders by immutable `sort_order_snapshot` and then snapshot row ID; Canada staging reloaded `First` before `Late` even though `Late` was created first. | Resolved |
 
 分类说明：
 
@@ -1467,3 +1467,57 @@ Next step: review and merge the independent snapshot hydration fix, redeploy
 only Canada staging, rerun the snapshot QA and admin/browser checks, then
 create the final PR #56 deployment record. Do not start the 15-minute
 slot-hold phase before Q-007 and Q-008 are resolved.
+
+## 2026-07-17 - Canada staging Birthday Booking snapshot acceptance
+
+Environment: Canada staging only. Status: Resolved; documentation PR pending
+review.
+
+- PR #56 merge SHA `8b6ba92c9f27b27e1479f91121379dedfc2e230c`
+  supplied the additive Booking schema already migrated in the prior phase.
+  PR #57 merge SHA and deployed git SHA
+  `e2ca19d4407064bb9d34d4fe8fe947cd1624c5c2` supplied the UTC hydration and
+  deterministic add-on relationship fixes. No migration ran in this phase.
+- Cloud Build `2392136c-e2ce-44d7-bced-7b33450958cb` produced the full-SHA
+  Canada image. Ready revision `le-chateau-canada-staging-00024-dof` passed
+  tagged `/healthz/`, matched the accepted runtime configuration fingerprint,
+  and now serves 100% of traffic. `00018-neb` and `00021-fom` remain available
+  rollback revisions.
+- Application-account QA reloaded summer and standard-time Bookings from
+  Cloud SQL. Start/end, priced, and cancelled instants hydrated as UTC and
+  converted back to the expected Toronto `12:00-16:00` slot. Q-007 is resolved.
+- A `Late` add-on was created before a lower-sort `First` add-on. The reloaded
+  relationship and read-only admin detail displayed `First`, then `Late`, with
+  immutable sort snapshots and snapshot-row tie-break behavior. Q-008 is
+  resolved.
+- The accepted historical Booking retained its original contact, package,
+  included-item, add-on, and integer CAD snapshots after source catalog and
+  Customer changes. Package/add-on/catalog subtotals remained 100/75/175
+  cents at pricing version 1. Model update/delete guards, terminal cancellation,
+  invalid-state validation, and transaction rollback checks passed.
+- Two catalog-priced Bookings for the same location/date/slot coexisted with
+  distinct public IDs. Reservation and Order counts stayed at zero, Payment
+  and Payment Log counts stayed at their preflight baselines, and no slot-hold
+  table or row was created. The Booking phase therefore remains deliberately
+  non-occupying and non-payable.
+- Authenticated browser acceptance covered core admin pages plus Birthday
+  Packages, Add-ons, and Bookings. The list/detail showed historical snapshots
+  and CAD values without Create, Edit, Delete, Save, Confirm, Reservation,
+  payment, or recalculation actions. Error-level console entries were zero;
+  permission isolation remains covered by the focused automated tests.
+- `/healthz/`, public pages, admin login, Livewire, and retained test media
+  returned successfully with no localhost URL. Current-revision logs contained
+  zero error-severity entries, HTTP 5xx, fatal/UTC/SQL/Cloud Storage/cache
+  errors, or unhandled exceptions.
+- All synthetic Booking snapshots, Bookings, Customer, package, and add-ons
+  were removed in dependency order. All temporary preflight/validation/cleanup
+  Jobs were deleted, and business-object baselines were unchanged. Render,
+  DigitalOcean, production, secrets, real data, payment, and outbound mail
+  were not changed.
+
+Known independent issue: full fresh-install migration ordering remains outside
+this validation and does not block the already-initialized Canada staging
+database.
+
+Next step: review and merge this documentation-only acceptance record. Do not
+start the separately scoped 15-minute slot-hold phase before that gate.
