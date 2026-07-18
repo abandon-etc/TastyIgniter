@@ -2273,3 +2273,48 @@ separate tracked problem; this work used a dependency-ordered isolated schema
 and does not modify that root migration. Next step: review the Draft PR, then
 merge and perform Canada staging migration/acceptance before starting the
 separate 15-minute slot-hold phase.
+
+## 2026-07-17 - Isolate Birthday Booking snapshot hydration blockers
+
+Environment: Canada staging and local Docker/MySQL. Status: Fix PR pending;
+Canada staging traffic safely rolled back.
+
+- Confirmed PR #56 merge SHA `8b6ba92c9f27b27e1479f91121379dedfc2e230c`,
+  built its full-SHA Cloud Run image, and deployed Ready revision
+  `le-chateau-canada-staging-00021-fom`. The additive Birthday Booking
+  migration ran successfully once and produced only the expected Booking and
+  add-on snapshot schema.
+- Public/admin/static/media smoke checks and current-revision error-log audit
+  passed. An isolated application-account QA then verified Booking identity,
+  catalog status, CAD package/add-on snapshots, integer minor-unit totals,
+  pricing version, and intentional same-slot coexistence.
+- The QA database round trip revealed Q-007: Eloquent's default `datetime`
+  cast treated stored UTC values as Toronto-local time after hydration. The
+  record therefore represented an instant four hours later during DST even
+  though the pre-persistence service object was correct.
+- Stopped the validation immediately, removed all synthetic QA rows, confirmed
+  Reservation/Order/Payment/payment-log baselines were unchanged, deleted the
+  disposable migration and QA Jobs, and returned 100% traffic to accepted
+  revision `le-chateau-canada-staging-00018-neb`. The additive migration was
+  retained; no destructive rollback command ran.
+- Added an extension-owned `UtcDateTime` cast for `starts_at`, `ends_at`,
+  `priced_at`, and `cancelled_at`, plus a Toronto-application-timezone
+  persistence/reload regression test. The cast serializes UTC explicitly and
+  rejects malformed hydrated values instead of silently changing instants.
+- Focused MySQL testing also isolated Q-008: snapshot inserts followed catalog
+  order, but the relation reload had no explicit ordering and could follow the
+  source-ID unique index instead. Added deterministic hydration by immutable
+  `sort_order_snapshot` and snapshot row ID; the existing stable-order service
+  regression covers the behavior.
+- PHP syntax, Pint, strict Composer validation, a real MySQL/Eloquent UTC
+  round-trip check, and clean Cloud Run and Render image builds passed
+  locally. The dependency-ordered MySQL 8.4 schema ran all 13 focused Booking
+  service tests with 112 assertions, zero errors, and zero failures; the known
+  PHPUnit XML deprecation remains non-blocking.
+- No slot hold, availability change, payment, webhook, public checkout,
+  production operation, secret, real data, or core/vendor modification is
+  included. Render and DigitalOcean remain unchanged fallbacks.
+
+Next step: finish the focused regression checks and publish the independent
+snapshot hydration PR. After merge, redeploy Canada staging and resume PR #56
+snapshot validation; do not start slot-hold work first.
