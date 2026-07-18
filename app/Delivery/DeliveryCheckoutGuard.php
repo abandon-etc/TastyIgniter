@@ -15,8 +15,14 @@ final class DeliveryCheckoutGuard
         /** @var LocationService $location */
         $location = resolve('location');
 
+        $this->gate->assertFulfillmentAvailable($location->current());
+
         if ($location->orderTypeIsDelivery()) {
             $this->gate->assertDeliveryEnabled($location->current());
+        }
+
+        if ($location->orderTypeIsCollection()) {
+            $this->gate->assertCollectionEnabled($location->current());
         }
     }
 }

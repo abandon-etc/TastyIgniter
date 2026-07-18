@@ -2448,21 +2448,28 @@ review; not deployed.
 - Added an app-owned Delivery availability gate and Location behavior override
   so active order types require both the global flag and existing Location
   Delivery setting. Pickup/Collection remains available independently.
-- Added server-side stale-session normalization that clears only temporary
-  Delivery location/area/timeslot state and preserves cart, Birthday, and
-  Reservation data. Missing Location setup remains handled by the upstream
+- Added passive server-side stale-session normalization that clears only
+  temporary Delivery location/area/timeslot state and preserves cart, Birthday,
+  and Reservation data. If Delivery and Collection are both unavailable, the
+  global web middleware clears the invalid order type without blocking
+  unrelated pages. Missing Location setup remains handled by the upstream
   installation/location flow.
-- Added server guards for fulfillment changes, checkout final save, and Orders
-  API writes. The API rejects all Delivery creates/updates until it can reuse
-  complete storefront address, area, minimum, fee, and totals validation;
-  Pickup API writes and historical Delivery reads remain unchanged.
+- Added strict server guards for fulfillment changes, cart validation, checkout
+  final save, and Orders API writes. The API rejects all Delivery
+  creates/updates until it can reuse complete storefront address, area,
+  minimum, fee, and totals validation. A disabled Pickup selection is cleared
+  and rejected, while enabled Pickup API writes and historical Delivery reads
+  remain unchanged.
 - Added unit, feature, HTTP storefront, checkout, and full Orders API tests.
   Test Order writes use synthetic values and database transactions only. The
   MySQL integration environment is isolated and does not contain staging or
   production data.
-- Delivery coverage passed 40 tests and 70 assertions on PHP 8.3 and MySQL
-  8.4.10. All 78 Birthday regression cases also passed; the existing
-  migration-inspection test that assumes an unprefixed schema was verified in
+- Delivery coverage passed 48 tests and 124 assertions on PHP 8.3 and MySQL
+  8.4.10. Coverage includes real homepage, Birthday, Reservation-account,
+  login, and content routes with both fulfillment methods disabled, as well as
+  strict order-type, cart, checkout, and Orders API failures. All 78 previously
+  passing Birthday regression cases remain unchanged; the existing
+  migration-inspection test that assumes an unprefixed schema continues to use
   its matching no-prefix database rather than changing unrelated test code.
 - PHP syntax, scoped Pint, Composer strict validation, Laravel config/route/view
   cache generation, and clean no-cache Cloud Run and Render Docker builds

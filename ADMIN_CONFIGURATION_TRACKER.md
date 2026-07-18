@@ -1637,10 +1637,14 @@ deployed or configured on Canada staging.
 - Active fulfillment methods omit Delivery while preserving Collection/Pickup.
   A stale Delivery session falls back to Collection without changing cart
   items, quantities, prices, Birthday state, or Reservation state. If neither
-  method is available, the request receives an explicit non-sensitive domain
-  error.
-- Storefront order-type changes and checkout finalization re-check the gate on
-  the server. Existing TastyIgniter checkout validation remains authoritative
+  method is available, passive web middleware clears the invalid order type and
+  temporary Delivery state without blocking homepage, Birthday, Reservation,
+  login, or content routes.
+- Storefront order-type changes, cart fulfillment validation, and checkout
+  finalization use strict server-side checks. These food-ordering actions return
+  an explicit non-sensitive domain error when no method is available, and a
+  disabled Collection/Pickup selection is cleared and rejected rather than
+  silently used. Existing TastyIgniter checkout validation remains authoritative
   for location, address, area, hours, minimum order, totals, and delivery fee.
 - Generic Orders API Delivery creates and updates fail closed because that API
   cannot safely reconstruct the complete storefront area/fee context. Pickup
@@ -1649,10 +1653,13 @@ deployed or configured on Canada staging.
 - No schema or migration was added. No staging/production environment variable
   was changed, no Order was submitted, and no real address, customer, payment,
   geocoding call, secret, vendor, or TastyIgniter core change is included.
-- Local acceptance passed 40 Delivery tests/70 assertions on MySQL 8.4.10,
-  78 Birthday regression cases, config/route/view cache generation, Composer
-  strict validation, Pint, and clean no-cache Cloud Run/Render builds. Existing
-  PHPUnit XML and npm dependency deprecation warnings are non-blocking.
+- Local acceptance passed 48 Delivery tests/124 assertions on MySQL 8.4.10,
+  including real homepage, Birthday, Reservation-account, login, and content
+  routes plus strict cart/checkout/API boundaries. The previously passing 78
+  Birthday regression cases remain unchanged. Config/route/view cache,
+  Composer strict validation, Pint, and clean no-cache Cloud Run/Render builds
+  also passed. Existing PHPUnit XML and npm dependency deprecation warnings are
+  non-blocking.
 
 Canada staging must remain `DELIVERY_ENABLED=false` when this change is later
 deployed for closed-state acceptance. Delivery Areas remain unconfigured and

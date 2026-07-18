@@ -6,7 +6,6 @@ namespace Tests\Feature\Delivery;
 
 use App\Delivery\DeliveryAvailabilityGate;
 use App\Delivery\Exceptions\DeliveryUnavailableException;
-use App\Delivery\Exceptions\NoFulfillmentMethodAvailableException;
 use Igniter\Flame\Geolite\Model\Location as UserLocation;
 use Igniter\Local\Classes\Location as LocationService;
 use Igniter\Local\Models\Location;
@@ -45,7 +44,7 @@ final class DeliverySessionNormalizationTest extends TestCase
             'address' => 'Test only',
         ]));
 
-        $changed = app(DeliveryAvailabilityGate::class)->normalizeOrderType($this->location);
+        $changed = app(DeliveryAvailabilityGate::class)->normalizeStaleSession($this->location);
 
         $this->assertTrue($changed);
         $this->assertSame(Location::COLLECTION, $this->location->getSession('orderType'));
@@ -63,7 +62,7 @@ final class DeliverySessionNormalizationTest extends TestCase
         $this->setLocation(false, true);
         $this->location->putSession('orderType', Location::DELIVERY);
 
-        app(DeliveryAvailabilityGate::class)->normalizeOrderType($this->location);
+        app(DeliveryAvailabilityGate::class)->normalizeStaleSession($this->location);
 
         $this->assertSame(Location::COLLECTION, $this->location->getSession('orderType'));
     }
@@ -73,7 +72,7 @@ final class DeliverySessionNormalizationTest extends TestCase
         config()->set('delivery.enabled', false);
         $this->setLocation(true, true);
 
-        app(DeliveryAvailabilityGate::class)->normalizeOrderType($this->location);
+        app(DeliveryAvailabilityGate::class)->normalizeStaleSession($this->location);
 
         $this->assertSame(Location::COLLECTION, $this->location->getSession('orderType'));
     }
@@ -84,7 +83,7 @@ final class DeliverySessionNormalizationTest extends TestCase
         $location->shouldReceive('current')->once()->andReturnNull();
         $location->shouldNotReceive('getSession');
 
-        $changed = app(DeliveryAvailabilityGate::class)->normalizeOrderType($location);
+        $changed = app(DeliveryAvailabilityGate::class)->normalizeStaleSession($location);
 
         $this->assertFalse($changed);
     }
@@ -95,25 +94,42 @@ final class DeliverySessionNormalizationTest extends TestCase
         $this->setLocation(true, true);
         $this->location->putSession('orderType', Location::COLLECTION);
 
-        $changed = app(DeliveryAvailabilityGate::class)->normalizeOrderType($this->location);
+        $changed = app(DeliveryAvailabilityGate::class)->normalizeStaleSession($this->location);
 
         $this->assertFalse($changed);
         $this->assertSame(Location::COLLECTION, $this->location->getSession('orderType'));
     }
 
-    public function test_no_collection_fails_explicitly_and_clears_invalid_selection(): void
+    public function test_disabled_collection_session_is_cleared_without_throwing(): void
+    {
+        config()->set('delivery.enabled', false);
+        $this->setLocation(true, false);
+        $this->location->putSession('orderType', Location::COLLECTION);
+
+        $changed = app(DeliveryAvailabilityGate::class)->normalizeStaleSession($this->location);
+
+        $this->assertTrue($changed);
+        $this->assertNull($this->location->getSession('orderType'));
+    }
+
+    public function test_no_collection_clears_invalid_selection_without_throwing(): void
     {
         config()->set('delivery.enabled', false);
         $this->setLocation(true, false);
         $this->location->putSession('orderType', Location::DELIVERY);
+        $this->location->putSession('delivery-timeslot', ['dateTime' => '2099-01-01 12:00:00']);
+        $this->location->putSession('area', 123);
+        $this->location->putSession('position', UserLocation::createFromArray([
+            'address' => 'Test only',
+        ]));
 
-        try {
-            app(DeliveryAvailabilityGate::class)->normalizeOrderType($this->location);
-            $this->fail('Expected the no-fulfillment exception.');
-        } catch (NoFulfillmentMethodAvailableException $exception) {
-            $this->assertSame('No fulfillment method is currently available.', $exception->getMessage());
-            $this->assertNull($this->location->getSession('orderType'));
-        }
+        $changed = app(DeliveryAvailabilityGate::class)->normalizeStaleSession($this->location);
+
+        $this->assertTrue($changed);
+        $this->assertNull($this->location->getSession('orderType'));
+        $this->assertNull($this->location->getSession('delivery-timeslot'));
+        $this->assertNull($this->location->getSession('area'));
+        $this->assertNull($this->location->getSession('position'));
     }
 
     public function test_spoofed_delivery_update_is_normalized_and_rejected(): void

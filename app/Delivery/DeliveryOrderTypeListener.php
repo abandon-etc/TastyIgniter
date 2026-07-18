@@ -14,11 +14,18 @@ final class DeliveryOrderTypeListener
 
     public function handle(LocationService $location, ?string $code = null): void
     {
+        if ($code === Location::COLLECTION && ! $this->gate->isCollectionEnabled($location->current())) {
+            $this->gate->normalizeStaleSession($location);
+            $this->gate->assertFulfillmentAvailable($location->current());
+            $this->gate->assertCollectionEnabled($location->current());
+        }
+
         if ($code !== Location::DELIVERY || $this->gate->isEnabledForLocation($location->current())) {
             return;
         }
 
-        $this->gate->normalizeOrderType($location);
+        $this->gate->normalizeStaleSession($location);
+        $this->gate->assertFulfillmentAvailable($location->current());
 
         throw new DeliveryUnavailableException;
     }

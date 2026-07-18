@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Delivery;
 
+use App\Delivery\Exceptions\CollectionUnavailableException;
 use App\Delivery\Exceptions\DeliveryUnavailableException;
 use App\Delivery\Exceptions\NoFulfillmentMethodAvailableException;
 use Igniter\Local\Classes\Location as LocationService;
@@ -47,9 +48,9 @@ final class DeliveryAvailabilityGate
     }
 
     /**
-     * Replace a stale Delivery selection without touching cart contents.
+     * Replace an invalid fulfillment selection without touching cart contents.
      */
-    public function normalizeOrderType(LocationService $location): bool
+    public function normalizeStaleSession(LocationService $location): bool
     {
         $model = $location->current();
 
@@ -58,6 +59,16 @@ final class DeliveryAvailabilityGate
         }
 
         $storedOrderType = $location->getSession('orderType');
+
+        if ($storedOrderType === Location::COLLECTION) {
+            if ($this->isCollectionEnabled($model)) {
+                return false;
+            }
+
+            $location->updateOrderType();
+
+            return true;
+        }
 
         if ($storedOrderType !== Location::DELIVERY
             && ! ($storedOrderType === null && ! $this->isEnabledForLocation($model))) {
@@ -73,12 +84,29 @@ final class DeliveryAvailabilityGate
         if (! $this->isCollectionEnabled($model)) {
             $location->updateOrderType();
 
-            throw new NoFulfillmentMethodAvailableException;
+            return true;
         }
 
         $location->updateOrderType(Location::COLLECTION);
 
         return true;
+    }
+
+    /**
+     * Fail closed only when a food-ordering action requires fulfillment.
+     */
+    public function assertFulfillmentAvailable(?Location $location): void
+    {
+        if (! $this->isEnabledForLocation($location) && ! $this->isCollectionEnabled($location)) {
+            throw new NoFulfillmentMethodAvailableException;
+        }
+    }
+
+    public function assertCollectionEnabled(?Location $location): void
+    {
+        if (! $this->isCollectionEnabled($location)) {
+            throw new CollectionUnavailableException;
+        }
     }
 
     public function clearDeliveryState(LocationService $location): void

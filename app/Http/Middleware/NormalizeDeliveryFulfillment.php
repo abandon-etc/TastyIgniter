@@ -22,7 +22,7 @@ final class NormalizeDeliveryFulfillment
             /** @var Location $location */
             $location = resolve('location');
             $location->currentOrDefault();
-            $this->gate->normalizeOrderType($location);
+            $this->gate->normalizeStaleSession($location);
         }
 
         return $next($request);
