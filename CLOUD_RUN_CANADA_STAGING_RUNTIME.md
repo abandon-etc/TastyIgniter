@@ -644,3 +644,54 @@ revision have not been changed for this feature. Delivery Areas remain
 unconfigured, the storefront Delivery UI is not restored, and D2/D3 remain
 future phases. Render and DigitalOcean continue as unchanged fallbacks and
 production remains unchanged.
+
+## 2026-07-18 - Delivery D1 runtime acceptance
+
+Canada staging now serves PR #62 merge SHA
+`6a1ccc1d95e25050abe13e36377a38db7c80e438` from Ready revision
+`le-chateau-canada-staging-d1-6a1ccc1d` at 100% traffic. Cloud Build
+`48710aec-3904-46a5-8842-0e8d1aa5a719` produced:
+
+`northamerica-northeast1-docker.pkg.dev/le-chateau-canada-staging/tastyigniter-staging/tastyigniter:6a1ccc1d95e25050abe13e36377a38db7c80e438`
+
+Image digest:
+`sha256:724e82849b6fd8d5befd27d213823e78a271349e53ac32758b9cadd4fe772095`.
+The tagged candidate passed `/healthz/` at 0% traffic before cutover. Runtime
+template fingerprint `0f5d7552c062fac4` confirms the existing service
+account, Cloud SQL connector, Secret Manager bindings, Cloud Storage mount,
+liveness, resources, scaling, ingress, and non-Delivery environment remained
+in place.
+
+`DELIVERY_ENABLED=false` is explicit on the Canada revision and resolved to
+false from the generated Laravel config cache. The Location's stored Delivery
+and Collection flags remain true and Delivery Areas remain 0, proving the
+project flag overlays rather than destroys Location configuration. Runtime
+active order types contain Collection/Pickup only. No migration or schema
+command ran.
+
+Disposable Jobs verified stale Delivery-session normalization, strict
+order-type/cart/checkout gates, API Delivery rejection, Pickup API
+create/read/update, and unchanged business baselines. Browser acceptance then
+verified a Pickup item could be added, incremented, decremented, removed, and
+used to open checkout without a Delivery fee or address requirement. No Order
+was submitted. All synthetic rows, tokens, users, carts, and Jobs were removed.
+There was no historical Delivery row in this staging database, so live history
+read was not applicable; automated PR #62 coverage remains the evidence for
+unchanged historical reads.
+
+Public and admin routes, Livewire, static assets, retained media, and final
+logs passed. Error-severity and HTTP 5xx counts were zero. Two expected API
+422 responses were recorded, with zero unexpected fulfillment 422s. The only
+runtime keyword match was the normal informational Cloud SQL socket startup
+message.
+
+Ready rollback points remain:
+
+- `le-chateau-canada-staging-slot60-f1d5dc9c`
+- `le-chateau-canada-staging-slot59-7e6a1e6d`
+- `le-chateau-canada-staging-00024-dof`
+
+Render and DigitalOcean remain unchanged fallbacks; production is unchanged.
+D2 storefront Delivery UI and D3 Delivery configuration have not started, and
+Canada staging must continue to use `DELIVERY_ENABLED=false` until separately
+approved.

@@ -1250,3 +1250,39 @@ scheduler configuration were not changed. The full fresh-install migration
 ordering issue remains independent. Next step: review and merge the
 documentation-only validation record; start no payment or registration work
 until separately approved.
+
+## 2026-07-18 - Canada Delivery D1 deployment validation
+
+PR #62 merge SHA `6a1ccc1d95e25050abe13e36377a38db7c80e438` is
+live only on Canada staging as Ready revision
+`le-chateau-canada-staging-d1-6a1ccc1d` at 100% traffic. Cloud Build
+`48710aec-3904-46a5-8842-0e8d1aa5a719` produced image digest
+`sha256:724e82849b6fd8d5befd27d213823e78a271349e53ac32758b9cadd4fe772095`.
+The tagged revision passed `/healthz/` before cutover; runtime fingerprint
+`0f5d7552c062fac4` preserved the accepted Canada service configuration.
+
+Canada staging explicitly keeps `DELIVERY_ENABLED=false`, including in the
+Laravel config cache. Stored Location Delivery/Collection settings remain
+enabled and Delivery Areas remain empty, while active storefront fulfillment
+contains only Collection/Pickup. No migration or schema change ran.
+
+Stale Delivery-session normalization, strict cart/checkout boundaries, Orders
+API Delivery rejection, Pickup API create/read/update, Pickup browser cart
+add/increase/decrease/remove, and checkout-page access passed. No final Order
+or payment was submitted. Synthetic Orders, status history, API credentials,
+sessions, carts, and disposable Jobs were removed by exact identifiers. The
+staging database has no historical Delivery row, so live historical-read QA
+was not applicable; automated PR #62 coverage remains in place.
+
+Public/admin pages, Livewire, assets, retained media, and final logs passed
+with zero error-severity entries, HTTP 5xx, unexpected fulfillment 422s, or
+runtime fatal/Cloud SQL/FUSE/cache failures. Two intentional Delivery API 422
+responses were expected.
+
+Render staging and DigitalOcean remain unchanged operational fallbacks, and
+production is unchanged. Existing Ready Canada rollback revisions
+`le-chateau-canada-staging-slot60-f1d5dc9c`,
+`le-chateau-canada-staging-slot59-7e6a1e6d`, and
+`le-chateau-canada-staging-00024-dof` were retained. The next gate is review
+of the documentation-only D1 validation PR. D2 UI, D3 business parameters,
+and fresh-install migration ordering remain separate work.

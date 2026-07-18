@@ -2484,3 +2484,46 @@ Next step: review and merge the feature PR, then deploy separately to Canada
 staging with `DELIVERY_ENABLED=false` for closed-state acceptance. D2 UI and D3
 Delivery business parameters remain separately scoped, as does the known
 fresh-install migration-ordering issue.
+
+## 2026-07-18 - Validated Delivery D1 on Canada staging
+
+Environment: Canada staging only. Status: Runtime acceptance complete;
+documentation PR pending review.
+
+- Built PR #62 merge SHA `6a1ccc1d95e25050abe13e36377a38db7c80e438`
+  with Cloud Build `48710aec-3904-46a5-8842-0e8d1aa5a719`. Artifact Registry
+  image
+  `northamerica-northeast1-docker.pkg.dev/le-chateau-canada-staging/tastyigniter-staging/tastyigniter:6a1ccc1d95e25050abe13e36377a38db7c80e438`
+  has digest
+  `sha256:724e82849b6fd8d5befd27d213823e78a271349e53ac32758b9cadd4fe772095`.
+- Deployed Ready revision `le-chateau-canada-staging-d1-6a1ccc1d`, validated
+  tagged `/healthz/` at 0% traffic, then assigned 100% traffic. Runtime
+  fingerprint `0f5d7552c062fac4` preserved the Cloud SQL, Secret Manager,
+  Cloud Storage, service-account, liveness, resource, scaling, and ingress
+  configuration.
+- Explicit `DELIVERY_ENABLED=false` survived config caching. The Location's
+  Delivery and Collection flags stayed true and Delivery Areas stayed empty;
+  active fulfillment exposed only Collection/Pickup. No migration ran.
+- Read-only/runtime QA verified stale Delivery-session fallback, targeted
+  Delivery-state cleanup, preservation of cart/Birthday/Reservation state,
+  safe order-type/cart/checkout failures, and unchanged business baselines.
+- Orders API QA returned 422 for Delivery create and Pickup-to-Delivery
+  update, while synthetic Pickup create/read/update returned 201/200/200.
+  Cleanup removed the exact QA Order, status history, API token, and API user,
+  with no Customer or Payment write. The database contained no historical
+  Delivery fixture, so live history read was not applicable; PR #62 tests
+  retain coverage for unchanged historical reads.
+- Browser Pickup regression passed menu access, add, quantity increase,
+  decrease, removal, and checkout-page access. Totals contained no Delivery
+  fee, no Delivery address was required, no final Order was submitted, and the
+  browser cart was cleaned.
+- Public/admin routes, Livewire, static assets, and test media passed. Final
+  log audit recorded zero error-severity entries, HTTP 5xx, unexpected 422s,
+  or fatal/Cloud SQL/FUSE/cache failures; two Delivery API 422s were expected.
+  Both disposable D1 Jobs were deleted.
+- Render and DigitalOcean remain unchanged fallbacks. Production, secrets,
+  real data, payment, mail, and domain configuration were not touched.
+
+Next step: review and merge this documentation-only validation PR. Canada
+staging must remain `DELIVERY_ENABLED=false`; D2 UI restoration, D3 business
+parameters, and fresh-install migration ordering remain separate phases.
