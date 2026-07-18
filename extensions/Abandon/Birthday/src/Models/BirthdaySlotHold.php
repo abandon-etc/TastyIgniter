@@ -123,6 +123,10 @@ class BirthdaySlotHold extends Model
 
     private function formatUtc(?CarbonInterface $instant): string
     {
-        return $instant?->setTimezone('UTC')->format('Y-m-d H:i:s').' UTC' ?: '';
+        if ($instant === null) {
+            return '';
+        }
+
+        return $instant->setTimezone('UTC')->format('Y-m-d H:i:s').' UTC';
     }
 }

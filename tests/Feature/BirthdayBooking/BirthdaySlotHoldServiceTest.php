@@ -82,6 +82,8 @@ final class BirthdaySlotHoldServiceTest extends TestCase
         $this->assertSame(900, (int) $hold->acquired_at->diffInSeconds($hold->expires_at));
         $this->assertSame('UTC', $hold->acquired_at->getTimezone()->getName());
         $this->assertSame('UTC', $hold->expires_at->getTimezone()->getName());
+        $this->assertSame('', $hold->released_at_display);
+        $this->assertSame('', $hold->expired_at_display);
         $this->assertSame(1, BirthdaySlotHold::query()->count());
         $this->assertTrue($this->holds()->isActiveForBooking($booking, $this->now->addMinutes(14)->addSeconds(59)));
         $this->assertFalse($this->holds()->isActiveForBooking($booking, $this->now->addMinutes(15)));
