@@ -11,6 +11,7 @@ use App\Delivery\DeliveryCheckoutGuard;
 use App\Delivery\DeliveryOrderTypeListener;
 use App\Delivery\LocationDeliveryAction;
 use App\Livewire\BirthdayReservation;
+use App\Livewire\DeliveryLocalSearch;
 use Igniter\Flame\Pagic\Router;
 use Igniter\Local\Models\Location as LocationModel;
 use Illuminate\Support\Facades\Event;
@@ -45,6 +46,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot()
     {
+        $this->app->booted(static function (): void {
+            Livewire::component('igniter-orange::local-search', DeliveryLocalSearch::class);
+        });
+
         LocationModel::implement(LocationDeliveryAction::class);
 
         Event::listen('location.orderType.updated', app(DeliveryOrderTypeListener::class)->handle(...));
@@ -56,7 +61,7 @@ class AppServiceProvider extends ServiceProvider
             return;
         }
 
-        Event::listen('theme.getActiveTheme', static fn(): string => 'birthday-orange');
+        Event::listen('theme.getActiveTheme', static fn (): string => 'birthday-orange');
 
         app(BirthdayReservationRules::class)->register();
         Livewire::component('birthday-reservation', BirthdayReservation::class);
