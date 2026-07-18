@@ -2318,3 +2318,50 @@ Canada staging traffic safely rolled back.
 Next step: finish the focused regression checks and publish the independent
 snapshot hydration PR. After merge, redeploy Canada staging and resume PR #56
 snapshot validation; do not start slot-hold work first.
+
+## 2026-07-17 - Validate Birthday Booking snapshots on Canada staging
+
+Environment: Canada staging only. Status: Runtime acceptance complete;
+documentation PR pending review.
+
+- Built PR #57 merge SHA `e2ca19d4407064bb9d34d4fe8fe947cd1624c5c2`
+  with Cloud Build `2392136c-e2ce-44d7-bced-7b33450958cb` and deployed the
+  full-SHA Artifact Registry image as Ready revision
+  `le-chateau-canada-staging-00024-dof`. Its tagged `/healthz/` returned 200,
+  its runtime fingerprint matched the accepted service configuration, and it
+  received 100% traffic. Revisions `00018-neb` and `00021-fom` were retained.
+- Did not rerun any migration. A disposable read-only application-account Job
+  confirmed the two Birthday Booking tables and the single PR #56 migration
+  record, no hold table, no residual QA, and unchanged business baselines.
+- Synthetic service-level QA resolved Q-007: persisted summer and standard-time
+  start/end values, plus priced/cancelled instants, reloaded in UTC and mapped
+  back to Toronto `12:00-16:00` without a second offset.
+- Synthetic QA resolved Q-008: an add-on created first with sort 20 reloaded
+  after the later-created sort-10 add-on. The relationship and admin detail
+  rendered `First`, then `Late`, using snapshot sort order and snapshot-row ID
+  as the deterministic tie-break.
+- Verified immutable contact/catalog snapshots, 100/75/175-cent CAD subtotals,
+  pricing version 1, public-ID uniqueness, model update/delete protection,
+  terminal cancellation, date/slot validation, invalid-catalog rollback, and
+  forced partial-snapshot rollback.
+- Same-location/date/slot catalog-priced Bookings were both accepted as
+  designed. No Reservation, Order, Payment, Payment Log, or slot hold was
+  created, and the public reservation availability model was not changed.
+- Authenticated browser acceptance passed for the Birthday Booking list/detail
+  and core admin pages. Historical snapshots remained read-only; browser
+  error-level console entries were zero. Public pages, Livewire, retained
+  media, and current-revision logs also passed with zero HTTP 5xx or matching
+  fatal/UTC/SQL/FUSE/cache errors.
+- Removed every synthetic Booking snapshot, Booking, Customer, package, and
+  add-on, then deleted all disposable Jobs. Render and DigitalOcean remained
+  unchanged fallbacks; production, secrets, real data, payment, and outbound
+  notifications were not touched.
+
+The local Windows host does not provide PHP, and PR #57 has no configured
+GitHub checks, so no redundant local PHPUnit run was claimed in this phase.
+The real Cloud Run/Cloud SQL QA above is the staging acceptance evidence; the
+focused MySQL tests recorded on PR #57 remain the automated regression evidence.
+
+Known separate issue: full fresh-install migration ordering remains outside
+scope. Next step is review and merge of this documentation-only record, then a
+separately approved 15-minute slot-hold phase.

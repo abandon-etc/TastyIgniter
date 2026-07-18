@@ -548,3 +548,37 @@ into this documentation-only acceptance PR.
 
 Next step: review and merge the final catalog validation record, then begin the
 separately scoped Birthday Booking domain and immutable price snapshot phase.
+
+## 2026-07-17 - Birthday Booking snapshot runtime acceptance
+
+Canada staging now runs git SHA
+`e2ca19d4407064bb9d34d4fe8fe947cd1624c5c2` as Ready revision
+`le-chateau-canada-staging-00024-dof` at 100% traffic. Cloud Build
+`2392136c-e2ce-44d7-bced-7b33450958cb` produced:
+
+`northamerica-northeast1-docker.pkg.dev/le-chateau-canada-staging/tastyigniter-staging/tastyigniter:e2ca19d4407064bb9d34d4fe8fe947cd1624c5c2`
+
+The image digest is
+`sha256:a7f5cfbd2f7bee65040f675c02a7dbb92ffdee7821ac958c239f9590224c2f17`.
+The tagged revision passed `/healthz/` before traffic changed, and the runtime
+configuration fingerprint matched accepted revision `00018-neb`. Revisions
+`00018-neb` and `00021-fom` remain Ready rollback points. No service account,
+Cloud SQL connector, Secret Manager binding, Cloud Storage mount, liveness,
+resource, scaling, ingress, domain, or environment setting changed.
+
+No migration ran. Application-account Cloud Run Jobs verified the existing
+Booking schema, UTC/DST round trips, deterministic add-on snapshot hydration,
+immutable history, model guards, transaction rollback, and same-slot
+non-occupancy. Authenticated admin list/detail acceptance and public/static/media
+regression passed. Current-revision error severity, HTTP 5xx, and matching
+fatal/UTC/SQL/FUSE/cache error counts were zero.
+
+All synthetic data and all disposable preflight/validation/cleanup Jobs were
+removed. Reservation, Order, Payment, and Payment Log baselines were unchanged;
+no slot-hold table exists. Render and DigitalOcean remain unchanged fallbacks,
+and production is unchanged.
+
+Current gate: review and merge the documentation-only validation record before
+starting any slot-hold, availability-lock, payment, registration, public-flow,
+or notification work. Full fresh-install migration ordering remains a separate
+known issue.
