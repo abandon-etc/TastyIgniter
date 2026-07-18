@@ -9,6 +9,7 @@ use App\BirthdayBooking\BirthdaySlot;
 use Igniter\Flame\Database\Model;
 use Igniter\Flame\Database\Relations\BelongsTo;
 use Igniter\Flame\Database\Relations\HasMany;
+use Igniter\Flame\Database\Relations\HasOne;
 use Igniter\Local\Models\Location;
 use Igniter\User\Models\Customer;
 use Illuminate\Support\Str;
@@ -122,6 +123,47 @@ class BirthdayBooking extends Model
             ->orderBy('birthday_booking_addon_id');
     }
 
+    public function slotHold(): HasOne
+    {
+        return $this->hasOne(BirthdaySlotHold::class, 'birthday_booking_id', 'birthday_booking_id');
+    }
+
+    public function getHoldPublicIdAttribute(): string
+    {
+        return (string) ($this->resolvedSlotHold()?->public_id ?? '');
+    }
+
+    public function getHoldEffectiveStatusLabelAttribute(): string
+    {
+        return $this->resolvedSlotHold()?->effective_status_label
+            ?? trans('abandon.birthday::default.hold_statuses.none');
+    }
+
+    public function getHoldAcquiredAtDisplayAttribute(): string
+    {
+        return (string) ($this->resolvedSlotHold()?->acquired_at_display ?? '');
+    }
+
+    public function getHoldExpiresAtDisplayAttribute(): string
+    {
+        return (string) ($this->resolvedSlotHold()?->expires_at_display ?? '');
+    }
+
+    public function getHoldReleasedAtDisplayAttribute(): string
+    {
+        return (string) ($this->resolvedSlotHold()?->released_at_display ?? '');
+    }
+
+    public function getHoldExpiredAtDisplayAttribute(): string
+    {
+        return (string) ($this->resolvedSlotHold()?->expired_at_display ?? '');
+    }
+
+    public function getHoldReleaseReasonAttribute(): string
+    {
+        return (string) ($this->resolvedSlotHold()?->release_reason ?? '');
+    }
+
     public function getContactNameAttribute(): string
     {
         return trim($this->contact_first_name_snapshot.' '.$this->contact_last_name_snapshot);
@@ -214,5 +256,10 @@ class BirthdayBooking extends Model
                 'status' => trans('abandon.birthday::default.booking_errors.cancelled_is_final'),
             ]);
         }
+    }
+
+    private function resolvedSlotHold(): ?BirthdaySlotHold
+    {
+        return $this->relationLoaded('slotHold') ? $this->slotHold : $this->slotHold()->first();
     }
 }

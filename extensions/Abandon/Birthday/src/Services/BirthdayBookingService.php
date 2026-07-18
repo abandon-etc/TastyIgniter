@@ -23,6 +23,7 @@ final class BirthdayBookingService
         private readonly BirthdayRules $rules,
         private readonly BirthdayTelephone $telephone,
         private readonly BirthdayPricingSnapshotService $pricing,
+        private readonly BirthdaySlotHoldService $holds,
     ) {}
 
     /**
@@ -122,15 +123,26 @@ final class BirthdayBookingService
 
     public function cancel(BirthdayBooking $booking, ?CarbonImmutable $cancelledAt = null): BirthdayBooking
     {
-        if ($booking->status === BirthdayBookingStatus::CANCELLED) {
-            return $booking;
-        }
+        return DB::transaction(function () use ($booking, $cancelledAt): BirthdayBooking {
+            $persisted = BirthdayBooking::query()->lockForUpdate()->findOrFail($booking->getKey());
 
-        $booking->status = BirthdayBookingStatus::CANCELLED;
-        $booking->cancelled_at = $cancelledAt ?? CarbonImmutable::now('UTC');
-        $booking->save();
+            if ($persisted->status === BirthdayBookingStatus::CANCELLED) {
+                return $persisted->load(['customer', 'location', 'addons', 'slotHold']);
+            }
 
-        return $booking->fresh(['customer', 'location', 'addons']);
+            $cancelledAt ??= CarbonImmutable::now('UTC');
+            $this->holds->release(
+                $persisted,
+                BirthdaySlotHoldService::REASON_BOOKING_CANCELLED,
+                $cancelledAt,
+            );
+
+            $persisted->status = BirthdayBookingStatus::CANCELLED;
+            $persisted->cancelled_at = $cancelledAt;
+            $persisted->save();
+
+            return $persisted->fresh(['customer', 'location', 'addons', 'slotHold']);
+        }, 3);
     }
 
     private function resolveSlot(string $slotCode): BirthdaySlot

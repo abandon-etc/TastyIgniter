@@ -1521,3 +1521,48 @@ database.
 
 Next step: review and merge this documentation-only acceptance record. Do not
 start the separately scoped 15-minute slot-hold phase before that gate.
+
+## 2026-07-18 - 15-minute Birthday slot holds implementation
+
+Environment: local isolated Docker/MySQL 8.4 only. Status: Pending review.
+
+- Added an extension-owned `birthday_slot_holds` schema with a unique public
+  identifier, one reusable row per location/date/slot, Booking ownership, UTC
+  acquisition/expiry/release timestamps, status, and release reason. The
+  migration is additive and safely reversible without changing existing
+  Birthday Booking, Reservation, Order, or payment records.
+- Hold duration is fixed at exactly 900 seconds. A hold is expired when
+  `expires_at <= now`; availability and acquisition apply this rule lazily, so
+  correctness does not depend on a cleanup scheduler. The optional
+  `birthday:expire-slot-holds` command only performs housekeeping.
+- Acquisition is transactional and database-enforced. Row locks, unique keys,
+  and finite duplicate/deadlock retries prevent two Bookings from owning the
+  same slot. Re-acquiring an active hold for the same Booking is idempotent and
+  does not renew its public ID or expiry. Released or expired rows are reused
+  atomically with a new public ID.
+- Booking creation remains non-occupying. Only an eligible catalog-priced
+  Booking can acquire a hold, and cancelled Bookings cannot acquire one.
+  Cancelling a Booking releases its active hold in the same transaction, so a
+  release failure also rolls back the cancellation.
+- Release is owner-only, idempotent, and limited to defined reasons. Direct
+  model update and physical deletion are blocked. Birthday Booking admin list
+  and detail views expose hold status, public ID, and timestamps read-only;
+  no create, renew, release, payment, or customer checkout action was added.
+- MySQL 8.4.10 verification passed with 68 Birthday tests and 451 assertions,
+  including true multi-process contention, exact-expiry-boundary reuse,
+  same-Booking idempotency, different-slot independence, cancellation rollback,
+  ownership rejection, and safe domain errors without SQLSTATE, index names,
+  or personal data. Migration up/down/up also passed in the isolated schema.
+- Composer validation, PHP syntax checks, Pint, Laravel config/route/view cache
+  builds, and clean no-cache Cloud Run and Render Docker builds passed. Only
+  pre-existing npm deprecation warnings and the existing PHPUnit XML
+  deprecation were observed.
+- No staging or production migration/deployment was performed. Render and
+  DigitalOcean remain unchanged fallbacks. No secret, real data, payment,
+  Reservation/Order logic, public Birthday checkout, vendor, or TastyIgniter
+  core change is included.
+
+Known independent issue: full fresh-install migration ordering remains outside
+this PR. After review and merge, deploy the additive migration to Canada
+staging in a separate controlled phase, then run hold concurrency and admin
+read-only acceptance against Cloud SQL before starting customer checkout work.

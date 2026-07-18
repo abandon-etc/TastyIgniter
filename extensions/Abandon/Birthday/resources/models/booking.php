@@ -59,6 +59,16 @@ $config['list']['columns'] = [
         'type' => 'text',
         'sortable' => false,
     ],
+    'hold_effective_status_label' => [
+        'label' => 'abandon.birthday::default.booking_labels.hold_status',
+        'type' => 'text',
+        'sortable' => false,
+    ],
+    'hold_expires_at_display' => [
+        'label' => 'abandon.birthday::default.booking_labels.hold_expires_at',
+        'type' => 'text',
+        'sortable' => false,
+    ],
     'created_at' => [
         'label' => 'lang:igniter::admin.column_date_added',
         'type' => 'datetime',
@@ -88,6 +98,13 @@ $config['form']['fields'] = [
     'status_label' => ['label' => 'abandon.birthday::default.booking_labels.status', 'type' => 'text', 'disabled' => true, 'span' => 'right'],
     'priced_at' => ['label' => 'abandon.birthday::default.booking_labels.priced_at', 'type' => 'text', 'disabled' => true, 'span' => 'left'],
     'cancelled_at' => ['label' => 'abandon.birthday::default.booking_labels.cancelled_at', 'type' => 'text', 'disabled' => true, 'span' => 'right'],
+    'hold_public_id' => ['label' => 'abandon.birthday::default.booking_labels.hold_public_id', 'type' => 'text', 'disabled' => true],
+    'hold_effective_status_label' => ['label' => 'abandon.birthday::default.booking_labels.hold_status', 'type' => 'text', 'disabled' => true],
+    'hold_acquired_at_display' => ['label' => 'abandon.birthday::default.booking_labels.hold_acquired_at', 'type' => 'text', 'disabled' => true, 'span' => 'left'],
+    'hold_expires_at_display' => ['label' => 'abandon.birthday::default.booking_labels.hold_expires_at', 'type' => 'text', 'disabled' => true, 'span' => 'right'],
+    'hold_released_at_display' => ['label' => 'abandon.birthday::default.booking_labels.hold_released_at', 'type' => 'text', 'disabled' => true, 'span' => 'left'],
+    'hold_expired_at_display' => ['label' => 'abandon.birthday::default.booking_labels.hold_expired_at', 'type' => 'text', 'disabled' => true, 'span' => 'right'],
+    'hold_release_reason' => ['label' => 'abandon.birthday::default.booking_labels.hold_release_reason', 'type' => 'text', 'disabled' => true],
     'created_at' => ['label' => 'lang:igniter::admin.column_date_added', 'type' => 'text', 'disabled' => true],
 ];
 

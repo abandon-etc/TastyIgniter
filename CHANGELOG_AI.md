@@ -2365,3 +2365,38 @@ focused MySQL tests recorded on PR #57 remain the automated regression evidence.
 Known separate issue: full fresh-install migration ordering remains outside
 scope. Next step is review and merge of this documentation-only record, then a
 separately approved 15-minute slot-hold phase.
+
+## 2026-07-18 - Implemented 15-minute Birthday slot holds
+
+Environment: local isolated Docker/MySQL 8.4.10. Status: Pending PR review; not
+deployed or migrated on Canada staging.
+
+- Added the extension-owned hold migration, status/model/domain exceptions,
+  transactional hold service, optional expiry command, and read-only Birthday
+  Booking admin integration.
+- Enforced a fixed 900-second UTC lifetime, exact `expires_at <= now` expiry,
+  one reusable row per location/date/slot, unique public IDs, owner-only
+  release, and no renewal for repeated acquisition by the same Booking.
+- Combined row locks, database unique constraints, atomic row reuse, and three
+  finite retries for duplicate/deadlock/lock-timeout races. Competing Bookings
+  receive a non-sensitive availability error; cancellation and hold release
+  share one transaction and roll back together.
+- Kept Birthday Booking creation non-occupying and rejected hold acquisition
+  for cancelled or otherwise ineligible Bookings. No scheduler is required for
+  correctness; the cleanup command only marks elapsed active rows expired.
+- Added service, migration, real-process concurrency, Booking regression, and
+  admin read-only tests. The full Birthday suite passed: 68 tests and 451
+  assertions on MySQL 8.4.10. Migration up/down/up passed without removing the
+  Birthday Booking table.
+- Composer strict validation, PHP syntax checks, Pint, config/route/view cache
+  generation, and clean no-cache `Dockerfile.cloudrun` and
+  `Dockerfile.render` builds passed. Existing npm and PHPUnit configuration
+  deprecation warnings remain non-blocking.
+- Did not deploy, migrate, or write Canada staging. Did not change Render,
+  DigitalOcean, production, payment, Reservation, Order, authentication,
+  public Birthday checkout, vendor, or TastyIgniter core. No secret, `.env`,
+  database dump, upload, or real customer/business data is included.
+
+Next step: review and merge the slot-hold PR, then run an explicitly controlled
+Canada staging additive migration/deployment and Cloud SQL concurrency/admin
+acceptance. The separate fresh-install migration-ordering issue remains open.
