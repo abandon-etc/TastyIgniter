@@ -8,6 +8,7 @@ use Abandon\Birthday\Services\BirthdayAddonService;
 use Abandon\Birthday\Services\BirthdayBookingService;
 use Abandon\Birthday\Services\BirthdayPackageService;
 use Abandon\Birthday\Services\BirthdayPricingSnapshotService;
+use Abandon\Birthday\Services\BirthdaySlotHoldService;
 use Igniter\System\Classes\BaseExtension;
 use Override;
 
@@ -22,6 +23,7 @@ class Extension extends BaseExtension
         $this->app->singleton(BirthdayBookingService::class);
         $this->app->singleton(BirthdayPackageService::class);
         $this->app->singleton(BirthdayPricingSnapshotService::class);
+        $this->app->singleton(BirthdaySlotHoldService::class);
     }
 
     #[Override]

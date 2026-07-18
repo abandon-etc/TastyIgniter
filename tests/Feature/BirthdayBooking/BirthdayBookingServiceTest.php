@@ -15,6 +15,7 @@ use Abandon\Birthday\Services\BirthdayBookingService;
 use Abandon\Birthday\Services\BirthdayPackageService;
 use Abandon\Birthday\Services\BirthdayPricingSnapshot;
 use Abandon\Birthday\Services\BirthdayPricingSnapshotService;
+use Abandon\Birthday\Services\BirthdaySlotHoldService;
 use App\BirthdayBooking\BirthdayRules;
 use App\BirthdayBooking\BirthdayTelephone;
 use Carbon\CarbonImmutable;
@@ -262,7 +263,8 @@ final class BirthdayBookingServiceTest extends TestCase
             ->where('slot_code', '12-16')
             ->count());
         $this->assertSame($counts, $this->unrelatedCounts());
-        $this->assertFalse(DB::getSchemaBuilder()->hasTable('birthday_slot_holds'));
+        $this->assertTrue(DB::getSchemaBuilder()->hasTable('birthday_slot_holds'));
+        $this->assertSame(0, DB::table('birthday_slot_holds')->count());
     }
 
     public function test_invalid_default_package_states_reject_without_partial_booking(): void
@@ -355,6 +357,7 @@ final class BirthdayBookingServiceTest extends TestCase
             app(BirthdayRules::class),
             app(BirthdayTelephone::class),
             $pricing,
+            app(BirthdaySlotHoldService::class),
         );
 
         try {

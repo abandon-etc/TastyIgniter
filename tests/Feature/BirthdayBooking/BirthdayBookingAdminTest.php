@@ -7,9 +7,11 @@ namespace Tests\Feature\BirthdayBooking;
 use Abandon\Birthday\Models\BirthdayAddon;
 use Abandon\Birthday\Models\BirthdayBooking;
 use Abandon\Birthday\Models\BirthdayPackage;
+use Abandon\Birthday\Models\BirthdaySlotHold;
 use Abandon\Birthday\Services\BirthdayAddonService;
 use Abandon\Birthday\Services\BirthdayBookingService;
 use Abandon\Birthday\Services\BirthdayPackageService;
+use Abandon\Birthday\Services\BirthdaySlotHoldService;
 use Carbon\CarbonImmutable;
 use Igniter\Local\Models\Location;
 use Igniter\User\Models\Customer;
@@ -29,6 +31,8 @@ final class BirthdayBookingAdminTest extends TestCase
     private BirthdayPackage $package;
 
     private BirthdayAddon $addon;
+
+    private BirthdaySlotHold $hold;
 
     protected function setUp(): void
     {
@@ -78,6 +82,10 @@ final class BirthdayBookingAdminTest extends TestCase
             [],
             CarbonImmutable::create(2026, 7, 10, 12, 0, 0, 'America/Toronto'),
         );
+        $this->hold = app(BirthdaySlotHoldService::class)->acquire(
+            $this->booking,
+            CarbonImmutable::now('UTC'),
+        );
     }
 
     public function test_super_user_can_view_read_only_booking_list(): void
@@ -92,6 +100,7 @@ final class BirthdayBookingAdminTest extends TestCase
             ->assertSee('$265.00')
             ->assertSee('CAD')
             ->assertSee('Catalog priced')
+            ->assertSee('Active')
             ->assertDontSee('abandon/birthday/bookings/create')
             ->assertDontSee('abandon.birthday::default');
     }
@@ -115,9 +124,32 @@ final class BirthdayBookingAdminTest extends TestCase
             ->assertSee('$265.00')
             ->assertSee('CAD')
             ->assertSee('Catalog priced')
+            ->assertSee($this->hold->public_id)
+            ->assertSee('Active')
+            ->assertSee($this->hold->expires_at->format('Y-m-d H:i:s').' UTC')
             ->assertDontSee('data-request="onSave"', false)
             ->assertDontSee('data-request="onDelete"', false)
             ->assertDontSee('abandon.birthday::default');
+    }
+
+    public function test_admin_uses_effective_expired_status_without_cleanup_and_exposes_no_hold_actions(): void
+    {
+        DB::table('birthday_slot_holds')->where('birthday_slot_hold_id', $this->hold->getKey())->update([
+            'expires_at' => CarbonImmutable::now('UTC')->subSecond()->format('Y-m-d H:i:s'),
+        ]);
+
+        $response = $this->actingAs($this->superUser(), 'igniter-admin')
+            ->get(route('abandon.birthday.bookings', ['slug' => 'preview/'.$this->booking->getKey()]))
+            ->assertOk()
+            ->assertSee('Expired')
+            ->assertDontSee('Acquire hold')
+            ->assertDontSee('Renew hold')
+            ->assertDontSee('Release hold')
+            ->assertDontSee('Extend hold')
+            ->assertDontSee('data-request="onSave"', false)
+            ->assertDontSee('data-request="onDelete"', false);
+
+        $this->assertStringNotContainsString('SQLSTATE', $response->getContent());
     }
 
     public function test_admin_pages_display_snapshots_after_catalog_sources_change(): void

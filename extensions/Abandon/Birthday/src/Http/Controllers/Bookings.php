@@ -45,11 +45,11 @@ class Bookings extends AdminController
 
     public function listExtendQuery($query): void
     {
-        $query->with(['customer', 'location'])->withCount('addons');
+        $query->with(['customer', 'location', 'slotHold'])->withCount('addons');
     }
 
     public function formExtendQuery($query): void
     {
-        $query->with(['customer', 'location', 'addons']);
+        $query->with(['customer', 'location', 'addons', 'slotHold']);
     }
 }
