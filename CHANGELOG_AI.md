@@ -2436,3 +2436,51 @@ acceptance. The separate fresh-install migration-ordering issue remains open.
 Next step: review this documentation-only validation PR. Do not begin payment,
 registration, public checkout, webhook, or production work until a separately
 approved phase.
+
+## 2026-07-18 - Implemented Delivery feature flag and server-side gate
+
+Environment: local isolated Docker/PHP 8.3/MySQL 8.4. Status: Pending PR
+review; not deployed.
+
+- Added a fail-closed `DELIVERY_ENABLED` project flag with config-cache-safe
+  runtime access and explicit boolean parsing. The default and invalid-value
+  behavior is false.
+- Added an app-owned Delivery availability gate and Location behavior override
+  so active order types require both the global flag and existing Location
+  Delivery setting. Pickup/Collection remains available independently.
+- Added passive server-side stale-session normalization that clears only
+  temporary Delivery location/area/timeslot state and preserves cart, Birthday,
+  and Reservation data. If Delivery and Collection are both unavailable, the
+  global web middleware clears the invalid order type without blocking
+  unrelated pages. Missing Location setup remains handled by the upstream
+  installation/location flow.
+- Added strict server guards for fulfillment changes, cart validation, checkout
+  final save, and Orders API writes. The API rejects all Delivery
+  creates/updates until it can reuse complete storefront address, area,
+  minimum, fee, and totals validation. A disabled Pickup selection is cleared
+  and rejected, while enabled Pickup API writes and historical Delivery reads
+  remain unchanged.
+- Added unit, feature, HTTP storefront, checkout, and full Orders API tests.
+  Test Order writes use synthetic values and database transactions only. The
+  MySQL integration environment is isolated and does not contain staging or
+  production data.
+- Delivery coverage passed 48 tests and 124 assertions on PHP 8.3 and MySQL
+  8.4.10. Coverage includes real homepage, Birthday, Reservation-account,
+  login, and content routes with both fulfillment methods disabled, as well as
+  strict order-type, cart, checkout, and Orders API failures. All 78 previously
+  passing Birthday regression cases remain unchanged; the existing
+  migration-inspection test that assumes an unprefixed schema continues to use
+  its matching no-prefix database rather than changing unrelated test code.
+- PHP syntax, scoped Pint, Composer strict validation, Laravel config/route/view
+  cache generation, and clean no-cache Cloud Run and Render Docker builds
+  passed. Only the existing PHPUnit XML and npm dependency deprecation warnings
+  remain.
+- No migration, schema, Delivery Area, fee, hours, storefront UI, homepage,
+  payment, Birthday, Reservation, production, Render, DigitalOcean, vendor, or
+  TastyIgniter core change is included. `.codex-tmp/` is excluded from Docker
+  build contexts and remains outside version control.
+
+Next step: review and merge the feature PR, then deploy separately to Canada
+staging with `DELIVERY_ENABLED=false` for closed-state acceptance. D2 UI and D3
+Delivery business parameters remain separately scoped, as does the known
+fresh-install migration-ordering issue.

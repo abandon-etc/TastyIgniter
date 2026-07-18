@@ -621,3 +621,26 @@ baselines remained 0/0/6/0. Render and DigitalOcean remain unchanged fallbacks;
 production and secrets were unchanged. Full fresh-install migration ordering
 remains an independent issue. The next gate is review of the documentation-only
 validation PR, not payment or registration implementation.
+
+## Planned Delivery feature flag runtime setting
+
+The project-owned Delivery gate reads `DELIVERY_ENABLED` through
+`config('delivery.enabled')`. The variable defaults to false and invalid values
+also fail closed. A future Canada staging deployment of the Delivery gate must
+set or retain:
+
+```text
+DELIVERY_ENABLED=false
+```
+
+This variable is non-secret. Because Canada staging enables Laravel config
+cache, changing it requires deploying a new revision so the cached value is
+rebuilt. Delivery additionally requires the current Location's existing
+`delivery.is_enabled` setting; neither flag replaces Delivery Area, address,
+hours, minimum-order, totals, or fee validation.
+
+This entry is planning documentation only: the Cloud Run service and current
+revision have not been changed for this feature. Delivery Areas remain
+unconfigured, the storefront Delivery UI is not restored, and D2/D3 remain
+future phases. Render and DigitalOcean continue as unchanged fallbacks and
+production remains unchanged.

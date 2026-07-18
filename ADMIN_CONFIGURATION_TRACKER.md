@@ -1621,3 +1621,48 @@ data, payment, registration, customer checkout, outbound mail, and scheduler
 configuration were not changed. Full fresh-install migration ordering remains
 a separate known issue. Next gate: review and merge the documentation-only
 validation PR; do not begin payment or registration work in this phase.
+
+## 2026-07-18 - Delivery feature flag and server-side gate
+
+Environment: local isolated Docker/MySQL 8.4. Status: Pending PR review; not
+deployed or configured on Canada staging.
+
+- Added the project-level `DELIVERY_ENABLED` flag, exposed at runtime through
+  `config('delivery.enabled')`. It defaults to false, parses common boolean
+  forms explicitly, and fails closed for invalid values.
+- Delivery is available only when both the project flag and the current
+  Location's existing `delivery.is_enabled` setting are true. Disabling the
+  project flag does not delete or overwrite Location, Delivery Area, fee,
+  minimum-order, or historical Order configuration.
+- Active fulfillment methods omit Delivery while preserving Collection/Pickup.
+  A stale Delivery session falls back to Collection without changing cart
+  items, quantities, prices, Birthday state, or Reservation state. If neither
+  method is available, passive web middleware clears the invalid order type and
+  temporary Delivery state without blocking homepage, Birthday, Reservation,
+  login, or content routes.
+- Storefront order-type changes, cart fulfillment validation, and checkout
+  finalization use strict server-side checks. These food-ordering actions return
+  an explicit non-sensitive domain error when no method is available, and a
+  disabled Collection/Pickup selection is cleared and rejected rather than
+  silently used. Existing TastyIgniter checkout validation remains authoritative
+  for location, address, area, hours, minimum order, totals, and delivery fee.
+- Generic Orders API Delivery creates and updates fail closed because that API
+  cannot safely reconstruct the complete storefront area/fee context. Pickup
+  creates and updates remain available, and historical Delivery orders remain
+  readable and unchanged.
+- No schema or migration was added. No staging/production environment variable
+  was changed, no Order was submitted, and no real address, customer, payment,
+  geocoding call, secret, vendor, or TastyIgniter core change is included.
+- Local acceptance passed 48 Delivery tests/124 assertions on MySQL 8.4.10,
+  including real homepage, Birthday, Reservation-account, login, and content
+  routes plus strict cart/checkout/API boundaries. The previously passing 78
+  Birthday regression cases remain unchanged. Config/route/view cache,
+  Composer strict validation, Pint, and clean no-cache Cloud Run/Render builds
+  also passed. Existing PHPUnit XML and npm dependency deprecation warnings are
+  non-blocking.
+
+Canada staging must remain `DELIVERY_ENABLED=false` when this change is later
+deployed for closed-state acceptance. Delivery Areas remain unconfigured and
+the D2 storefront/UI and D3 business-parameter phases have not started. Render
+and DigitalOcean remain unchanged fallbacks. The fresh-install migration
+ordering issue remains separate.
