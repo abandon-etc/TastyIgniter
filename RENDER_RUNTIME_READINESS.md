@@ -1219,3 +1219,34 @@ migration-order issue remains open.
 
 Next gate: review and merge the documentation-only validation record. Only
 after that approval may the separately scoped 15-minute slot-hold phase begin.
+
+## 2026-07-18 - Canada Birthday slot-hold display validation
+
+Canada staging now serves PR #60 merge SHA
+`f1d5dc9c8a576e81b8f72f618080e1efb09db6b9` from Ready revision
+`le-chateau-canada-staging-slot60-f1d5dc9c` at 100% traffic. Cloud Build
+`c41097bb-06b6-45a3-a4ff-a10b5405ff73` produced the full-SHA image with digest
+`sha256:4e56e80eaa8c9dcd704ea5ea67255e320817d2c457c064d5893801b289c5ec6c`.
+The tagged candidate passed `/healthz/` before cutover, and the PR #59 plus PR
+#57 revisions remain Ready rollback targets.
+
+No migration ran. The existing hold migration record, schema, five required
+indexes, and two restrictive foreign keys were read-only verified. Active,
+released, effective-expired before cleanup, persisted expired after cleanup,
+and no-hold admin states passed list/detail acceptance. Empty hold timestamps
+are blank rather than isolated `UTC`; non-empty values remain UTC and the
+surface remains read-only.
+
+PR #59 remains the completed acceptance for fixed 900-second expiry,
+no-renewal idempotency, database concurrency, reclaim, owner-only release, and
+transactional cancellation. PR #60 changed only display formatting and tests.
+Public/admin/Livewire/media regressions passed; current-revision error and HTTP
+5xx counts were zero. All synthetic data and temporary Jobs were removed, and
+Reservation/Order/Payment/Payment Log baselines remained 0/0/6/0.
+
+Render staging and DigitalOcean remain unchanged fallbacks. Production,
+secrets, real data, payment, registration, checkout, notifications, and
+scheduler configuration were not changed. The full fresh-install migration
+ordering issue remains independent. Next step: review and merge the
+documentation-only validation record; start no payment or registration work
+until separately approved.
