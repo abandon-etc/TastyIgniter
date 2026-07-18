@@ -214,6 +214,39 @@ final class BirthdayBookingServiceTest extends TestCase
         }
     }
 
+    public function test_booking_instants_round_trip_as_utc_when_the_application_timezone_is_toronto(): void
+    {
+        $previousTimezone = date_default_timezone_get();
+        $previousAppTimezone = config('app.timezone');
+
+        try {
+            date_default_timezone_set('America/Toronto');
+            config()->set('app.timezone', 'America/Toronto');
+            $this->defaultPackage('Classic', '250.00');
+
+            $booking = $this->createBooking();
+            $reloaded = BirthdayBooking::query()->findOrFail($booking->getKey());
+
+            $this->assertSame('2026-07-12 16:00:00', $reloaded->starts_at->format('Y-m-d H:i:s'));
+            $this->assertSame('UTC', $reloaded->starts_at->getTimezone()->getName());
+            $this->assertSame('12:00', $reloaded->starts_at->setTimezone('America/Toronto')->format('H:i'));
+            $this->assertSame('16:00', $reloaded->ends_at->setTimezone('America/Toronto')->format('H:i'));
+
+            $cancelled = app(BirthdayBookingService::class)->cancel(
+                $reloaded,
+                CarbonImmutable::create(2026, 7, 10, 18, 0, 0, 'UTC'),
+            );
+            $cancelled = BirthdayBooking::query()->findOrFail($cancelled->getKey());
+
+            $this->assertSame('2026-07-10 18:00:00', $cancelled->cancelled_at->format('Y-m-d H:i:s'));
+            $this->assertSame('UTC', $cancelled->cancelled_at->getTimezone()->getName());
+            $this->assertSame('UTC', $cancelled->priced_at->getTimezone()->getName());
+        } finally {
+            date_default_timezone_set($previousTimezone);
+            config()->set('app.timezone', $previousAppTimezone);
+        }
+    }
+
     public function test_same_slot_bookings_are_allowed_and_do_not_create_other_business_objects(): void
     {
         $this->defaultPackage('Classic', '250.00');

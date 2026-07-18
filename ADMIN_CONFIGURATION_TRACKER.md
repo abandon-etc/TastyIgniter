@@ -145,6 +145,8 @@
 | Q-004 | 前台首页 | 第一批已关闭或后置 Delivery，但首页仍显示 delivery address 搜索入口；菜单页显示 Pickup，不显示 Delivery。 | Yes | 主题改造 | 已通过项目级 Orange 视图覆盖隐藏首页 local search / delivery address 搜索区域，并替换为按当前语言显示的点单和预约入口按钮；未修改 core、`vendor/` 或数据库。 | Resolved |
 | Q-005 | 前台首页、菜单页、预约页、购物车入口 | `<html lang>` 已可在 `fr_CA` / `en_CA` 间切换，但前台仍有未完整本地化内容。 | Yes | 翻译配置 / 主题改造 | 已新增少量 `lang/vendor` 覆盖并将首页 CTA 改为语言 key：`fr_CA` 显示法语单语，`en_CA` 显示英语单语；已部分覆盖导航、Pickup、预约和购物车关键文案。完整站点翻译、后台 demo content 和未覆盖主题文案仍需后续处理。 | Open |
 | Q-006 | 菜单页 / 购物车 / 结账入口 | 初次验证时当前本地时间不在营业时间内，前台显示 `CLOSED`，导致无法完成加入购物车和 checkout 验证。临时打开本地营业时间后，测试商品可加入购物车，数量可增加 / 减少，可移除商品，并可进入 checkout 表单。 | No | 前台流程 / 后台配置 | 已确认原因是测试时段不在营业时间内；测试后已从 `.local/backups/q006-before-temp-open-20260708-102353.json` 恢复原始营业时间和 collection 配置。未提交订单，未提交预约，未配置真实支付。 | Resolved |
+| Q-007 | Canada staging / Birthday Booking snapshot validation | UTC booking instants are stored correctly, but the default Eloquent `datetime` cast reinterprets them in the Toronto application timezone when records are reloaded, shifting the displayed instant by four hours during daylight-saving time. | Yes | Birthday extension / datetime persistence | Use an app-owned UTC datetime cast for Booking instant fields and add a database round-trip regression test under `America/Toronto`. Canada staging traffic was returned to the last accepted revision while the fix is reviewed. | Open |
+| Q-008 | Birthday Booking add-on snapshot hydration | Add-on snapshots are written in catalog sort order, but the Booking relationship has no explicit ordering; MySQL may return them in source add-on ID index order instead of historical `sort_order_snapshot` order. | Yes | Birthday extension / snapshot presentation | Order the app-owned Booking add-on relationship by immutable `sort_order_snapshot`, then snapshot row ID, and retain the existing stable-order regression test. | Open |
 
 分类说明：
 
@@ -1416,3 +1418,52 @@ this PR does not broaden scope to that issue.
 Next step: review the Draft Birthday Booking snapshot PR. Do not merge,
 deploy, or run the Canada staging migration until that review gate passes;
 the 15-minute slot-hold phase starts only after merge and staging acceptance.
+
+## 2026-07-17 - Canada staging Birthday Booking snapshot hydration blockers
+
+Environment: Canada staging and local Docker/MySQL validation. Status: Open
+(Q-007 and Q-008); runtime rolled back pending fix review.
+
+- Deployed PR #56 merge SHA `8b6ba92c9f27b27e1479f91121379dedfc2e230c`
+  as image tag `8b6ba92c9f27b27e1479f91121379dedfc2e230c` and Ready revision
+  `le-chateau-canada-staging-00021-fom`. The additive Birthday Booking
+  migration completed once through `php artisan igniter:up --force
+  --no-interaction`; both new tables, expected indexes, foreign keys, and the
+  single migration record were present without changing existing business
+  tables.
+- Tagged and live smoke checks passed for `/healthz/`, public pages, admin
+  login, Livewire, and retained test media. Current-revision logs contained no
+  startup, Cloud SQL, FUSE, cache, fatal, exception, or HTTP 5xx error.
+- Isolated QA created synthetic catalog/customer/Booking records only long
+  enough to validate status, public identifier, CAD snapshot values, integer
+  minor-unit totals, pricing version, and same-slot non-occupancy behavior.
+  Database reload then exposed Q-007: UTC start/end values were reinterpreted
+  as Toronto-local datetimes by the default Eloquent cast, shifting the actual
+  instant by four hours during daylight-saving time.
+- Validation stopped before slot hold work. All QA Booking, snapshot,
+  Customer, package, and add-on rows were removed; Reservation, Order,
+  Payment, and payment-log counts remained at their baselines. Disposable QA
+  and migration Jobs were deleted.
+- Traffic was returned 100% to accepted revision
+  `le-chateau-canada-staging-00018-neb`; revision `00021-fom` remains at 0%
+  for diagnosis. The additive schema remains in Canada staging and was not
+  destructively rolled back.
+- The fix uses an extension-owned UTC cast for Booking instant fields and adds
+  a database round-trip regression under `America/Toronto`. Direct
+  MySQL/Eloquent round-trip validation passed locally.
+- Focused MySQL regression also exposed Q-008: snapshot rows were inserted in
+  catalog order, but the relationship query had no `ORDER BY`, so MySQL could
+  hydrate them in source add-on ID index order. The same focused fix orders
+  the relationship by immutable `sort_order_snapshot` and snapshot row ID.
+  The dependency-ordered MySQL 8.4 schema passed all 13 focused Booking
+  service tests with 112 assertions and no error or failure.
+  Q-007 and Q-008 remain Open until the fix PR is merged, deployed, and the
+  full Canada staging QA is repeated.
+- Render and DigitalOcean remain unchanged fallbacks. Production, real data,
+  real payment, notifications, secrets, and service-account keys were not
+  touched.
+
+Next step: review and merge the independent snapshot hydration fix, redeploy
+only Canada staging, rerun the snapshot QA and admin/browser checks, then
+create the final PR #56 deployment record. Do not start the 15-minute
+slot-hold phase before Q-007 and Q-008 are resolved.

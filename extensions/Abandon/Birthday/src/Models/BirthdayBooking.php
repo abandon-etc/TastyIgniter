@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Abandon\Birthday\Models;
 
+use Abandon\Birthday\Casts\UtcDateTime;
 use App\BirthdayBooking\BirthdaySlot;
 use Igniter\Flame\Database\Model;
 use Igniter\Flame\Database\Relations\BelongsTo;
@@ -60,8 +61,8 @@ class BirthdayBooking extends Model
         'customer_id' => 'integer',
         'location_id' => 'integer',
         'event_date' => 'date:Y-m-d',
-        'starts_at' => 'datetime',
-        'ends_at' => 'datetime',
+        'starts_at' => UtcDateTime::class,
+        'ends_at' => UtcDateTime::class,
         'guest_count' => 'integer',
         'package_id' => 'integer',
         'package_included_items_snapshot' => 'array',
@@ -69,8 +70,8 @@ class BirthdayBooking extends Model
         'addons_subtotal_minor' => 'integer',
         'catalog_subtotal_minor' => 'integer',
         'pricing_version' => 'integer',
-        'priced_at' => 'datetime',
-        'cancelled_at' => 'datetime',
+        'priced_at' => UtcDateTime::class,
+        'cancelled_at' => UtcDateTime::class,
     ];
 
     public $timestamps = true;
@@ -116,7 +117,9 @@ class BirthdayBooking extends Model
 
     public function addons(): HasMany
     {
-        return $this->hasMany(BirthdayBookingAddon::class, 'birthday_booking_id', 'birthday_booking_id');
+        return $this->hasMany(BirthdayBookingAddon::class, 'birthday_booking_id', 'birthday_booking_id')
+            ->orderBy('sort_order_snapshot')
+            ->orderBy('birthday_booking_addon_id');
     }
 
     public function getContactNameAttribute(): string
