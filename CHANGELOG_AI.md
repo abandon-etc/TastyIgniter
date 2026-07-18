@@ -2400,3 +2400,39 @@ deployed or migrated on Canada staging.
 Next step: review and merge the slot-hold PR, then run an explicitly controlled
 Canada staging additive migration/deployment and Cloud SQL concurrency/admin
 acceptance. The separate fresh-install migration-ordering issue remains open.
+
+## 2026-07-18 - Validate PR #60 Birthday slot-hold display on Canada staging
+
+- Built PR #60 merge SHA `f1d5dc9c8a576e81b8f72f618080e1efb09db6b9`
+  with Cloud Build `c41097bb-06b6-45a3-a4ff-a10b5405ff73`. Artifact Registry
+  image digest:
+  `sha256:4e56e80eaa8c9dcd704ea5ea67255e320817d2c457c064d5893801b289c5ec6c`.
+- Deployed Ready revision `le-chateau-canada-staging-slot60-f1d5dc9c`, first
+  at 0% with a tagged `/healthz/` check, then at 100% traffic. The accepted
+  runtime configuration remained in place; PR #59 and PR #57 revisions remain
+  rollback targets.
+- Did not run a migration. Read-only Cloud SQL checks confirmed the existing
+  hold migration record, schema, required indexes and restrictive foreign
+  keys. The service/migration/concurrency diff from PR #59 was empty.
+- Verified active, released, expired before cleanup, expired after cleanup,
+  and no-hold admin list/detail states. Null timestamps are now blank, non-null
+  timestamps remain UTC, raw translation/null values were absent, and the
+  pages remained read-only.
+- Rechecked 900-second rows, the optional cleanup command, authenticated admin
+  pages, public pages, Livewire, and retained media. PR #59 remains the source
+  of the completed no-renewal, concurrency, reclaim, release, and cancellation
+  acceptance.
+- Removed all exact-ID synthetic holds, Bookings, snapshots, Customer, and
+  catalog rows. Reservations=0, Orders=0, Payments=6, Payment Logs=0 after
+  cleanup. Deleted every temporary PR #60 Job.
+- Current revision logs had zero error-severity entries and HTTP 5xx. Reviewed
+  cache/FUSE keyword matches were INFO-only startup configuration. No secret,
+  real data, payment, notification, Render/DigitalOcean, or production change
+  occurred.
+- The complete local feature suite was not rerun because PHP is unavailable on
+  the host; focused PR tests were not changed and live staging acceptance
+  passed. Fresh-install migration ordering remains a separate known issue.
+
+Next step: review this documentation-only validation PR. Do not begin payment,
+registration, public checkout, webhook, or production work until a separately
+approved phase.

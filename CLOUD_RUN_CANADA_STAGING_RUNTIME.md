@@ -582,3 +582,42 @@ Current gate: review and merge the documentation-only validation record before
 starting any slot-hold, availability-lock, payment, registration, public-flow,
 or notification work. Full fresh-install migration ordering remains a separate
 known issue.
+
+## 2026-07-18 - Birthday slot-hold runtime validation
+
+PR #60 merge/deployed SHA
+`f1d5dc9c8a576e81b8f72f618080e1efb09db6b9` is live on Ready revision
+`le-chateau-canada-staging-slot60-f1d5dc9c` at 100% traffic. Cloud Build
+`c41097bb-06b6-45a3-a4ff-a10b5405ff73` produced:
+
+`northamerica-northeast1-docker.pkg.dev/le-chateau-canada-staging/tastyigniter-staging/tastyigniter:f1d5dc9c8a576e81b8f72f618080e1efb09db6b9`
+
+Image digest:
+`sha256:4e56e80eaa8c9dcd704ea5ea67255e320817d2c457c064d5893801b289c5ec6c`.
+The tagged candidate returned `200 ok` from `/healthz/` before cutover. The
+runtime template fingerprint is
+`sha256:ef47dbf662b6b4cc7617f534b329624640c4999d016bc8c626b5804375f1bbad`.
+Existing service account, Cloud SQL, Secret Manager, Cloud Storage mount,
+liveness, environment, scaling, ingress, and `MAIL_MAILER=log` settings were
+retained. Ready revisions `le-chateau-canada-staging-slot59-7e6a1e6d` and
+`le-chateau-canada-staging-00024-dof` remain rollback points.
+
+No migration ran. The PR #59 hold migration was read-only verified with its
+single migration record, 14 columns, five required indexes, two restrictive
+foreign keys, and no residual preflight data. Three synthetic hold rows each
+measured exactly 900 seconds.
+
+Authenticated list/detail validation covered active, released,
+effective-expired before cleanup, persisted expired after
+`birthday:expire-slot-holds`, and no-hold states. Empty timestamps rendered
+blank and non-empty timestamps retained the UTC suffix. The admin surface
+remained read-only. Core public/admin/Livewire/media checks passed, the retained
+media object returned `image/png`, and current-revision error and HTTP 5xx
+counts were zero.
+
+All synthetic package, Customer, Booking, snapshot, and hold data and all
+temporary Jobs were removed. Reservation, Order, Payment, and Payment Log
+baselines remained 0/0/6/0. Render and DigitalOcean remain unchanged fallbacks;
+production and secrets were unchanged. Full fresh-install migration ordering
+remains an independent issue. The next gate is review of the documentation-only
+validation PR, not payment or registration implementation.

@@ -1566,3 +1566,58 @@ Known independent issue: full fresh-install migration ordering remains outside
 this PR. After review and merge, deploy the additive migration to Canada
 staging in a separate controlled phase, then run hold concurrency and admin
 read-only acceptance against Cloud SQL before starting customer checkout work.
+
+## 2026-07-18 - Canada staging Birthday slot-hold display acceptance
+
+Environment: Canada staging only. Status: Resolved; documentation PR pending
+review.
+
+- PR #59 merge SHA `7e6a1e6d6bf40c863aa17434287e718c65fd6d16`
+  supplied the already-migrated 15-minute hold lifecycle. PR #60 merge SHA and
+  deployed SHA `f1d5dc9c8a576e81b8f72f618080e1efb09db6b9` fixes only null
+  timestamp display and its tests; hold services, migration, indexes, and
+  concurrency behavior did not change.
+- Cloud Build `c41097bb-06b6-45a3-a4ff-a10b5405ff73` produced the full-SHA
+  Canada image with digest
+  `sha256:4e56e80eaa8c9dcd704ea5ea67255e320817d2c457c064d5893801b289c5ec6c`.
+  Ready revision `le-chateau-canada-staging-slot60-f1d5dc9c` passed tagged
+  `/healthz/` at 0% traffic and now serves 100%. Revisions
+  `le-chateau-canada-staging-slot59-7e6a1e6d` and
+  `le-chateau-canada-staging-00024-dof` remain Ready rollback points.
+- No migration ran. Read-only application-account checks confirmed the hold
+  migration record, 14 columns, five required indexes, two restrictive foreign
+  keys, and an initially empty hold table.
+- Authenticated Birthday Booking list/detail acceptance covered active,
+  released, effective-expired before cleanup, persisted expired after one
+  cleanup command, and no-hold states. Empty timestamp fields rendered as an
+  empty value, never isolated `UTC` or ` UTC`; every non-empty timestamp kept
+  `Y-m-d H:i:s UTC`. List/detail status remained consistent and no acquire,
+  renew, extend, release, edit, save, delete, confirmation, Reservation, or
+  payment action was exposed.
+- Dashboard, Reservations, Orders, Birthday Packages, Birthday Add-ons, and
+  Birthday Bookings loaded in the retained authenticated session. Public
+  pages, admin login, Livewire, and retained test media passed; no localhost
+  resource or browser-visible runtime failure appeared. Permission isolation
+  remains unchanged and covered by the focused admin tests; no real staff role
+  was modified.
+- PR #59 already proved 900-second exact expiry, no-renewal idempotency,
+  same-slot/same-Booking/different-slot concurrency, reclaim, owner-only
+  release, and transactional cancellation. This phase rechecked three
+  900-second staging rows and the effective-expiry/cleanup display paths.
+- Synthetic QA used one clearly named package, one `example.invalid` Customer,
+  four Bookings, and three holds. All were removed by exact IDs; no add-on
+  snapshot existed. Reservations and Orders remained 0, Payments 6, and
+  Payment Logs 0. All temporary PR #60 Cloud Run Jobs were deleted.
+- Current-revision error-severity and HTTP 5xx counts were zero. INFO-only
+  GCS FUSE/config-cache startup lines were reviewed and were not errors. No
+  fatal, SQLSTATE, Cloud SQL, FUSE permission, Laravel cache, route, class, or
+  translation failure was found.
+- The local host has no PHP runtime, so the complete feature suite was not
+  rerun in this deployment phase. PR #60's focused tests and review remained
+  unchanged, and the live staging acceptance above passed.
+
+Render and DigitalOcean remain unchanged fallbacks; production, secrets, real
+data, payment, registration, customer checkout, outbound mail, and scheduler
+configuration were not changed. Full fresh-install migration ordering remains
+a separate known issue. Next gate: review and merge the documentation-only
+validation PR; do not begin payment or registration work in this phase.
