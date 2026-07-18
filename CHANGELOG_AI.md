@@ -2436,3 +2436,44 @@ acceptance. The separate fresh-install migration-ordering issue remains open.
 Next step: review this documentation-only validation PR. Do not begin payment,
 registration, public checkout, webhook, or production work until a separately
 approved phase.
+
+## 2026-07-18 - Implemented Delivery feature flag and server-side gate
+
+Environment: local isolated Docker/PHP 8.3/MySQL 8.4. Status: Pending PR
+review; not deployed.
+
+- Added a fail-closed `DELIVERY_ENABLED` project flag with config-cache-safe
+  runtime access and explicit boolean parsing. The default and invalid-value
+  behavior is false.
+- Added an app-owned Delivery availability gate and Location behavior override
+  so active order types require both the global flag and existing Location
+  Delivery setting. Pickup/Collection remains available independently.
+- Added server-side stale-session normalization that clears only temporary
+  Delivery location/area/timeslot state and preserves cart, Birthday, and
+  Reservation data. Missing Location setup remains handled by the upstream
+  installation/location flow.
+- Added server guards for fulfillment changes, checkout final save, and Orders
+  API writes. The API rejects all Delivery creates/updates until it can reuse
+  complete storefront address, area, minimum, fee, and totals validation;
+  Pickup API writes and historical Delivery reads remain unchanged.
+- Added unit, feature, HTTP storefront, checkout, and full Orders API tests.
+  Test Order writes use synthetic values and database transactions only. The
+  MySQL integration environment is isolated and does not contain staging or
+  production data.
+- Delivery coverage passed 40 tests and 70 assertions on PHP 8.3 and MySQL
+  8.4.10. All 78 Birthday regression cases also passed; the existing
+  migration-inspection test that assumes an unprefixed schema was verified in
+  its matching no-prefix database rather than changing unrelated test code.
+- PHP syntax, scoped Pint, Composer strict validation, Laravel config/route/view
+  cache generation, and clean no-cache Cloud Run and Render Docker builds
+  passed. Only the existing PHPUnit XML and npm dependency deprecation warnings
+  remain.
+- No migration, schema, Delivery Area, fee, hours, storefront UI, homepage,
+  payment, Birthday, Reservation, production, Render, DigitalOcean, vendor, or
+  TastyIgniter core change is included. `.codex-tmp/` is excluded from Docker
+  build contexts and remains outside version control.
+
+Next step: review and merge the feature PR, then deploy separately to Canada
+staging with `DELIVERY_ENABLED=false` for closed-state acceptance. D2 UI and D3
+Delivery business parameters remain separately scoped, as does the known
+fresh-install migration-ordering issue.
