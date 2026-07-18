@@ -1666,3 +1666,54 @@ deployed for closed-state acceptance. Delivery Areas remain unconfigured and
 the D2 storefront/UI and D3 business-parameter phases have not started. Render
 and DigitalOcean remain unchanged fallbacks. The fresh-install migration
 ordering issue remains separate.
+
+## 2026-07-18 - Canada staging Delivery D1 closed-state acceptance
+
+Environment: Canada staging only. Status: Resolved; documentation PR pending
+review.
+
+- PR #62 merge/deployed SHA
+  `6a1ccc1d95e25050abe13e36377a38db7c80e438` was built by Cloud Build
+  `48710aec-3904-46a5-8842-0e8d1aa5a719`. The full-SHA image digest is
+  `sha256:724e82849b6fd8d5befd27d213823e78a271349e53ac32758b9cadd4fe772095`.
+  Ready revision `le-chateau-canada-staging-d1-6a1ccc1d` passed tagged
+  `/healthz/` at 0% traffic and now serves 100%. Runtime template fingerprint
+  `0f5d7552c062fac4` matched the retained service configuration.
+- Canada staging explicitly uses `DELIVERY_ENABLED=false`; the generated
+  Laravel config cache also resolved `config('delivery.enabled')` to false.
+  The Location's existing Delivery and Collection settings both remain true,
+  while Delivery Areas remain 0. The project gate therefore removes Delivery
+  and leaves only Collection/Pickup active without deleting future Delivery
+  configuration.
+- No migration or schema command ran. Orders, Reservations, Birthday
+  Bookings, Birthday holds, Customers, Payments, and Payment Logs remained at
+  their preflight baselines after cleanup.
+- A stale Delivery session normalized to Collection and cleared Delivery-only
+  timeslot, area, and address-position state while preserving cart,
+  Birthday, and Reservation state. The no-fulfillment strict cart/checkout
+  path failed closed without blocking ordinary routes.
+- Delivery order-type spoofing, checkout, and Orders API create/update paths
+  returned safe 422 responses before a Delivery write. Pickup API create,
+  update, read, and attempted conversion to Delivery behaved as expected;
+  the synthetic Pickup Order, status history, API token, and API user were
+  removed by exact identifiers. No historical Delivery Order exists in this
+  staging database, so live historical-read acceptance was not applicable;
+  the PR #62 automated regression remains the compatibility evidence.
+- Browser Pickup acceptance showed only `Cueillette`. A menu item could be
+  added, increased from one to two, decreased to one, removed, and added again
+  before opening checkout. Subtotal and total stayed equal with no Delivery
+  fee or address requirement, and no Order was submitted. The QA cart was
+  empty after cleanup.
+- Public routes, admin pages, Livewire, frontend/admin assets, and retained
+  test media returned successfully. Browser console errors, current-revision
+  error-severity logs, HTTP 5xx, unexpected fulfillment 422s, and runtime
+  fatal/Cloud SQL/FUSE/cache errors were zero. Two expected API 422 responses
+  were observed. All temporary D1 Jobs were deleted.
+
+Ready rollback revisions remain
+`le-chateau-canada-staging-slot60-f1d5dc9c`,
+`le-chateau-canada-staging-slot59-7e6a1e6d`, and
+`le-chateau-canada-staging-00024-dof`. Render, DigitalOcean, production,
+secrets, real data, payment, outbound mail, and domain configuration were not
+changed. D2 storefront Delivery UI and D3 Delivery Areas/business parameters
+have not started; the fresh-install migration-ordering issue remains separate.
