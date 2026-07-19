@@ -2563,3 +2563,36 @@ Canada staging remains `DELIVERY_ENABLED=false` with zero Delivery Areas, and
 Render/DigitalOcean remain unchanged fallbacks. Next step: review and merge the
 D2 PR, deploy it separately with Delivery still closed, and complete
 Pickup-only runtime acceptance before any D3 business-parameter configuration.
+
+## 2026-07-18 - Fixed Q-009 Pickup checkout Delivery instructions
+
+Environment: Canada staging deployment investigation and local isolated
+Docker. Status: Fix PR pending review; Canada staging rolled back to D1.
+
+- Built PR #64 merge SHA `fab804d276f60a05548039f7d39b45a2585ff912`
+  with Cloud Build `ad91ad49-dbac-4fd9-8eb1-40c24e0c9970`; image digest
+  `sha256:cab7dcaef031e071e8dad086075e81d5bd8e5299dac0ed6bfe81e793a7cfeefc`
+  deployed as Ready revision `le-chateau-canada-staging-d2-fab804d2`.
+- Tagged 0% validation passed health, startup logs, direct D2 assets, generated
+  Laravel config cache, and read-only database baselines. Delivery remained
+  explicitly and effectively false, Location Delivery/Collection settings
+  stayed enabled, Delivery Areas stayed 0, and no migration ran.
+- Temporary browser acceptance at 100% passed the Pickup-only homepage, menu,
+  Birthday CTA, schedule tabs, cart quantity changes/removal/re-addition,
+  fee-free totals, DOM focusability, overflow, and console checks. It then
+  exposed Q-009: Pickup checkout rendered the upstream driver-note textarea.
+- Stopped before Order submission, emptied the browser cart, deleted the
+  disposable Job, and restored D1 revision
+  `le-chateau-canada-staging-d1-6a1ccc1d` to 100% traffic. No Order, Customer,
+  Payment, address, Delivery Area, or real data was written.
+- Added a project-owned Orange checkout partial that skips only
+  `delivery_comment` for non-Delivery orders. Delivery orders retain the
+  upstream field. Added explicit Pickup-hidden and Delivery-preserved tests.
+- Validation passed 51 Delivery tests with 182 assertions; the final focused
+  storefront UI rerun passed 13 tests with 69 assertions. Pint, Blade view
+  caching, and local Cloud Run and Render image builds passed. No vendor/core,
+  migration, payment, production, Render runtime, DigitalOcean, secret, or D3
+  business-parameter change is included.
+
+Next step: merge and deploy the focused Q-009 fix, then repeat the complete D2
+Pickup-only browser, server-gate, session, log, and cleanup acceptance.

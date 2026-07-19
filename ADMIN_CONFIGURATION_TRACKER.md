@@ -1770,3 +1770,47 @@ Canada staging remains on the prior D1 revision with
 must first be deployed with the flag still false for Pickup-only acceptance.
 D3 Delivery Areas and business parameters remain a separate phase, as does the
 fresh-install migration-ordering issue.
+
+## 2026-07-18 - Q-009 Canada staging D2 Pickup checkout blocker
+
+Environment: Canada staging and local isolated Docker. Status: Blocked on
+staging; fix PR pending review. Impact: D2 acceptance only; production,
+Render, DigitalOcean, D3 configuration, and stored business data are unchanged.
+
+- PR #64 merge SHA `fab804d276f60a05548039f7d39b45a2585ff912`
+  built successfully in Cloud Build
+  `ad91ad49-dbac-4fd9-8eb1-40c24e0c9970`. The Artifact Registry image digest
+  is `sha256:cab7dcaef031e071e8dad086075e81d5bd8e5299dac0ed6bfe81e793a7cfeefc`.
+  Ready revision `le-chateau-canada-staging-d2-fab804d2` passed tagged
+  `/healthz/`, page, asset, startup-log, config-cache, and read-only database
+  preflight at 0% traffic. Runtime fingerprint `5bc68581b170b321` matched the
+  retained service configuration.
+- Cached `config('delivery.enabled')` resolved to false. Location Delivery and
+  Collection remained stored as enabled, effective Delivery remained false,
+  and Delivery Areas remained 0. No migration or schema command ran.
+- After a temporary 100% cutover, the desktop homepage and menu were
+  Pickup-only: Pickup and Birthday CTAs remained available, Delivery search,
+  schedule tab, hidden focusable controls, raw translation keys, horizontal
+  overflow, and browser console errors were absent. Browser cart add,
+  increase, decrease, remove, re-add, persistence, and fee-free totals passed.
+- Q-009 was found before checkout submission: the Pickup checkout still
+  rendered the upstream `delivery_comment` textarea labelled for a driver.
+  This violates the D2 requirement that Delivery instructions not render for
+  Pickup. No final Order, Customer, Payment, Payment Log, address, or Delivery
+  Area was created.
+- The browser cart was emptied, the disposable preflight Job was deleted, and
+  traffic was returned to `le-chateau-canada-staging-d1-6a1ccc1d` at 100%.
+  The failed D2 revision remains at 0% as an auditable rollback candidate;
+  `/healthz/` returned `200 ok` after rollback.
+- The proposed project-level Orange checkout partial omits only
+  `delivery_comment` when the current order is not Delivery and preserves the
+  field for real Delivery orders. It does not change checkout persistence,
+  totals, payment, Orders API, vendor, or TastyIgniter core.
+- Isolated PHP 8.3/MySQL 8.4 verification passed all 51 Delivery tests with
+  182 assertions. The focused storefront UI suite passed 13 tests with 69
+  assertions after the final generic-comment preservation assertion. Pint and
+  Blade view caching passed. Fresh local
+  `Dockerfile.cloudrun` and `Dockerfile.render` builds also passed.
+
+Next step: review and merge the Q-009 fix PR, rebuild from the resulting full
+SHA, and repeat D2 Pickup-only staging acceptance before any D3 work.
