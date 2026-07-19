@@ -2643,3 +2643,36 @@ migration ordering were not changed.
 
 Next step: review this documentation-only PR. Keep Canada staging Delivery
 closed until D3 is separately approved.
+
+## 2026-07-19 - Audited Delivery D3 business parameters
+
+Environment: Canada staging read-only and repository source audit. Status:
+D3A documented; awaiting business decisions.
+
+- Synced `4.x` to PR #66 merge SHA
+  `ea5c6b5f263ba93f4bd28b9551435d85c66b7ff7` and inspected the installed
+  TastyIgniter Local v4.1.4 and Cart v4.2.3 behavior without modifying vendor.
+- Verified the active Canada revision remains Ready at 100% with
+  `DELIVERY_ENABLED=false`, stored Delivery/Collection enabled, zero Delivery
+  Areas, and Pickup-only storefront behavior.
+- Read-only admin inspection recorded the retained Delivery minimum, interval,
+  lead time, future-order state, weekly schedule, tax switches, distance unit,
+  and geocoder configuration without recording credentials or changing a
+  field.
+- Documented native address/circle/polygon support, first-priority overlap
+  behavior, inclusive boundaries, postal/FSA normalization limits, multiple
+  Location selection, server-side area revalidation, and Order totals history.
+- Confirmed minimum and free-delivery conditions use `Cart::subtotal()` before
+  cart-level coupon and tax; Delivery fee is priority 100, coupon 200, tax 300,
+  and Pickup skips the Delivery condition. Distance surcharge remains additive
+  even when the base-area condition is free.
+- Added `DELIVERY_D3_BUSINESS_PARAMETER_PLAN.md` with options A/B/C, a
+  polygon-first recommendation, a complete decision table whose final values
+  are all pending, D3B/D3C acceptance plans, rollback, and exact QA cleanup.
+- Opened Q-011 as a D3C gate for synthetic geocoder failure log redaction and
+  Google/Nominatim quota, identification, attribution, and fallback acceptance.
+
+No runtime code, database, schema, Delivery Area, fee, minimum, hours, tax,
+environment, real data, payment, mail, production, Render, or DigitalOcean
+change is included. Q-005, Q-010, and fresh-install migration ordering remain
+separate. D3B must not start until the user confirms the decision table.
