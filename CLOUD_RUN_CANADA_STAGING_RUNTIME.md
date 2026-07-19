@@ -695,3 +695,45 @@ Render and DigitalOcean remain unchanged fallbacks; production is unchanged.
 D2 storefront Delivery UI and D3 Delivery configuration have not started, and
 Canada staging must continue to use `DELIVERY_ENABLED=false` until separately
 approved.
+
+## 2026-07-19 - Delivery D2 Pickup-only runtime validation
+
+Cloud Build `7ae74bf0-1943-4f15-a87d-d5fe43dac2af` built full merge SHA
+`31821289df9ae4a162cabd0cac7a3ac6fb04cd0c` with `Dockerfile.cloudrun` and
+pushed:
+
+`northamerica-northeast1-docker.pkg.dev/le-chateau-canada-staging/tastyigniter-staging/tastyigniter:31821289df9ae4a162cabd0cac7a3ac6fb04cd0c`
+
+Digest:
+`sha256:72371b610a2dff66d29dcee09a2095c72c2f6bb0d932d33744db3444c3689102`.
+Revision `le-chateau-canada-staging-d2fix-31821289` passed tagged 0% health,
+HTML, Livewire, eight direct CSS/JavaScript assets, config-cache, database, and
+startup-log preflight before receiving 100% traffic. The redacted runtime
+configuration fingerprint `74bfef31792cdfcf` matched D1, covering the service
+account, Cloud SQL connector, secret reference types, media mount, port, and
+accepted execution settings.
+
+`DELIVERY_ENABLED=false` remains explicit and cached false. Location Delivery
+and Collection settings remain stored, effective Delivery is false, Delivery
+Areas are 0, and no migration/schema command ran. Pickup-only desktop/mobile
+pages, public Birthday/Reservation, authenticated admin modules, Livewire, and
+the retained `IMG_2484.png` object passed. The object returned `image/png`,
+109065 bytes, and `Cache-Control: public, max-age=604800`.
+
+A disposable production-image Job verified stale Delivery session fallback,
+Delivery-state cleanup, cart/Birthday/Reservation preservation, and fail-closed
+422 behavior for storefront and Orders API spoofing without leaking internal
+details. Read-only business counts matched preflight and the Job was deleted.
+Current-revision error severity, HTTP 5xx, unexpected 422, fatal, Cloud SQL,
+FUSE, cache, and permission checks were zero.
+
+Ready rollback remains `le-chateau-canada-staging-d1-6a1ccc1d`. The failed
+`le-chateau-canada-staging-d2-fab804d2` revision remains tagged at 0% for
+audit. Render and DigitalOcean are unchanged fallbacks; production is
+unchanged. D3, payment, real mail, real data, domain, and fresh-install
+migration ordering remain separate.
+
+Non-blocking follow-ups are Q-005 (`en_CA` still falls back to `fr_CA`) and
+Q-010 (the upstream Orange scheduled Pickup time select does not synchronize a
+changed same-day value through its current `wire:ignore` binding). Future
+orders remain disabled and neither observation changes this D2 deployment.

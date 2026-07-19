@@ -2596,3 +2596,50 @@ Docker. Status: Fix PR pending review; Canada staging rolled back to D1.
 
 Next step: merge and deploy the focused Q-009 fix, then repeat the complete D2
 Pickup-only browser, server-gate, session, log, and cleanup acceptance.
+
+## 2026-07-19 - Validated Delivery D2 Pickup-only on Canada staging
+
+Environment: Canada staging. Status: D2 runtime acceptance complete;
+documentation PR pending review.
+
+- Built PR #65 merge SHA `31821289df9ae4a162cabd0cac7a3ac6fb04cd0c`
+  with Cloud Build `7ae74bf0-1943-4f15-a87d-d5fe43dac2af`. Artifact Registry
+  digest is
+  `sha256:72371b610a2dff66d29dcee09a2095c72c2f6bb0d932d33744db3444c3689102`.
+- Deployed new Ready revision `le-chateau-canada-staging-d2fix-31821289` at
+  0% for tagged health/page/asset/config/database/log preflight, then routed
+  100% traffic after it passed. The failed PR #64 D2 revision remains 0%, and
+  D1 remains available for rollback. Redacted runtime configuration matched D1
+  with fingerprint `74bfef31792cdfcf`.
+- Confirmed explicit and cached `DELIVERY_ENABLED=false`, effective
+  Collection/Pickup, retained Location settings, zero Delivery Areas, and no
+  migration/schema change.
+- Desktop and 390x844 checks found no Delivery fulfillment search, address,
+  selector, schedule tab, hidden focusable control, overflow, raw key, asset
+  failure, or console error. Pickup and Birthday CTAs, Collection selection,
+  public Birthday/Reservation, authenticated admin modules, Livewire, and
+  retained media passed.
+- Combined the earlier same-D2 live cart lifecycle pass with the exact PR #65
+  image verification. The redeploy ran before configured opening time, so the
+  existing schedule guard prevented a second synthetic add. No final Order,
+  Customer, Payment, address, or Delivery Area was created.
+- Verified Q-009 in the deployed source: Pickup omits only
+  `delivery_comment`, ordinary `comment` remains, and Delivery rendering is
+  preserved by the focused tests. The PR #65 focused suite passed 13 tests/69
+  assertions; the full Delivery suite passed 51 tests/182 assertions.
+- A disposable production-image Job passed stale-session normalization,
+  session/cart preservation, storefront spoof 422, Orders API 422, and
+  no-leak checks. Final read-only counts matched the preflight baseline; the
+  Job was deleted.
+- Current revision logs contained zero error-severity entries, HTTP 5xx,
+  unexpected 422, or fatal/SQL/FUSE/cache/permission errors. `/healthz/`
+  returned `200 ok` and the retained PNG returned 200 with its cache header.
+
+Q-005 remains open for the `en_CA` to `fr_CA` fallback. Q-010 records the
+pre-existing Orange scheduled-time `wire:ignore` synchronization issue as
+Deferred and separate from D2; future orders remain disabled. Render,
+DigitalOcean, production, payment, real data, D3 settings, and fresh-install
+migration ordering were not changed.
+
+Next step: review this documentation-only PR. Keep Canada staging Delivery
+closed until D3 is separately approved.

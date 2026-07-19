@@ -1286,3 +1286,43 @@ production is unchanged. Existing Ready Canada rollback revisions
 `le-chateau-canada-staging-00024-dof` were retained. The next gate is review
 of the documentation-only D1 validation PR. D2 UI, D3 business parameters,
 and fresh-install migration ordering remain separate work.
+
+## 2026-07-19 - Canada Delivery D2 Pickup-only acceptance
+
+Canada staging now serves PR #65 merge SHA
+`31821289df9ae4a162cabd0cac7a3ac6fb04cd0c` from Ready revision
+`le-chateau-canada-staging-d2fix-31821289` at 100% traffic. Cloud Build
+`7ae74bf0-1943-4f15-a87d-d5fe43dac2af` produced digest
+`sha256:72371b610a2dff66d29dcee09a2095c72c2f6bb0d932d33744db3444c3689102`.
+The 0% tagged candidate passed health, HTML, Livewire, direct asset, cached
+configuration, read-only database, and startup-log checks before cutover.
+Redacted runtime fingerprint `74bfef31792cdfcf` matched retained D1 settings.
+
+Delivery remains explicitly and effectively false. Stored Location Delivery
+and Collection settings remain enabled, Delivery Areas remain 0, migration
+count remains 165, and no migration/schema command ran. Pickup-only desktop
+and 390x844 UI checks passed without Delivery fulfillment controls, hidden
+focus targets, overflow, raw translation keys, or console errors. Q-009 is
+resolved in the exact deployed image: Pickup omits the driver-only
+`delivery_comment`, while ordinary order comments and the Delivery-only path
+remain covered by the focused PR #65 tests.
+
+The earlier same-D2 live cart lifecycle pass remains valid; this redeploy check
+occurred before configured opening time and the existing schedule guard
+correctly prevented a second add. No Order or Payment was submitted. A
+disposable production-image Job passed Delivery spoof 422, Orders API 422,
+stale-session Pickup fallback, Delivery-state cleanup, and cart/Birthday/
+Reservation preservation checks. Final business counts matched preflight and
+the Job was deleted.
+
+Public/admin/Birthday/Reservation/Livewire/media regressions passed.
+Current-revision error severity, HTTP 5xx, unexpected 422, fatal, SQL, FUSE,
+cache, and permission counts were zero. The retained PNG returned 200 and
+`/healthz/` returned `200 ok`.
+
+The failed PR #64 D2 revision remains 0%; D1 remains a Ready rollback. Render
+and DigitalOcean remain unchanged fallbacks and production is unchanged.
+Q-005 language fallback and Q-010 upstream scheduled-Pickup binding are
+non-blocking follow-ups. D3 business parameters, Delivery enablement,
+fresh-install migration ordering, payment, production, and domain work have
+not started.

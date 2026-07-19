@@ -1814,3 +1814,62 @@ Render, DigitalOcean, D3 configuration, and stored business data are unchanged.
 
 Next step: review and merge the Q-009 fix PR, rebuild from the resulting full
 SHA, and repeat D2 Pickup-only staging acceptance before any D3 work.
+
+## 2026-07-19 - Delivery D2 Pickup-only Canada staging acceptance
+
+Environment: Canada staging. Status: Resolved for D2; documentation review
+pending. Impact: Pickup storefront presentation only. Production, Render,
+DigitalOcean, Delivery business parameters, and stored business data are
+unchanged.
+
+- PR #64 (`fab804d276f60a05548039f7d39b45a2585ff912`) and the Q-009 fix in
+  PR #65 (`31821289df9ae4a162cabd0cac7a3ac6fb04cd0c`) are deployed from the
+  full merge SHA. Cloud Build `7ae74bf0-1943-4f15-a87d-d5fe43dac2af`
+  produced digest
+  `sha256:72371b610a2dff66d29dcee09a2095c72c2f6bb0d932d33744db3444c3689102`.
+- Ready revision `le-chateau-canada-staging-d2fix-31821289` serves 100% of
+  traffic. The failed D2 revision `le-chateau-canada-staging-d2-fab804d2`
+  remains tagged at 0%; D1 `le-chateau-canada-staging-d1-6a1ccc1d` remains a
+  rollback revision. Redacted D1/new-revision runtime fingerprints both equal
+  `74bfef31792cdfcf`.
+- `DELIVERY_ENABLED=false` is explicit and cached false. Stored Location
+  Delivery and Collection settings remain enabled, effective Delivery is
+  false, Delivery Areas remain 0, and the migration count remains 165. No
+  migration or schema command ran.
+- Desktop and 390x844 browser checks passed the Pickup-only homepage and menu:
+  Pickup and Birthday CTAs remain, Delivery search/address/tabs/hidden
+  focusable controls are absent, Collection is selected after refresh, and
+  there is no horizontal overflow, raw translation key, or console error.
+- The earlier PR #64 live pass already covered cart add/increase/decrease/
+  remove/re-add/persistence and fee-free totals. During this redeploy check the
+  store was still before its configured opening time, so a new cart item was
+  correctly rejected by the existing schedule guard. No Order was submitted.
+- Q-009 is resolved in the deployed full-SHA image: the project checkout
+  override omits only `delivery_comment` for Pickup while preserving the
+  ordinary `comment` field and the Delivery-only field path. The final focused
+  PR #65 suite passed 13 tests with 69 assertions; all 51 Delivery tests passed
+  with 182 assertions.
+- A production-image disposable Job confirmed stale Delivery session cleanup,
+  Pickup fallback, cart/Birthday/Reservation session preservation, and 422
+  rejection without internal-detail leakage for storefront and Orders API
+  Delivery spoofing. The Job was deleted after the checks.
+- Orders/Pickup Orders/Delivery Orders remained 3/3/0; Customers,
+  Reservations, Birthday Bookings, holds, and Delivery Areas remained 0;
+  Payments/Payment Logs remained 6/0. Retained test media returned 200,
+  `image/png`, 109065 bytes, and the accepted seven-day cache header.
+- Admin Orders, Reservations, Birthday Bookings, Packages, Add-ons, and Media
+  Manager loaded without console errors. Current-revision error-severity,
+  HTTP 5xx, unexpected 422, fatal, SQL, FUSE, cache, and permission counts were
+  zero. `/healthz/` returned `200 ok`.
+
+Known non-blocking items: Q-005 remains open because the `en_CA` switch still
+falls back to `fr_CA`. Q-010 is Deferred: the upstream Orange scheduled Pickup
+time select is `wire:ignore` and did not synchronize a changed same-day value
+back to Livewire during pre-opening QA. It did not change D2 behavior, future
+orders remain disabled, and it must be handled separately before scheduled
+Pickup is relied on. The staging `Cash On Delivery` payment-method label is not
+a Delivery fulfillment control and remains outside D2/payment scope.
+
+Next step: review and merge the documentation-only D2 validation PR. Do not
+enable Delivery or begin D3 until its Delivery Area and business parameters
+are separately approved.
