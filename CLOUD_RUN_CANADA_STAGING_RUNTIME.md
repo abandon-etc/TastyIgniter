@@ -737,3 +737,24 @@ Non-blocking follow-ups are Q-005 (`en_CA` still falls back to `fr_CA`) and
 Q-010 (the upstream Orange scheduled Pickup time select does not synchronize a
 changed same-day value through its current `wire:ignore` binding). Future
 orders remain disabled and neither observation changes this D2 deployment.
+
+## 2026-07-19 - Delivery D3A planning gate
+
+The active Canada revision remains
+`le-chateau-canada-staging-d2fix-31821289`, Ready at 100%, with explicit and
+cached `DELIVERY_ENABLED=false`. D3A performed read-only source and admin
+inspection only. Stored Delivery/Collection settings remain enabled, Delivery
+Areas remain 0, and Pickup remains the only effective storefront fulfillment.
+
+The approved D3 sequence is documented in
+`DELIVERY_D3_BUSINESS_PARAMETER_PLAN.md`: confirm all business parameters,
+configure and verify while the global gate is false (D3B), then deploy an
+isolated 0%-traffic tagged revision with the gate true before any staging
+cutover (D3C). The accepted D2 revision remains the immediate runtime rollback.
+
+Q-011 is an explicit D3C gate: controlled synthetic provider failure must prove
+that no address query, provider credential, geometry, SQL, or internal ID is
+leaked to logs or public errors, and the Google/Nominatim quota,
+identification, attribution, and fallback policy must be accepted. No runtime,
+secret, database, schema, Delivery, tax, payment, mail, domain, or production
+configuration changed during D3A.

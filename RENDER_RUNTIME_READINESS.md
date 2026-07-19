@@ -1326,3 +1326,17 @@ Q-005 language fallback and Q-010 upstream scheduled-Pickup binding are
 non-blocking follow-ups. D3 business parameters, Delivery enablement,
 fresh-install migration ordering, payment, production, and domain work have
 not started.
+
+## 2026-07-19 - Delivery D3A planning does not change fallback runtime
+
+The Delivery D3 business-parameter audit is documented in
+`DELIVERY_D3_BUSINESS_PARAMETER_PLAN.md`. It made no Render, DigitalOcean,
+runtime, database, schema, Delivery Area, fee, hours, tax, secret, payment,
+mail, domain, or production change. Canada staging remains Pickup-only with
+`DELIVERY_ENABLED=false`, and Render staging remains an unchanged fallback.
+
+D3B may configure Canada staging only after the user confirms every business
+parameter. D3C must use a 0%-traffic tagged Canada revision before any staging
+cutover. Q-011 geocoder logging/privacy and provider operations acceptance is a
+gate before Delivery enablement. Q-005, Q-010, and fresh-install migration
+ordering remain independent.

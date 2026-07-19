@@ -147,6 +147,7 @@
 | Q-006 | 菜单页 / 购物车 / 结账入口 | 初次验证时当前本地时间不在营业时间内，前台显示 `CLOSED`，导致无法完成加入购物车和 checkout 验证。临时打开本地营业时间后，测试商品可加入购物车，数量可增加 / 减少，可移除商品，并可进入 checkout 表单。 | No | 前台流程 / 后台配置 | 已确认原因是测试时段不在营业时间内；测试后已从 `.local/backups/q006-before-temp-open-20260708-102353.json` 恢复原始营业时间和 collection 配置。未提交订单，未提交预约，未配置真实支付。 | Resolved |
 | Q-007 | Canada staging / Birthday Booking snapshot validation | UTC booking instants were stored correctly, but the default Eloquent `datetime` cast reinterpreted them in the Toronto application timezone after reload. | No | Birthday extension / datetime persistence | Resolved by PR #57 with the extension-owned `UtcDateTime` cast. Canada staging database round trips verified UTC hydration plus correct Toronto daylight-saving and standard-time display for start/end, priced, and cancelled instants. | Resolved |
 | Q-008 | Birthday Booking add-on snapshot hydration | Add-on snapshots could reload in source add-on ID order because the Booking relationship lacked an explicit historical ordering. | No | Birthday extension / snapshot presentation | Resolved by PR #57. The relationship now orders by immutable `sort_order_snapshot` and then snapshot row ID; Canada staging reloaded `First` before `Late` even though `Late` was created first. | Resolved |
+| Q-011 | Canada staging Delivery geocoding failure path | Orange logs provider diagnostics after a fully empty geocoder result. Provider exceptions may originate from request URLs, so D3B must prove with a synthetic failure that no full address, query URL, API credential, geometry, SQL, or internal ID reaches application logs or public errors. The public Nominatim fallback also requires an accepted identifying User-Agent/Referer, attribution, and one-request-per-second operating policy. | Yes, blocks Delivery enablement only | Delivery configuration / privacy / external provider operations | Run the controlled D3B synthetic failure and quota/fallback checks while `DELIVERY_ENABLED=false`. If sensitive output is reproduced, add a project-owned sanitizer/wrapper in a separate PR; do not modify vendor/core. | Open |
 
 分类说明：
 
@@ -1873,3 +1874,42 @@ a Delivery fulfillment control and remains outside D2/payment scope.
 Next step: review and merge the documentation-only D2 validation PR. Do not
 enable Delivery or begin D3 until its Delivery Area and business parameters
 are separately approved.
+
+## 2026-07-19 - Delivery D3A business parameter audit
+
+Environment: Canada staging and local source audit. Status: Pending business
+decisions. Impact: planning only; no runtime or database write.
+
+- Baseline `4.x` is `ea5c6b5f263ba93f4bd28b9551435d85c66b7ff7`.
+  Ready revision `le-chateau-canada-staging-d2fix-31821289` remains at 100%
+  with explicit and cached `DELIVERY_ENABLED=false`.
+- Read-only admin inspection confirmed stored Location Delivery and Collection
+  are enabled, Delivery Areas are 0, effective storefront fulfillment is
+  Pickup-only, and no Delivery launch fee exists. Retained Delivery values are
+  CAD 0.00 minimum, 15-minute interval, 25-minute lead time, future orders off,
+  and daily 12:00-21:00 hours. Pickup remains CAD 0.00 minimum and daily
+  12:00-22:00.
+- Tax mode is disabled with rate 0 and Delivery-charge tax off. Distance unit
+  is kilometres. Geocoder is the configured Google/Nominatim Chain; no secret
+  value is recorded.
+- Native area support, overlap priority, address revalidation, totals order,
+  fee/minimum/free-threshold behavior, schedules, rollback, D3B/D3C sequence,
+  and the complete pending user decision table are recorded in
+  `DELIVERY_D3_BUSINESS_PARAMETER_PLAN.md`.
+- Preferred technical launch shape is one conservative polygon with one base
+  fee rule, no distance surcharge, Pickup default, future orders off, and no
+  tax-setting change. This is a recommendation only; every business value
+  remains pending confirmation.
+- Q-011 (Open, blocks D3C): before Delivery enablement, a controlled synthetic
+  provider-failure test must prove that geocoder logs/public errors do not
+  expose complete addresses, query URLs, provider credentials, geometry, SQL,
+  or internal IDs. Public Nominatim identification, attribution, and quota
+  suitability must also be accepted. Any required fix must be project-owned,
+  not a vendor/core patch.
+
+No Delivery Area, fee, minimum, schedule, tax, environment variable, Order,
+Customer, address, schema, production, payment, mail, Render, or DigitalOcean
+change was made. Q-005, Q-010, and fresh-install migration ordering remain
+independent. Next step is user confirmation of the D3 decision table; Canada
+staging must remain `DELIVERY_ENABLED=false` until D3B and tagged D3C
+acceptance are complete.
