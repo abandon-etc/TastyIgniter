@@ -6,6 +6,7 @@ namespace Tests\Feature\Delivery;
 
 use App\Delivery\Exceptions\DeliveryUnavailableException;
 use App\Livewire\DeliveryLocalSearch;
+use Igniter\Cart\Classes\CheckoutFormField;
 use Igniter\Local\Classes\Location as LocationService;
 use Igniter\Local\Models\Location;
 use Igniter\Local\Models\LocationSettings;
@@ -15,6 +16,8 @@ use Igniter\Main\Template\Page;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\View;
+use Illuminate\Support\ViewErrorBag;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -190,6 +193,49 @@ final class DeliveryStorefrontUiTest extends TestCase
         $component->instance()->onSearchNearby();
     }
 
+    public function test_pickup_checkout_omits_the_delivery_comment_field(): void
+    {
+        View::share('errors', new ViewErrorBag);
+
+        $html = view('igniter-orange::includes.checkout.tab-fields', [
+            'fields' => [
+                $this->checkoutField('comment', 'Add an order note'),
+                $this->checkoutField('delivery_comment', 'Leave a note for the driver'),
+            ],
+            'order' => new class
+            {
+                public function isDeliveryType(): bool
+                {
+                    return false;
+                }
+            },
+        ])->render();
+
+        $this->assertStringContainsString('data-checkout-control="comment"', $html);
+        $this->assertStringContainsString('Add an order note', $html);
+        $this->assertStringNotContainsString('delivery_comment', $html);
+        $this->assertStringNotContainsString('Leave a note for the driver', $html);
+    }
+
+    public function test_delivery_checkout_keeps_the_delivery_comment_field(): void
+    {
+        View::share('errors', new ViewErrorBag);
+
+        $html = view('igniter-orange::includes.checkout.tab-fields', [
+            'fields' => [$this->checkoutField('delivery_comment', 'Leave a note for the driver')],
+            'order' => new class
+            {
+                public function isDeliveryType(): bool
+                {
+                    return true;
+                }
+            },
+        ])->render();
+
+        $this->assertStringContainsString('data-checkout-control="delivery_comment"', $html);
+        $this->assertStringContainsString('Leave a note for the driver', $html);
+    }
+
     public function test_required_canadian_english_and_french_copy_is_available(): void
     {
         $expectations = [
@@ -250,6 +296,22 @@ final class DeliveryStorefrontUiTest extends TestCase
         $location->setModel($model);
 
         return $location;
+    }
+
+    private function checkoutField(string $name, string $placeholder): CheckoutFormField
+    {
+        $label = $name === 'delivery_comment'
+            ? 'igniter.cart::default.checkout.label_delivery_comment'
+            : 'igniter.cart::default.checkout.label_comment';
+        $field = new CheckoutFormField($name, $label);
+        $field->arrayName = 'fields';
+        $field->idPrefix = 'checkout';
+        $field->displayAs('textarea', [
+            'placeholder' => $placeholder,
+            'cssClass' => 'col-sm-12',
+        ]);
+
+        return $field;
     }
 
     private function makeScheduleViewData(string $activeType = 'collection'): object
