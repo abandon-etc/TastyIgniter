@@ -47,6 +47,16 @@ final class DeliveryAvailabilityGateTest extends TestCase
         $this->assertTrue($types->has(Location::COLLECTION));
     }
 
+    public function test_delivery_is_the_only_active_type_when_collection_is_disabled(): void
+    {
+        config()->set('delivery.enabled', true);
+
+        $activeTypes = $this->location(true, false)->availableOrderTypes()
+            ->filter(static fn ($orderType): bool => ! $orderType->isDisabled());
+
+        $this->assertSame([Location::DELIVERY], $activeTypes->keys()->all());
+    }
+
     public function test_both_fulfillment_methods_disabled_return_no_active_types(): void
     {
         config()->set('delivery.enabled', false);

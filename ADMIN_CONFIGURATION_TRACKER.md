@@ -1717,3 +1717,56 @@ Ready rollback revisions remain
 secrets, real data, payment, outbound mail, and domain configuration were not
 changed. D2 storefront Delivery UI and D3 Delivery Areas/business parameters
 have not started; the fresh-install migration-ordering issue remains separate.
+
+## 2026-07-18 - Conditional Delivery storefront UI
+
+Environment: local isolated Docker/PHP 8.3/MySQL 8.4. Status: Pending PR
+review; not deployed or enabled on Canada staging.
+
+- Storefront Delivery presentation now uses the same `DeliveryAvailabilityGate`
+  as D1. Delivery controls render only when the global flag and current
+  Location Delivery setting are both enabled; Location Collection remains an
+  independent Pickup control.
+- The homepage remains Pickup-only when Delivery is closed and retains the
+  Birthday venue CTA. When both Delivery conditions are enabled, the existing
+  address-search flow is restored alongside Pickup and Birthday. The address
+  input has a programmatic label and the current-location control has an
+  accessible name. No real address or geocoding request was used in QA.
+- Orange menu, cart, checkout, and mobile fulfillment components continue to
+  consume the D1-filtered active order types. A new session defaults to Pickup
+  when both methods are available, an existing valid Delivery selection is
+  preserved, and Delivery becomes the default only when Collection is disabled.
+  Neither-method state remains fail-closed without a fake food-ordering CTA.
+- The menu information panel now filters Delivery and Collection schedule tabs
+  through the same gate. Disabled tabs are absent from the DOM and tab order,
+  while general opening hours remain available.
+- Project overrides correct the Orange Alpine timeslot tuple and prevent its
+  map initializer from running without a valid map target/coordinates. This
+  keeps Pickup-to-Delivery-to-Pickup modal switching free of browser console
+  errors without modifying vendor or TastyIgniter core.
+- Required `en_CA` and `fr_CA` Delivery/Pickup, address-search, availability,
+  unavailable-state, and Birthday CTA copy is project-owned; tests reject raw
+  keys and verify the exact critical translations.
+- Browser acceptance covered desktop and a 390x844 mobile viewport. Closed
+  state had no address input, Delivery tab, hidden focusable Delivery control,
+  or horizontal overflow. Enabled state showed both fulfillment radios with
+  Pickup selected, exposed Delivery address guidance after switching, returned
+  cleanly to Pickup, and recorded zero console errors after runtime assets were
+  published as they are in both deployment images.
+- The isolated PHP 8.3/MySQL 8.4 verification passed 63 Delivery tests with
+  190 assertions and 78 Birthday tests with 520 assertions. PHP syntax, Pint
+  across the changed PHP files, strict Composer validation, and config, route,
+  and view cache generation all passed. Fresh no-cache builds of
+  `Dockerfile.cloudrun` and `Dockerfile.render` also passed; only existing npm
+  dependency deprecation notices were emitted.
+- D1 server gates, checkout totals/fees, area validation, Orders API
+  fail-closed behavior, Birthday, Reservation, cart contents, and historical
+  data were not weakened or changed. No Order, migration, schema, Delivery
+  Area, fee, minimum, hours, production, Render, DigitalOcean, secret, or real
+  customer data change is included.
+
+Canada staging remains on the prior D1 revision with
+`DELIVERY_ENABLED=false`; Delivery Areas remain 0. After review and merge, D2
+must first be deployed with the flag still false for Pickup-only acceptance.
+D3 Delivery Areas and business parameters remain a separate phase, as does the
+fresh-install migration-ordering issue.

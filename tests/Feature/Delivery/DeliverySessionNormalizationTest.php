@@ -77,6 +77,38 @@ final class DeliverySessionNormalizationTest extends TestCase
         $this->assertSame(Location::COLLECTION, $this->location->getSession('orderType'));
     }
 
+    public function test_missing_order_type_prefers_collection_when_both_methods_are_available(): void
+    {
+        config()->set('delivery.enabled', true);
+        $this->setLocation(true, true);
+
+        app(DeliveryAvailabilityGate::class)->normalizeStaleSession($this->location);
+
+        $this->assertSame(Location::COLLECTION, $this->location->getSession('orderType'));
+    }
+
+    public function test_existing_valid_delivery_selection_is_preserved(): void
+    {
+        config()->set('delivery.enabled', true);
+        $this->setLocation(true, true);
+        $this->location->putSession('orderType', Location::DELIVERY);
+
+        $changed = app(DeliveryAvailabilityGate::class)->normalizeStaleSession($this->location);
+
+        $this->assertFalse($changed);
+        $this->assertSame(Location::DELIVERY, $this->location->getSession('orderType'));
+    }
+
+    public function test_missing_order_type_uses_delivery_when_collection_is_disabled(): void
+    {
+        config()->set('delivery.enabled', true);
+        $this->setLocation(true, false);
+
+        app(DeliveryAvailabilityGate::class)->normalizeStaleSession($this->location);
+
+        $this->assertSame(Location::DELIVERY, $this->location->getSession('orderType'));
+    }
+
     public function test_missing_current_location_is_left_for_upstream_setup_handling(): void
     {
         $location = Mockery::mock(LocationService::class);

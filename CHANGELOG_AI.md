@@ -2527,3 +2527,39 @@ documentation PR pending review.
 Next step: review and merge this documentation-only validation PR. Canada
 staging must remain `DELIVERY_ENABLED=false`; D2 UI restoration, D3 business
 parameters, and fresh-install migration ordering remain separate phases.
+
+## 2026-07-18 - Restored conditional Delivery storefront presentation
+
+Environment: local isolated Docker/PHP 8.3/MySQL 8.4. Status: Pending PR
+review; not deployed.
+
+- Registered a project-owned Orange local-search Livewire component that
+  reuses upstream search behavior but checks the D1 Delivery gate before and
+  after every search. The homepage conditionally renders the address form while
+  always preserving the applicable Pickup and Birthday entry points.
+- Updated missing-order-type normalization so Pickup is preferred when both
+  methods are available, a valid Delivery session is preserved, and
+  Delivery-only Locations still receive a usable default.
+- Added project Orange overrides for fulfillment schedule tabs and timeslot
+  rendering. Closed methods are removed from the DOM, tab state remains
+  accessible, Alpine tuple scoping survives Livewire morphs, and map setup is
+  skipped unless a real map target and finite coordinates exist.
+- Added exact `en_CA` and `fr_CA` critical UI copy plus Livewire, Blade, gate,
+  session, accessibility, and no-fulfillment tests. Local desktop/mobile browser
+  acceptance verified both flag states and Pickup/Delivery/Pickup switching
+  with no console errors after the same asset-publish step used by deployment
+  images.
+- Isolated PHP 8.3/MySQL 8.4 verification passed 63 Delivery tests with 190
+  assertions and 78 Birthday tests with 520 assertions. PHP syntax, Pint,
+  strict Composer validation, config/route/view cache generation, and fresh
+  no-cache Cloud Run and Render image builds passed. Build output contained
+  only existing npm dependency deprecation notices.
+- No vendor/core, migration/schema, Delivery Area, fee, minimum, hours,
+  checkout totals, Orders API, Birthday, Reservation, staging runtime,
+  production, payment, secret, real address, geocoding, or real Order change is
+  included.
+
+Canada staging remains `DELIVERY_ENABLED=false` with zero Delivery Areas, and
+Render/DigitalOcean remain unchanged fallbacks. Next step: review and merge the
+D2 PR, deploy it separately with Delivery still closed, and complete
+Pickup-only runtime acceptance before any D3 business-parameter configuration.

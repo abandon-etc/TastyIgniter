@@ -40,6 +40,22 @@ final class DeliveryAvailabilityGate
         return $orderTypes->forget(Location::DELIVERY);
     }
 
+    /**
+     * Keep storefront schedule tabs aligned with the active fulfillment types.
+     */
+    public function availableScheduleTypes(?Location $location, Collection $scheduleTypes): Collection
+    {
+        if (! $this->isEnabledForLocation($location)) {
+            $scheduleTypes->forget(Location::DELIVERY);
+        }
+
+        if (! $this->isCollectionEnabled($location)) {
+            $scheduleTypes->forget(Location::COLLECTION);
+        }
+
+        return $scheduleTypes;
+    }
+
     public function assertDeliveryEnabled(?Location $location): void
     {
         if (! $this->isEnabledForLocation($location)) {
@@ -60,6 +76,22 @@ final class DeliveryAvailabilityGate
 
         $storedOrderType = $location->getSession('orderType');
 
+        if ($storedOrderType === null) {
+            if ($this->isCollectionEnabled($model)) {
+                $location->updateOrderType(Location::COLLECTION);
+
+                return true;
+            }
+
+            if ($this->isEnabledForLocation($model)) {
+                $location->updateOrderType(Location::DELIVERY);
+
+                return true;
+            }
+
+            return false;
+        }
+
         if ($storedOrderType === Location::COLLECTION) {
             if ($this->isCollectionEnabled($model)) {
                 return false;
@@ -70,8 +102,7 @@ final class DeliveryAvailabilityGate
             return true;
         }
 
-        if ($storedOrderType !== Location::DELIVERY
-            && ! ($storedOrderType === null && ! $this->isEnabledForLocation($model))) {
+        if ($storedOrderType !== Location::DELIVERY) {
             return false;
         }
 
