@@ -1,21 +1,23 @@
 # Delivery D3 Business Parameter Plan
 
 Date: 2026-07-19
-Environment: Canada staging audit and planning only
-Status: Pending business decisions
+Updated: 2026-08-19
+Environment: Canada staging audit, planning, and closed-gate configuration
+Status: Approved D3B configuration saved; D3C enablement remains blocked
 
 ## Scope and safety state
 
-This document records D3A, the read-only audit that must finish before any
-Delivery Area or fee is written to Canada staging.
+This document records the D3A read-only audit and the approved D3B
+configuration written on 2026-08-19 while Delivery remained closed.
 
 - Canada staging remains Pickup-only because `DELIVERY_ENABLED=false`.
-- The stored default Location has Delivery and Collection enabled, but there
-  are zero Delivery Areas. No delivery address can therefore complete the
-  native coverage check.
-- No setting, database row, schema, runtime revision, secret, Order, Customer,
-  Reservation, Birthday record, payment, email, or SMS was changed during
-  this audit.
+- At the D3A baseline, the stored default Location had Delivery and Collection
+  enabled but zero Delivery Areas. D3B now retains one approved polygon while
+  the global Delivery gate remains false.
+- No setting or database row was changed during D3A. The later D3B write was
+  limited to the approved Location coordinates, Delivery Area, minimum, and
+  schedule; it did not change schema, runtime revision, secret, Order,
+  Customer, Reservation, Birthday record, payment, email, or SMS data.
 - Render staging and the DigitalOcean database remain unchanged fallbacks.
 - Production is outside this phase.
 
@@ -40,7 +42,7 @@ Delivery Area or fee is written to Canada staging.
 Vendor and TastyIgniter core were inspected as installed dependencies only;
 they were not modified.
 
-## Current Canada staging state
+## D3A Canada staging before-state
 
 | Item | Read-only result |
 | --- | --- |
@@ -67,8 +69,48 @@ they were not modified.
 | Geocoder | Chain: Google followed by Nominatim |
 | Google geocoder credential | Configured; value not recorded |
 
-The stored values are a baseline, not approved Delivery business decisions.
-D3B must back them up before any edit.
+The table above is the D3A before-state retained for rollback. The approved
+D3B after-state is recorded below.
+
+## 2026-08-19 D3B approved staging configuration
+
+The user confirmed that Canada staging contains no real customer, order, or
+payment data and authorized the scoped Location and Delivery Area writes. No
+schema, migration, Order, Customer, Reservation, Birthday, Payment, mail,
+production, Render, or DigitalOcean change was made.
+
+| Item | Saved and independently read back |
+| --- | --- |
+| Global Delivery gate | `DELIVERY_ENABLED=false`; storefront remains Pickup-only |
+| Delivery centre | Current default Location; coordinates saved from the supplied map point |
+| Delivery Area | One default polygon named `D3 Montreal Delivery Area` |
+| Boundary storage | 36 unique vertices plus the native encoded polygon |
+| Base Delivery fee | CAD 5.00 below the free threshold |
+| Free Delivery | CAD 0.00 at or above CAD 80.00 |
+| Distance surcharge | None |
+| Delivery minimum | CAD 20.00 |
+| Delivery hours | Monday-Friday 12:00-21:00; Saturday-Sunday closed |
+| Pickup settings | Unchanged |
+| Tax settings | Unchanged |
+
+### Supplied KMZ/KML boundary validation
+
+- The uploaded KMZ contains one KML NetworkLink. The linked Google My Maps
+  export was fetched read-only for the actual geometry.
+- The geometry export contains one Document, no Folder, two Placemarks, one
+  store Point, and one Polygon. There is exactly one polygon ring.
+- The ring contains 37 coordinate entries including the closing repeat, or 36
+  unique vertices. It is closed, has no consecutive duplicate vertices, and
+  has no self-intersections.
+- Bounding box is longitude `-73.6145426` to `-73.5364782` and latitude
+  `45.6164684` to `45.6711452`. Approximate planar/geodesic area is
+  14.74 square kilometres.
+- This is suitable as the single D3 Delivery Area polygon. The native saved
+  representation correctly stores the 36 unique vertices and its encoded
+  polygon rather than duplicating the closing vertex.
+- Runtime self-checks passed for the confirmed store point (inside), a
+  synthetic outside point (outside), and an exact first-vertex boundary point
+  (inside, as required by native inclusive-boundary behavior).
 
 ## Delivery Area capabilities
 
@@ -296,30 +338,31 @@ fee composition while using only native server-side behavior.
 
 ## User decision table
 
-The `User final value` column is intentionally not filled by Codex.
+The `User final value` column records only values explicitly confirmed by the
+user. Unconfirmed launch decisions remain marked Pending confirmation.
 
 | Parameter | Options | Technical constraint | Recommended value | User final value |
 | --- | --- | --- | --- | --- |
-| Delivery centre | Current default Location / another approved Location | Area belongs to one Location; current staging has one active Location | Current default Location after business confirmation | Pending confirmation |
-| Delivery Area type | Postal/FSA / radius / polygon / multiple areas | First matching ascending priority wins | One conservative polygon | Pending confirmation |
-| Service boundary | Neighbourhoods / streets / postal zones / drawn boundary | Must be supplied by the business; no guessing | Explicit street-level polygon | Pending confirmation |
-| Maximum distance | None / kilometre limit | Radius and distance surcharge depend on geocoding | No separate distance rule for first launch | Pending confirmation |
+| Delivery centre | Current default Location / another approved Location | Area belongs to one Location; current staging has one active Location | Current default Location after business confirmation | Current default Location; confirmed 2026-08-19 |
+| Delivery Area type | Postal/FSA / radius / polygon / multiple areas | First matching ascending priority wins | One conservative polygon | One polygon; confirmed 2026-08-19 |
+| Service boundary | Neighbourhoods / streets / postal zones / drawn boundary | Must be supplied by the business; no guessing | Explicit street-level polygon | Supplied Google My Maps boundary; confirmed 2026-08-19 |
+| Maximum distance | None / kilometre limit | Radius and distance surcharge depend on geocoding | No separate distance rule for first launch | None; confirmed 2026-08-19 |
 | Excluded areas | Explicit list/boundary exclusions | Native polygon has no hole editor documented; shape around exclusions or split areas | Explicitly list exclusions before drawing | Pending confirmation |
 | Cross administrative borders | Allowed / disallowed | Geometry does not understand borough policy | Disallow unless explicitly approved | Pending confirmation |
-| Partial postal codes | Allowed / disallowed | FSA needs anchored regex and spaced/unspaced tests | Disallow in first polygon launch | Pending confirmation |
-| Multiple fee zones | One / multiple | Areas should not overlap; priority is authoritative | One zone initially | Pending confirmation |
-| Base fee model | Fixed / per-area / base plus distance / free | Native area condition amount | One fixed per-area fee | Pending confirmation |
-| Base Delivery fee | CAD amount | Non-negative, two decimals; amount `-1` means unavailable | Business decision required | Pending confirmation |
-| Distance surcharge | Off / threshold rules | Added even when base fee condition is free | Off initially | Pending confirmation |
-| Free Delivery | Off / on | Implemented as an ordered area condition | Optional after base flow passes | Pending confirmation |
-| Free threshold | CAD subtotal | Uses server `Cart::subtotal()`, before cart coupon and tax | Business decision required | Pending confirmation |
-| Delivery minimum | CAD subtotal | Max of Location and matched-area minimum; excludes Delivery fee/tax | Business decision required | Pending confirmation |
+| Partial postal codes | Allowed / disallowed | FSA needs anchored regex and spaced/unspaced tests | Disallow in first polygon launch | Not used as a control; confirmed 2026-08-19 |
+| Multiple fee zones | One / multiple | Areas should not overlap; priority is authoritative | One zone initially | One zone; confirmed 2026-08-19 |
+| Base fee model | Fixed / per-area / base plus distance / free | Native area condition amount | One fixed per-area fee | Fixed per-area fee; confirmed 2026-08-19 |
+| Base Delivery fee | CAD amount | Non-negative, two decimals; amount `-1` means unavailable | Business decision required | CAD 5.00; confirmed 2026-08-19 |
+| Distance surcharge | Off / threshold rules | Added even when base fee condition is free | Off initially | Off; confirmed 2026-08-19 |
+| Free Delivery | Off / on | Implemented as an ordered area condition | Optional after base flow passes | On; confirmed 2026-08-19 |
+| Free threshold | CAD subtotal | Uses server `Cart::subtotal()`, before cart coupon and tax | Business decision required | CAD 80.00; confirmed 2026-08-19 |
+| Delivery minimum | CAD subtotal | Max of Location and matched-area minimum; excludes Delivery fee/tax | Business decision required | CAD 20.00; confirmed 2026-08-19 |
 | Pickup minimum | CAD amount | Independent Collection setting | Keep CAD 0.00 | Pending confirmation |
 | Discount basis | Native subtotal behavior | Item conditions affect basis; cart-level coupon does not | Keep native behavior and document it | Pending confirmation |
 | Delivery fee tax | Off / on | Current tax mode and rate are disabled/0 | Keep off until tax advice/approval | Pending confirmation |
 | Fee displayed as tax-inclusive | Inclusive / exclusive | Controlled by tax mode/menu-price settings, not area rule | Do not change in D3 | Pending confirmation |
 | Admin temporary fee change | Allowed / disallowed/change control | Native admin has no D3-specific approval or audit workflow | Disallow ad hoc edits; use recorded change control | Pending confirmation |
-| Delivery hours | Weekly schedule | Independent from Pickup/general opening | Confirm whether retained daily 12:00-21:00 is real | Pending confirmation |
+| Delivery hours | Weekly schedule | Independent from Pickup/general opening | Confirm whether retained daily 12:00-21:00 is real | Monday-Friday 12:00-21:00; weekends closed; confirmed 2026-08-19 |
 | Lead time | Minutes | Current retained value 25 | Confirm operational value | Pending confirmation |
 | Add lead time to start | Off / on | Changes generated first timeslot behavior | Test both only after business choice | Pending confirmation |
 | Time interval | Minutes | Current retained value 15 | Confirm 15 minutes | Pending confirmation |
@@ -331,7 +374,7 @@ The `User final value` column is intentionally not filled by Codex.
 | Peak lead time | Fixed / variable | Variable peak schedule needs new approved feature | Fixed initially | Pending confirmation |
 | Holiday handling | Temporary disable / schedule edit / future feature | No dated override workflow found | Recorded temporary disable until separately designed | Pending confirmation |
 | Default fulfillment | Pickup / Delivery | D2 currently prefers Pickup while preserving valid Delivery session | Keep Pickup | Pending confirmation |
-| Out-of-area response | Block with generic EN/FR message | Must not expose geometry or IDs | Block, retain cart, offer Pickup | Pending confirmation |
+| Out-of-area response | Block with generic EN/FR message | Must not expose geometry or IDs | Block, retain cart, offer Pickup | Block Delivery and retain Pickup option; confirmed 2026-08-19 |
 | Unrecognized address | Retry/edit/Pickup | Geocoder is authoritative | Generic retry/edit plus Pickup option | Pending confirmation |
 | Incomplete postal code | Reject / ask for full address | Street number and street name are required at checkout | Ask for complete address | Pending confirmation |
 | Multiple Location match | Nearest / manual choice | Native flow selects nearest matching Location | Keep native nearest while only one Location exists | Pending confirmation |
@@ -409,7 +452,9 @@ rollback. Broad updates or deletes are forbidden.
 
 ## Open gates
 
-- Business must fill every `User final value` entry before D3B.
+- The approved polygon, fee, free threshold, minimum, and weekly hours are
+  configured. Remaining pending decisions in the table must be resolved before
+  D3C enablement if they affect the launch acceptance matrix.
 - Q-011: synthetic geocoder failure logging, public Nominatim identification,
   attribution, quota, and fallback behavior require staging acceptance before
   Delivery can be enabled.

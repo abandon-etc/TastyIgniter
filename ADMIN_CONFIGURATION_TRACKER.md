@@ -1913,3 +1913,48 @@ change was made. Q-005, Q-010, and fresh-install migration ordering remain
 independent. Next step is user confirmation of the D3 decision table; Canada
 staging must remain `DELIVERY_ENABLED=false` until D3B and tagged D3C
 acceptance are complete.
+
+## 2026-08-19 - Delivery D3B closed-gate staging configuration
+
+Environment: Canada staging. Status: Resolved for the approved D3B
+configuration scope; D3C remains blocked. Impact: Location coordinates,
+Delivery Area, fee conditions, Delivery minimum, and Delivery schedule only.
+
+- The user confirmed that staging contains no real customer, order, or payment
+  data and authorized the scoped database writes and a disposable Cloud Run
+  Job. Production, Render, DigitalOcean, schema, migrations, secrets, payment,
+  mail, and public Delivery enablement were outside scope.
+- The supplied KMZ/KML geometry was validated as one suitable polygon: one
+  Document, no Folder, two Placemarks, one Point, one Polygon, and one ring.
+  The ring has 37 coordinate entries including closure, 36 unique vertices,
+  no consecutive duplicates, no self-intersection, and an approximate area of
+  14.74 square kilometres.
+- The current default Location coordinates were saved from the supplied map
+  point and independently read back. The full street address is intentionally
+  not repeated in this record.
+- One default native polygon area, `D3 Montreal Delivery Area`, was retained.
+  Admin readback confirmed Shape (polygon), 36 saved unique vertices, the
+  expected boundary box, and no distance-based charge rows.
+- Delivery conditions were saved in priority order: CAD 0.00 at or above a
+  CAD 80.00 subtotal, then CAD 5.00 below CAD 80.00. Delivery minimum was
+  saved as CAD 20.00.
+- Delivery hours were changed to Monday-Friday 12:00-21:00 with Saturday and
+  Sunday closed. Pickup hours and other Pickup settings were unchanged.
+- The disposable same-image Job used the active staging service environment
+  and Cloud SQL socket. Its transaction and after-save self-check confirmed
+  one area, 36 vertices, the expected fee rules, an inside Location point, an
+  outside synthetic point, and an inclusive boundary point. Earlier
+  incompatible attempts created no area row and were corrected before the
+  verified run.
+- Admin readback independently confirmed the area, fee rules, minimum,
+  schedule, coordinates, and boundary data. The public storefront still shows
+  Pickup and Birthday paths only because `DELIVERY_ENABLED=false` remains in
+  effect.
+- The disposable Cloud Run Job was deleted after verification and an API GET
+  returned 404. No Order, Customer, Reservation, Birthday, Payment, or Payment
+  Log was created or modified by this task.
+
+Q-011 remains Open and blocks D3C Delivery enablement. Remaining business
+decisions that affect the D3C acceptance matrix also remain pending. Next step:
+review this documentation update, then complete Q-011 and the isolated D3C
+acceptance before changing `DELIVERY_ENABLED`.
