@@ -2716,6 +2716,7 @@ Delivery gate.
 Environment: Canada staging investigation and local isolated tests. Status:
 Fix PR pending review; Q-011 remains Open and Delivery remains closed.
 
+- Opened Ready PR #69, `Fix Delivery geocoder error redaction`, against `4.x`.
 - Synced from PR #68 merge SHA
   `b653b55b2787700b7dd26edc95b36074a8bbe35f`. The active Canada staging
   revision remained `le-chateau-canada-staging-d2fix-31821289` at 100% with
