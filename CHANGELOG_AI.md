@@ -2710,3 +2710,39 @@ configuration complete; D3C enablement remains blocked.
 Next step: review the documentation diff. Q-011 and any remaining launch
 decisions must be resolved before an isolated D3C revision changes the global
 Delivery gate.
+
+## 2026-08-20 - Added project-owned Delivery geocoder error redaction
+
+Environment: Canada staging investigation and local isolated tests. Status:
+Fix PR pending review; Q-011 remains Open and Delivery remains closed.
+
+- Synced from PR #68 merge SHA
+  `b653b55b2787700b7dd26edc95b36074a8bbe35f`. The active Canada staging
+  revision remained `le-chateau-canada-staging-d2fix-31821289` at 100% with
+  `DELIVERY_ENABLED=false`.
+- A disposable same-image controlled failure reproduced the encoded synthetic
+  address and provider request URL in application/Cloud Run logs. The tested
+  log window did not expose a credential, authorization header, geometry,
+  SQLSTATE, or internal Location/area ID.
+- Source audit traced the log leak to Orange's empty-geocode diagnostics and
+  found that autocomplete and suggestion lookup can also surface raw provider
+  exception messages in Livewire validation errors.
+- Added a project-owned `DeliveryLocalSearch` wrapper that logs only generic
+  geocoder event codes and returns the existing generic invalid-address
+  validation error. No vendor/core code or global error reporting was changed.
+- Added focused synthetic redaction tests for an empty result, autocomplete
+  provider failure, and suggestion lookup failure. PHP syntax checks passed;
+  the focused suite passed 3 tests with 20 assertions in an isolated PHP 8.3
+  container without staging database access, migration, or seed.
+- Recorded that public Nominatim fallback is not approved for production
+  Delivery traffic in its current form: request-derived identity is not a
+  stable application identity, there is no shared cross-instance rate limiter,
+  Google failure can fan out fallback traffic, and public autocomplete is
+  prohibited.
+
+No Delivery gate, traffic, Location, polygon, fee, minimum, schedule, Pickup,
+tax, database/schema, Order, Customer, Reservation, Birthday, payment, mail,
+production, Render, DigitalOcean, secret, or real-data change is included.
+Next step: merge the redaction fix, deploy it to an isolated Canada staging
+revision with `DELIVERY_ENABLED=false`, rerun Q-011, and keep D3C blocked until
+that staging acceptance passes.
