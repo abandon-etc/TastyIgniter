@@ -38,10 +38,12 @@ separate explicit approval.
 - The freeze audit started from clean, remote-synchronized `4.x` at exactly
   `f731f775e5d3f069a959641323b544007ca21552`.
 - No open Delivery implementation PR existed at freeze time.
-- The merge commit of the PR that adds this document becomes the
-  **CLAUDE HANDOFF BASELINE**. Its SHA cannot be recorded until the PR is
-  merged. Before new work, fetch `origin/4.x`, identify that merge commit,
-  verify it is contained in `HEAD`, and start from a clean worktree.
+- The merge commit of the PR that added this document is the
+  **CLAUDE HANDOFF BASELINE**:
+  `6c9331c1526778e474be2a980831f1e5505955b4`, the merge commit of PR #71,
+  `Freeze project baseline for Claude handoff`, merged 2026-08-20. Before new
+  work, fetch `origin/4.x`, verify that commit is contained in `HEAD`, and
+  start from a clean worktree.
 
 Never start from a PR #69, PR #70, handoff feature branch, or stale local clone.
 Do not read, modify, or stage `.codex-tmp/`.
