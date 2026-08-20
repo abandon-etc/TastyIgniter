@@ -3079,3 +3079,51 @@ auto-merge under the standing Level 0 docs-only authorization.
 Documentation only. Every changed path is `.md`. No code, runtime, schema,
 secret, business data, or production change. `DELIVERY_ENABLED` remains `false`
 and D3C has not started.
+
+## 2026-08-20 - FP-1 gains an explicit REVISION target
+
+Environment: repository, plus read-only Canada staging measurements. Status: PR
+open. Level 1 and non-`.md`, so outside the standing docs-only authorization;
+the user approved it with a mandatory regression condition.
+
+- D3C surfaced the gap. `CLAUDE_HANDOFF.md` section 19 requires a configuration
+  fingerprint for the tagged revision, but `tools/fp1.py` could only target the
+  revision holding main traffic, and deliberately refused anything else.
+- Added an optional third argument. `tools/fp1.py SERVICE REGION REVISION`
+  fingerprints the named revision. Its `traffic_percent` is whatever that
+  revision holds, which is 0 for a revision serving no traffic.
+- Left the default path untouched, as required. With no `REVISION` the target
+  is still the traffic-holding revision and the split-traffic guard still
+  fires. The guard was not weakened, relaxed, or made conditional in that mode.
+- Met the mandatory regression condition before anything else. Re-fingerprinting
+  `le-chateau-canada-staging-d2fix-31821289` in default mode reproduced the
+  recorded baseline
+  `2127efd6d63de53e6d9fbc5388f9db3fee72d0575eec25a09b9f99e9ad8565d3`, and the
+  full twenty-one-line output was byte-identical to the recorded table, not
+  merely the total. The baseline was not adjusted to accommodate the code, and
+  would not have been; a mismatch was to mean revert and redo.
+- Verified the guard with stubbed service responses rather than by inspection.
+  Default mode exits with the unchanged message on a two-way split and on zero
+  traffic holders, and still succeeds with a single holder. Explicit mode
+  returns the named revision under a split, reports 0 for a non-serving
+  revision, and matches default mode exactly when it names the serving one.
+  Argument arity accepts three and four and rejects two and five.
+- Confirmed the two modes agree. Naming the serving revision explicitly
+  produced output byte-identical to the default invocation.
+- Documented that a non-serving revision never matches the serving one.
+  `traffic_percent` and `revision` differ by construction, so a tagged
+  revision's fingerprint is necessarily different even when every other field
+  is identical. `CLOUD_RUN_CANADA_STAGING_RUNTIME.md` now states plainly that
+  this is expected and must not be recorded as drift, and that comparisons must
+  be like with like.
+- Exercised the new mode against the D3C tagged revision as part of that
+  verification. The D3C acceptance record itself is deliberately not written
+  here; it is written once when the section 19 matrix completes.
+- Added `scratchpad/` to `.gitignore`, carried on this change as agreed rather
+  than as a pull request of its own. The session scratchpad lives outside the
+  working tree, so nothing from it could have been committed; the rule is
+  defensive.
+
+No runtime, traffic, revision, image, environment variable, schema, secret,
+business data, or production change. The measurements were read-only.
+`DELIVERY_ENABLED` remains `false` on the revision serving main traffic.

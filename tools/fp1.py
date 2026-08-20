@@ -12,7 +12,14 @@ the printed table, so the table alone is enough to re-verify the total.
 Requires Python 3 and an authenticated gcloud on PATH. Read-only: it describes
 the service and one revision and changes nothing.
 
-Usage: python tools/fp1.py SERVICE REGION
+With no REVISION argument the target is the revision holding main traffic, and
+the run stops with an error if traffic is split across more than one revision.
+Passing REVISION fingerprints that revision instead, and its traffic_percent is
+whatever that revision holds, which is 0 for a revision serving no traffic. A
+non-serving revision therefore always fingerprints differently from the serving
+one, by that field alone. That is expected and is not drift.
+
+Usage: python tools/fp1.py SERVICE REGION [REVISION]
 """
 import hashlib
 import json
@@ -40,13 +47,18 @@ def probe_repr(p):
     return ','.join(sorted(p))
 
 
-def collect(service, region):
+def collect(service, region, revision=None):
     svc = gcloud(['run', 'services', 'describe', service, '--region', region])
-    traffic = [t for t in svc['status']['traffic'] if t.get('percent')]
-    if len(traffic) != 1:
-        sys.exit('FP-1 requires exactly one revision holding traffic; found %d'
-                 % len(traffic))
-    revision, percent = traffic[0]['revisionName'], traffic[0]['percent']
+    entries = svc['status']['traffic']
+    if revision is None:
+        traffic = [t for t in entries if t.get('percent')]
+        if len(traffic) != 1:
+            sys.exit('FP-1 requires exactly one revision holding traffic; found %d'
+                     % len(traffic))
+        revision, percent = traffic[0]['revisionName'], traffic[0]['percent']
+    else:
+        percent = sum(t.get('percent') or 0
+                      for t in entries if t.get('revisionName') == revision)
 
     rev = gcloud(['run', 'revisions', 'describe', revision, '--region', region])
     spec, meta = rev['spec'], rev['metadata']
@@ -90,8 +102,8 @@ def collect(service, region):
     ]
 
 
-def main(service, region):
-    fields = collect(service, region)
+def main(service, region, revision=None):
+    fields = collect(service, region, revision)
     lines = []
     for name, value in fields:
         h = hashlib.sha256(('%s\x1f%s' % (name, value)).encode('utf-8'))
@@ -104,6 +116,6 @@ def main(service, region):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 3:
+    if len(sys.argv) not in (3, 4):
         sys.exit(__doc__.strip().splitlines()[-1])
-    main(sys.argv[1], sys.argv[2])
+    main(*sys.argv[1:])

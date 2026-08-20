@@ -14,5 +14,7 @@ node_modules
 /public/vendor
 /public/storage
 
+scratchpad/
+__pycache__/
 /storage/clockwork
 /_ide_helper.php
