@@ -2734,6 +2734,10 @@ Fix PR pending review; Q-011 remains Open and Delivery remains closed.
   provider failure, and suggestion lookup failure. PHP syntax checks passed;
   the focused suite passed 3 tests with 20 assertions in an isolated PHP 8.3
   container without staging database access, migration, or seed.
+- Permanently deleted both disposable Q-011 Cloud Run Jobs after testing and
+  confirmed that both exact names are absent from the Cloud Run Jobs list. No
+  synthetic database row, temporary revision, cache, or configuration was
+  retained; synthetic audit logs remain under the platform retention policy.
 - Recorded that public Nominatim fallback is not approved for production
   Delivery traffic in its current form: request-derived identity is not a
   stable application identity, there is no shared cross-instance rate limiter,

@@ -1987,6 +1987,11 @@ geocoder logging and Livewire error privacy only.
 - Three isolated redaction tests passed with 20 assertions. They prove that
   synthetic address, URL, and credential markers are absent from validation
   payloads and that only generic log events are emitted.
+- Both disposable Q-011 Cloud Run Jobs were permanently deleted after the
+  test. Cloud Run list readback confirmed that both exact names are absent.
+  No synthetic database row, temporary revision, cache, or configuration was
+  retained. Synthetic Cloud Logging audit entries remain subject to the
+  platform retention policy; they contain no real customer data.
 - The native Nominatim provider inherits the incoming browser User-Agent or
   Referer instead of supplying a stable application identity. There is no
   shared cross-instance one-request-per-second limiter, and Cloud Run fan-out
