@@ -2173,3 +2173,48 @@ No Cloud Run service, revision, traffic, image, environment variable, Cloud SQL
 row or schema, Delivery Area, fee, minimum, schedule, Pickup, Birthday,
 Reservation, payment, secret, production, Render, or DigitalOcean state was
 changed. Delivery remains closed and D3C has not started.
+
+## 2026-08-20 - Runtime configuration fingerprint FP-1
+
+Environment: Canada staging, read-only measurement. Status: recorded.
+
+- The runtime fingerprint recorded at the handoff freeze,
+  `b82e3aa41eaba24a1bc54784f9f889209a83b178cda1baeec85f069337e41b1b`, is void.
+  Its normalized field list and algorithm were never recorded and cannot be
+  reconstructed, so the value can be neither confirmed nor disproved. It has
+  never been verified. It is retired rather than repaired: writing an
+  algorithm now would not turn the old digest into evidence of anything. No
+  document may cite it as runtime evidence or compare a new measurement
+  against it.
+- Defined fingerprint FP-1 in `CLOUD_RUN_CANADA_STAGING_RUNTIME.md` with a
+  fixed twenty-field list, an explicit algorithm, a reference implementation,
+  and stated coverage limits. FP-1 is a new baseline whose history starts
+  2026-08-20 and is not comparable to the void value.
+- FP-1 records a per-field digest table alongside the total, so a future
+  mismatch names the field that changed instead of only signalling that
+  something did. The total is the SHA-256 of the published table, so the table
+  alone re-verifies the total without access to the service.
+- Field 16 records the Cloud SQL connection name as a digest rather than an
+  instance count. A count cannot distinguish one attached instance from a
+  different attached instance, so a database swap would have left a
+  count-based fingerprint unchanged. Verified: substituting a different
+  instance name, and separately a different project, each changed the field
+  digest, and the field was confirmed to carry the connection name rather than
+  an empty string.
+- Recorded the confidentiality limit rather than implying protection that does
+  not exist. Per-field digests localize change and are not a confidentiality
+  control; a digest over a low-entropy value can be confirmed by anyone able
+  to guess a candidate. A keyed hash was rejected because computing a
+  fingerprint would then require reading a secret value.
+- Baseline measured against `le-chateau-canada-staging-d2fix-31821289` at 100%
+  traffic: FP-1
+  `2127efd6d63de53e6d9fbc5388f9db3fee72d0575eec25a09b9f99e9ad8565d3`. Two
+  independent runs produced byte-identical output.
+- Field plaintext was assembled in memory only. No plaintext was printed,
+  logged, written to disk, or committed; only the per-field table and the
+  total are recorded. No secret value was read.
+
+No Cloud Run service, revision, traffic, image, environment variable, Cloud SQL
+row or schema, Delivery Area, fee, minimum, schedule, Pickup, Birthday,
+Reservation, payment, secret, production, Render, or DigitalOcean state was
+changed. Delivery remains closed and D3C has not started.
