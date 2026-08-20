@@ -801,3 +801,55 @@ Q-011 is `Resolved` only for the current Canada staging tested failure path.
 Public Nominatim fallback is not approved for production Delivery traffic and
 remains a separate production operations gate. This validation does not enable
 Delivery or authorize a traffic change.
+
+## 2026-08-20 - Post-handoff runtime readback and leftover Job cleanup
+
+An independent read-only audit reconfirmed the frozen runtime. Main traffic
+remained 100% on `le-chateau-canada-staging-d2fix-31821289` with digest
+`sha256:72371b610a2dff66d29dcee09a2095c72c2f6bb0d932d33744db3444c3689102`.
+`le-chateau-canada-staging-q011-3fc841d` and
+`le-chateau-canada-staging-d2-fab804d2` remained tagged at 0%. The runtime
+service account, Cloud SQL attachment, media volume mount at
+`/var/www/html/storage/app/media`, the five bound Secret Manager references,
+`/healthz/` liveness, `MAIL_MAILER=log`, and `DELIVERY_ENABLED=false` were all
+unchanged. Cloud SQL read back `RUNNABLE` with automated backups enabled and the
+runtime identity still had zero user-managed keys. No secret value was read.
+
+A full revision sweep added evidence beyond the freeze record. Of the 26
+revisions in this service only four define `DELIVERY_ENABLED` — `le-chateau-canada-staging-q011-3fc841d`,
+`le-chateau-canada-staging-d2fix-31821289`,
+`le-chateau-canada-staging-d2-fab804d2`, and
+`le-chateau-canada-staging-d1-6a1ccc1d` — and all four read `false`. The other
+22 predate the flag and do not define it. No revision has ever served with
+Delivery enabled.
+
+Seventeen Cloud Run Jobs remained from the July initialization phase and were
+absent from every project document. Three could write to the database
+(`birthday-migration-f40531e4`, `tastyigniter-empty-migrate-178366`,
+`tastyigniter-admin-create-178372`), three rewrote container configuration
+(`tastyigniter-init-canada-1783653711`,
+`tastyigniter-init-canada-1783654052`, `tastyigniter-init-canada-staging`), and
+eleven were read-only probes (`tastyigniter-admin-cols-178371`,
+`tastyigniter-admin-probe-178370`, `tastyigniter-db-diagnostic`,
+`tastyigniter-db-status-178365`, `tastyigniter-http-diag-178373`,
+`tastyigniter-install-help`, `tastyigniter-install-help-178365`,
+`tastyigniter-php-probe-178365`, `tastyigniter-prefixed-probe-178369`,
+`tastyigniter-schema-probe-178367`, `tastyigniter-users-probe-178368`).
+
+`tastyigniter-admin-create-178372` created or reset a super-admin account from a
+Secret Manager password and explains the previously unexplained
+`tastyigniter-admin-password` secret. None of the 17 stored a literal
+credential; every secret-like environment variable resolved through Secret
+Manager.
+
+All 17 restorable definitions were exported to the operator's Cloud Shell home
+directory, then all 17 were deleted after explicit per-target confirmation
+against a pre-deletion snapshot, with no wildcard or inferred target. Exact
+readback confirmed zero Jobs remain in the region and 17 of 17 absent.
+Post-deletion readback confirmed unchanged traffic, unchanged
+`DELIVERY_ENABLED=false`, and health `200 ok`. Two Secret Manager entries,
+`tastyigniter-media-bucket` and `tastyigniter-admin-password`, exist but are not
+bound to the serving revision; they were left in place.
+
+This cleanup changed no service, revision, traffic, image, environment variable,
+database row, schema, secret value, production, Render, or DigitalOcean state.

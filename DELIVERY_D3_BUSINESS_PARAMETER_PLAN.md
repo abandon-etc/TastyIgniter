@@ -374,7 +374,11 @@ fee composition while using only native server-side behavior.
 ## User decision table
 
 The `User final value` column records only values explicitly confirmed by the
-user. Unconfirmed launch decisions remain marked Pending confirmation.
+user. As of 2026-08-20 every row in this table is confirmed. Two confirmed
+directions still carry an outstanding numeric value: the tax rate and Delivery
+fee applicability await accountant confirmation, and the Google geocoding daily
+usage cap is not yet chosen. Neither blocks D3C isolated acceptance, because
+staging tax remains disabled and D3C uses synthetic addresses only.
 
 | Parameter | Options | Technical constraint | Recommended value | User final value |
 | --- | --- | --- | --- | --- |
@@ -382,8 +386,8 @@ user. Unconfirmed launch decisions remain marked Pending confirmation.
 | Delivery Area type | Postal/FSA / radius / polygon / multiple areas | First matching ascending priority wins | One conservative polygon | One polygon; confirmed 2026-08-19 |
 | Service boundary | Neighbourhoods / streets / postal zones / drawn boundary | Must be supplied by the business; no guessing | Explicit street-level polygon | Supplied Google My Maps boundary; confirmed 2026-08-19 |
 | Maximum distance | None / kilometre limit | Radius and distance surcharge depend on geocoding | No separate distance rule for first launch | None; confirmed 2026-08-19 |
-| Excluded areas | Explicit list/boundary exclusions | Native polygon has no hole editor documented; shape around exclusions or split areas | Explicitly list exclusions before drawing | Pending confirmation |
-| Cross administrative borders | Allowed / disallowed | Geometry does not understand borough policy | Disallow unless explicitly approved | Pending confirmation |
+| Excluded areas | Explicit list/boundary exclusions | Native polygon has no hole editor documented; shape around exclusions or split areas | Explicitly list exclusions before drawing | None; the whole approved polygon is served; confirmed 2026-08-20 |
+| Cross administrative borders | Allowed / disallowed | Geometry does not understand borough policy | Disallow unless explicitly approved | Allowed; the saved polygon boundary governs, with no extra administrative restriction; confirmed 2026-08-20 |
 | Partial postal codes | Allowed / disallowed | FSA needs anchored regex and spaced/unspaced tests | Disallow in first polygon launch | Not used as a control; confirmed 2026-08-19 |
 | Multiple fee zones | One / multiple | Areas should not overlap; priority is authoritative | One zone initially | One zone; confirmed 2026-08-19 |
 | Base fee model | Fixed / per-area / base plus distance / free | Native area condition amount | One fixed per-area fee | Fixed per-area fee; confirmed 2026-08-19 |
@@ -392,30 +396,30 @@ user. Unconfirmed launch decisions remain marked Pending confirmation.
 | Free Delivery | Off / on | Implemented as an ordered area condition | Optional after base flow passes | On; confirmed 2026-08-19 |
 | Free threshold | CAD subtotal | Uses server `Cart::subtotal()`, before cart coupon and tax | Business decision required | CAD 80.00; confirmed 2026-08-19 |
 | Delivery minimum | CAD subtotal | Max of Location and matched-area minimum; excludes Delivery fee/tax | Business decision required | CAD 20.00; confirmed 2026-08-19 |
-| Pickup minimum | CAD amount | Independent Collection setting | Keep CAD 0.00 | Pending confirmation |
-| Discount basis | Native subtotal behavior | Item conditions affect basis; cart-level coupon does not | Keep native behavior and document it | Pending confirmation |
-| Delivery fee tax | Off / on | Current tax mode and rate are disabled/0 | Keep off until tax advice/approval | Pending confirmation |
-| Fee displayed as tax-inclusive | Inclusive / exclusive | Controlled by tax mode/menu-price settings, not area rule | Do not change in D3 | Pending confirmation |
-| Admin temporary fee change | Allowed / disallowed/change control | Native admin has no D3-specific approval or audit workflow | Disallow ad hoc edits; use recorded change control | Pending confirmation |
+| Pickup minimum | CAD amount | Independent Collection setting | Keep CAD 0.00 | CAD 0.00; no Pickup minimum; confirmed 2026-08-20 |
+| Discount basis | Native subtotal behavior | Item conditions affect basis; cart-level coupon does not | Keep native behavior and document it | Keep native behavior; thresholds use `Cart::subtotal()` excluding Delivery fee and tax, and a cart-level coupon does not lower it; confirmed 2026-08-20 |
+| Delivery fee tax | Off / on | Current tax mode and rate are disabled/0 | Keep off until tax advice/approval | Delivery fee is taxable; the CAD 5.00 fee is a pre-tax amount taxed with the items at checkout; direction confirmed 2026-08-20, rate and applicability pending accountant confirmation |
+| Fee displayed as tax-inclusive | Inclusive / exclusive | Controlled by tax mode/menu-price settings, not area rule | Do not change in D3 | Tax-exclusive; menu prices are pre-tax and tax is added at checkout; direction confirmed 2026-08-20, pending accountant confirmation |
+| Admin temporary fee change | Allowed / disallowed/change control | Native admin has no D3-specific approval or audit workflow | Disallow ad hoc edits; use recorded change control | Allowed at any time with no approval workflow; confirmed 2026-08-20. Recorded risk: the platform stores no actor or timestamp for such an edit |
 | Delivery hours | Weekly schedule | Independent from Pickup/general opening | Confirm whether retained daily 12:00-21:00 is real | Monday-Friday 12:00-21:00; weekends closed; confirmed 2026-08-19 |
-| Lead time | Minutes | Current retained value 25 | Confirm operational value | Pending confirmation |
-| Add lead time to start | Off / on | Changes generated first timeslot behavior | Test both only after business choice | Pending confirmation |
-| Time interval | Minutes | Current retained value 15 | Confirm 15 minutes | Pending confirmation |
-| ASAP | On / off | Restriction can be None, ASAP-only, or later-only | On for initial same-day flow | Pending confirmation |
-| Future orders | On / off | Q-010 is separate and future orders are currently off | Off | Pending confirmation |
-| Future min/max days | Integer days | Used only when future orders are on | Leave inactive at 0/5 | Pending confirmation |
-| Same-day cutoff | Closing time / explicit rule | No separate native cutoff-minutes field | Encode with earlier Delivery closing time | Pending confirmation |
-| Stop before close | Minutes | Must be represented by schedule/last-slot acceptance | Confirm operational buffer | Pending confirmation |
-| Peak lead time | Fixed / variable | Variable peak schedule needs new approved feature | Fixed initially | Pending confirmation |
-| Holiday handling | Temporary disable / schedule edit / future feature | No dated override workflow found | Recorded temporary disable until separately designed | Pending confirmation |
-| Default fulfillment | Pickup / Delivery | D2 currently prefers Pickup while preserving valid Delivery session | Keep Pickup | Pending confirmation |
+| Lead time | Minutes | Current retained value 25 | Confirm operational value | 25 minutes, retained; confirmed 2026-08-20 |
+| Add lead time to start | Off / on | Changes generated first timeslot behavior | Test both only after business choice | Off, retained; confirmed 2026-08-20 |
+| Time interval | Minutes | Current retained value 15 | Confirm 15 minutes | 15 minutes, retained; confirmed 2026-08-20 |
+| ASAP | On / off | Restriction can be None, ASAP-only, or later-only | On for initial same-day flow | On; confirmed 2026-08-20 |
+| Future orders | On / off | Q-010 is separate and future orders are currently off | Off | Off, retained; confirmed 2026-08-20 |
+| Future min/max days | Integer days | Used only when future orders are on | Leave inactive at 0/5 | Inactive at 0/5, retained; confirmed 2026-08-20 |
+| Same-day cutoff | Closing time / explicit rule | No separate native cutoff-minutes field | Encode with earlier Delivery closing time | No earlier cutoff; ordering stays open to the 21:00 Delivery closing time; confirmed 2026-08-20 |
+| Stop before close | Minutes | Must be represented by schedule/last-slot acceptance | Confirm operational buffer | No buffer; confirmed 2026-08-20 |
+| Peak lead time | Fixed / variable | Variable peak schedule needs new approved feature | Fixed initially | Fixed; no peak-period feature for first launch; one 25-minute value applies; confirmed 2026-08-20 |
+| Holiday handling | Temporary disable / schedule edit / future feature | No dated override workflow found | Recorded temporary disable until separately designed | Operational manual switch; Delivery is turned off in admin on the closed day and restored afterwards; confirmed 2026-08-20 |
+| Default fulfillment | Pickup / Delivery | D2 currently prefers Pickup while preserving valid Delivery session | Keep Pickup | Keep Pickup; confirmed 2026-08-20 |
 | Out-of-area response | Block with generic EN/FR message | Must not expose geometry or IDs | Block, retain cart, offer Pickup | Block Delivery and retain Pickup option; confirmed 2026-08-19 |
-| Unrecognized address | Retry/edit/Pickup | Geocoder is authoritative | Generic retry/edit plus Pickup option | Pending confirmation |
-| Incomplete postal code | Reject / ask for full address | Street number and street name are required at checkout | Ask for complete address | Pending confirmation |
-| Multiple Location match | Nearest / manual choice | Native flow selects nearest matching Location | Keep native nearest while only one Location exists | Pending confirmation |
-| No Delivery Area | Block Delivery | Native launch requires at least one area | Fail closed | Pending confirmation |
-| Provider unavailable | Retry / Pickup / contact | Chain can fail; no sensitive diagnostics in response | Fail closed, preserve cart, offer Pickup | Pending confirmation |
-| Geocoder provider | Chain / Google / Nominatim | Quota, billing, attribution, and log-redaction gates apply | Retain Chain only after Q-011 acceptance | Pending confirmation |
+| Unrecognized address | Retry/edit/Pickup | Geocoder is authoritative | Generic retry/edit plus Pickup option | Generic retry/edit message plus a Pickup option, with no technical detail exposed; confirmed 2026-08-20 |
+| Incomplete postal code | Reject / ask for full address | Street number and street name are required at checkout | Ask for complete address | Ask for the complete address; street number and street name remain required; confirmed 2026-08-20 |
+| Multiple Location match | Nearest / manual choice | Native flow selects nearest matching Location | Keep native nearest while only one Location exists | Keep native nearest matching Location; confirmed 2026-08-20 |
+| No Delivery Area | Block Delivery | Native launch requires at least one area | Fail closed | Fail closed and block Delivery ordering; confirmed 2026-08-20 |
+| Provider unavailable | Retry / Pickup / contact | Chain can fail; no sensitive diagnostics in response | Fail closed, preserve cart, offer Pickup | Fail closed, preserve the cart, offer Pickup, expose no diagnostics; confirmed 2026-08-20 |
+| Geocoder provider | Chain / Google / Nominatim | Quota, billing, attribution, and log-redaction gates apply | Retain Chain only after Q-011 acceptance | Google only for production Delivery traffic, with a daily usage cap; the public Nominatim fallback is retired; direction confirmed 2026-08-20, cap value pending |
 
 ## D3B implementation plan: configure while closed
 
@@ -488,8 +492,14 @@ rollback. Broad updates or deletes are forbidden.
 ## Open gates
 
 - The approved polygon, fee, free threshold, minimum, and weekly hours are
-  configured. Remaining pending decisions in the table must be resolved before
-  D3C enablement if they affect the launch acceptance matrix.
+  configured. All previously pending rows in the user decision table were
+  confirmed on 2026-08-20, so no business decision blocks the D3C acceptance
+  matrix. The outstanding tax rate and Google daily usage cap are production
+  gates, not D3C gates.
+- Two confirmed decisions carry a recorded operational risk. Admin Delivery fee
+  edits are allowed with no approval workflow while the platform records no
+  actor or timestamp, and holiday closure depends on an operator remembering to
+  toggle Delivery off and back on. Both are accepted for first launch.
 - Q-011 is `Resolved` for the current Canada staging tested failure path. The
   final clean same-image matrix found no sensitive or internal disclosure and
   confirmed fail-closed behavior. `DELIVERY_ENABLED=false` remains unchanged;
