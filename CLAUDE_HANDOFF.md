@@ -23,10 +23,10 @@ notifications, and production launch are deferred. Birthday is a separate
 business domain and must never be represented as a food menu item or ordinary
 restaurant Order.
 
-The exact next technical phase, only after this handoff PR is merged, is a
-0%-traffic tagged Canada staging revision with `DELIVERY_ENABLED=true` for D3C
-isolated acceptance. Do not route main traffic or touch production without a
-separate explicit approval.
+The handoff PR is merged and the frozen baseline is recorded in section 2, so
+the next phase is unblocked. It is a 0%-traffic tagged Canada staging revision
+with `DELIVERY_ENABLED=true` for D3C isolated acceptance. Do not route main
+traffic or touch production without a separate explicit approval.
 
 ## 2. Frozen baseline
 
@@ -310,6 +310,31 @@ Public Nominatim is not approved for production Delivery traffic for the
 identity, attribution, shared rate-limit, fallback fan-out, and autocomplete
 reasons documented above.
 
+### Continuous integration has never run
+
+`.github/workflows/pipeline.yml` and `release.yml` are both reported `active`
+by `gh workflow list`, but `gh run list` returns zero runs for this repository.
+CI has never executed here, on any branch or pull request, including PRs #74,
+#75, and #76. The most likely cause is that Actions is disabled for this fork.
+
+The practical consequence is a reading trap. An empty check list on a pull
+request page means **untested**, not **passing**. Section 15 already forbids
+merging merely because checks are absent, and this is the condition that rule
+exists for. The section 20 stop condition covering a blocking CI finding is
+inert for the same reason: CI produces no findings at all.
+
+This is a decision point, not a defect to fix quietly. After D3C, and before
+any substantive code work such as Birthday checkout, payment, webhooks, or
+authentication, decide explicitly whether to enable CI. Documentation-only
+changes can proceed without it; code changes should not, indefinitely.
+
+Expect enabling it to fail broadly at first. `vendor/` has never been installed
+in this working copy, the PHP suite's current state against the PHP 8.3, 8.4,
+and 8.5 matrix is unknown, and that matrix has never been exercised. Such a
+failure would be pre-existing state becoming visible, not a regression
+introduced by enabling CI. Budget a triage pass for it rather than treating the
+first red run as a blocker on whichever change happens to trigger it.
+
 ## 11. Production gates
 
 Production work has not started and production is unchanged. Before any
@@ -421,7 +446,8 @@ or log the value.
 
 ## 18. Exact next phase
 
-After the handoff PR is merged, begin:
+The handoff PR is merged and the baseline is recorded in section 2, so this
+phase is unblocked. Begin:
 
 `Delivery D3C isolated enablement`
 
@@ -478,7 +504,8 @@ a Canada staging main-traffic cutover.
 
 Stop and request direction if any of these occurs:
 
-- the handoff PR is not yet merged or the frozen baseline cannot be verified;
+- the frozen baseline in section 2 cannot be verified, or `HEAD` does not
+  contain it;
 - the worktree is dirty with overlapping user changes;
 - runtime readback differs materially from this freeze and the change is not
   already documented;
@@ -491,5 +518,5 @@ Stop and request direction if any of these occurs:
 - a new business decision would materially change Delivery, Birthday, payment,
   tax, or fallback behavior.
 
-Do not start D3C before the handoff PR is merged. After merge, Claude should
-begin Delivery D3C isolated enablement from the frozen handoff baseline.
+Delivery D3C isolated enablement is the current phase. It starts from the
+frozen handoff baseline recorded in section 2.

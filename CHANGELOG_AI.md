@@ -3025,3 +3025,57 @@ user authorized this specific change explicitly and once.
 The measurement was read-only. No runtime, traffic, revision, image,
 environment variable, schema, secret, business data, or production change.
 `DELIVERY_ENABLED` remains `false` and D3C has not started.
+
+## 2026-08-20 - Record the CI gap and clear stale post-merge preconditions
+
+Environment: repository documentation only. Status: PR open; eligible for
+auto-merge under the standing Level 0 docs-only authorization.
+
+- Recorded in `CLAUDE_HANDOFF.md` section 10 that continuous integration has
+  never run in this repository. Both workflows report `active`, but the run
+  history is empty across every branch and pull request, including PRs #74,
+  #75, and #76. Actions being disabled for this fork is the likely cause.
+- Stated the consequence plainly, because it is a reading trap rather than a
+  visible failure: an empty check list means untested, not passing. It is also
+  why the section 15 rule against merging on absent checks matters here, and
+  why the section 20 stop condition about a blocking CI finding is inert, since
+  CI produces no findings at all.
+- Framed it as a decision point rather than a defect to fix quietly. After D3C
+  and before substantive code work such as Birthday checkout, payment,
+  webhooks, or authentication, whether to enable CI must be decided
+  explicitly. Documentation-only changes can proceed without it; code changes
+  should not do so indefinitely.
+- Recorded the expected consequence of enabling it: broad initial failure.
+  `vendor/` has never been installed in this working copy and the PHP 8.3, 8.4,
+  and 8.5 matrix has never been exercised, so the suite's current state is
+  unknown. That is pre-existing state becoming visible, not a regression, and
+  it warrants a budgeted triage pass rather than blocking whichever change
+  happens to trigger the first red run.
+- Added a matching note to `CLAUDE.md` under current state, so a fresh session
+  cannot read an empty check list as a green one. The note is deliberately
+  placed in the state section rather than the merge-gate section, because the
+  standing docs-only authorization does not cover changes to the merge rules
+  and no merge rule is being changed.
+- Cleared the stale post-merge preconditions in `CLAUDE_HANDOFF.md`. Sections
+  1, 18, and 20 still said the next phase waits for a handoff PR that merged on
+  2026-08-20 as PR #71. Section 20's stop condition now turns on whether the
+  section 2 baseline verifies and is contained in `HEAD`, which is the half of
+  it that remains live.
+- Re-swept every `.md` with wider patterns after the previous sweep missed
+  these. The earlier regex required "the PR"/"this PR" immediately after
+  "after", so "after the handoff PR is merged" did not match. The new sweep
+  allowed up to sixty characters between the conjunction and "merged", and
+  separately searched deferred-value phrasing, pending markers, and
+  angle-bracket markers.
+- Triaged and deliberately left unchanged: `<INSTANCE_CONNECTION_NAME>` and
+  `<from Secret Manager>` are intentional redaction markers; the 2026-07-10
+  Birthday entry and the Q-007/Q-008 note in
+  `ADMIN_CONFIGURATION_TRACKER.md` are dated historical statements that were
+  accurate when written; the section 11 production gate referring to decisions
+  "still marked pending" is a forward-looking gate rather than an unfilled
+  value; and the outstanding tax rate and geocoding cap are genuinely open
+  items correctly recorded as open.
+
+Documentation only. Every changed path is `.md`. No code, runtime, schema,
+secret, business data, or production change. `DELIVERY_ENABLED` remains `false`
+and D3C has not started.
