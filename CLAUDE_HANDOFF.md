@@ -335,6 +335,21 @@ failure would be pre-existing state becoming visible, not a regression
 introduced by enabling CI. Budget a triage pass for it rather than treating the
 first red run as a blocker on whichever change happens to trigger it.
 
+### Log redaction does not reach inside a Throwable
+
+`App\Logging\RedactUrlProcessor` strips absolute URLs from a log record's
+message, context strings, and extra strings. Monolog normalizes a Throwable
+placed in log context at format time, which runs after processors, so a URL
+inside an exception object passed as context is not covered.
+
+Project-owned code does not pass exceptions into log context; see
+`App\Livewire\DeliveryLocalSearch`, which catches provider failures without
+binding the exception. The gap therefore matters only for vendor code that logs
+an exception object directly. It is asserted in
+`tests/Unit/Logging/RedactUrlProcessorTest.php` so it stays visible rather than
+being assumed closed. Closing it would need formatter-level redaction, which is
+a larger change and a separate decision.
+
 ## 11. Production gates
 
 Production work has not started and production is unchanged. Before any
