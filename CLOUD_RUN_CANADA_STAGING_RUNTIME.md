@@ -355,7 +355,7 @@ Twenty fields, in this fixed order.
 | 1 | `service` | service name under test |
 | 2 | `region` | region under test |
 | 3 | `revision` | the `status.traffic[]` entry holding a percent |
-| 4 | `traffic_percent` | that same entry |
+| 4 | `traffic_percent` | percent held by the target revision; 0 when it serves none |
 | 5 | `image_digest` | `spec.containers[0].image`, the part after `@` |
 | 6 | `service_account` | `spec.serviceAccountName` |
 | 7 | `container_concurrency` | `spec.containerConcurrency` |
@@ -427,11 +427,34 @@ describes the service and one revision and changes nothing.
 
 ```
 python tools/fp1.py le-chateau-canada-staging northamerica-northeast1
+python tools/fp1.py le-chateau-canada-staging northamerica-northeast1 REVISION
 ```
 
+Without `REVISION` the target is the revision holding main traffic, and the run
+stops with an error when traffic is split across more than one revision. That
+guard is deliberate: a split is a state change that needs a decision, not a
+fingerprint.
+
+With `REVISION` the named revision is fingerprinted instead. This is how the
+tagged-revision criterion in `CLAUDE_HANDOFF.md` section 19 is satisfied. The
+split guard does not apply in this mode, because the target is stated rather
+than inferred.
+
 It prints the per-field digest table and the total, and nothing else. Field
-plaintext is never printed, logged, or written to disk. It refuses to run when
-traffic is split across more than one revision.
+plaintext is never printed, logged, or written to disk.
+
+#### A non-serving revision never matches the serving one
+
+`traffic_percent` is 0 for a revision serving no traffic and 100 for the
+serving one, so their fingerprints differ by that field alone even when every
+other field is identical. A tagged revision also carries its own `revision`
+name, so two fields differ by construction before any real difference is
+considered.
+
+This is expected. It is **not drift**, and a future reader must not record it
+as one. When comparing, read the per-field table rather than the total, and
+compare like with like: a tagged revision against the same tagged revision at
+another point in time, or the serving revision against the serving revision.
 
 ### 2026-08-20 - FP-1 baseline
 
