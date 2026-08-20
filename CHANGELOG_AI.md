@@ -2676,3 +2676,37 @@ No runtime code, database, schema, Delivery Area, fee, minimum, hours, tax,
 environment, real data, payment, mail, production, Render, or DigitalOcean
 change is included. Q-005, Q-010, and fresh-install migration ordering remain
 separate. D3B must not start until the user confirms the decision table.
+
+## 2026-08-19 - Configured Delivery D3B on closed Canada staging
+
+Environment: Canada staging and documentation. Status: Approved D3B
+configuration complete; D3C enablement remains blocked.
+
+- Synced the task branch from the latest `origin/4.x` baseline and made no
+  runtime code, vendor/core, schema, or migration change.
+- Validated the supplied KMZ/KML read-only. The linked geometry contains one
+  suitable polygon with 36 unique vertices, a closed ring, no consecutive
+  duplicates, no self-intersection, and an approximate area of 14.74 square
+  kilometres.
+- Saved and read back the default Location coordinates from the supplied map,
+  one default `D3 Montreal Delivery Area` polygon, CAD 5.00 base Delivery,
+  free Delivery at or above CAD 80.00, no distance surcharge, CAD 20.00
+  Delivery minimum, and Monday-Friday 12:00-21:00 Delivery hours with weekends
+  closed. Pickup and tax settings were unchanged.
+- A disposable current-image Cloud Run Job performed the exact transactional
+  area write and after-save inside/outside/boundary checks using the active
+  staging service configuration and Cloud SQL socket. Admin readback then
+  independently confirmed the area type, 36 vertices, fee rules, minimum,
+  schedule, and coordinates.
+- `DELIVERY_ENABLED=false` remained unchanged and the public storefront stayed
+  Pickup-only. No Order, Customer, Reservation, Birthday, Payment, Payment Log,
+  real customer data, production service, payment, mail, Render, DigitalOcean,
+  or secret was touched.
+- Deleted the disposable Cloud Run Job after verification and confirmed the
+  resource returned 404. Updated `DELIVERY_D3_BUSINESS_PARAMETER_PLAN.md` and
+  `ADMIN_CONFIGURATION_TRACKER.md` with the approved values, non-sensitive
+  boundary summary, validation, rollback state, and remaining gates.
+
+Next step: review the documentation diff. Q-011 and any remaining launch
+decisions must be resolved before an isolated D3C revision changes the global
+Delivery gate.
