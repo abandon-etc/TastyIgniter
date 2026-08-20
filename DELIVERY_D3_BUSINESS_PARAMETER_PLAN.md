@@ -235,6 +235,23 @@ accepted Google-only, self-hosted, commercial, or other project-owned reliable
 fallback design; that operating decision is separate from the Q-011 redaction
 fix.
 
+### 2026-08-20 final clean Q-011 acceptance
+
+The merged project-owned redaction fix was validated from commit
+`3fc841d12e65155c445c9c747ee7f97ec3ea0f49` in isolated revision
+`le-chateau-canada-staging-q011-3fc841d` at 0% traffic while the stable revision
+retained 100% traffic and `DELIVERY_ENABLED=false`. The authoritative same-image
+clean execution passed empty-result, forward/reverse failure, autocomplete,
+place-lookup, business-validation, successful-reverse, and closed Delivery API
+paths. Exact-window logs and public/Livewire results exposed no full address,
+provider URL, credential, raw provider exception, geometry, SQL/internal ID,
+database diagnostic, or PHP path. The failure path remained fail-closed and no
+business data changed.
+
+Q-011 is therefore `Resolved` for this current Canada staging tested failure
+path. This does not approve public Nominatim for production Delivery traffic,
+does not change the global Delivery gate, and does not authorize D3C cutover.
+
 ## Server-side totals audit
 
 The effective native order is:
@@ -473,12 +490,10 @@ rollback. Broad updates or deletes are forbidden.
 - The approved polygon, fee, free threshold, minimum, and weekly hours are
   configured. Remaining pending decisions in the table must be resolved before
   D3C enablement if they affect the launch acceptance matrix.
-- Q-011 remains `Open — staging rerun required`: the 2026-08-20 synthetic
-  failure exposed the encoded synthetic address and provider request URL in
-  application/Cloud Run logs.
-  Review the updated project redaction fix, then merge and deploy it only after
-  review passes. Rerun the complete staging acceptance before Delivery can be
-  enabled.
+- Q-011 is `Resolved` for the current Canada staging tested failure path. The
+  final clean same-image matrix found no sensitive or internal disclosure and
+  confirmed fail-closed behavior. `DELIVERY_ENABLED=false` remains unchanged;
+  any D3C enablement requires a separate isolated revision and approval.
 - Public Nominatim fallback is not approved for production Delivery traffic;
   stable identification, attribution, shared rate limiting, and an accepted
   replacement/operating model remain a separate production gate.
