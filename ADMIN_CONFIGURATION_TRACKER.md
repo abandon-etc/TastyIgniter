@@ -2218,3 +2218,29 @@ No Cloud Run service, revision, traffic, image, environment variable, Cloud SQL
 row or schema, Delivery Area, fee, minimum, schedule, Pickup, Birthday,
 Reservation, payment, secret, production, Render, or DigitalOcean state was
 changed. Delivery remains closed and D3C has not started.
+
+## 2026-08-20 - FP-1 implementation location and D3C pre/post gate
+
+Environment: repository, plus a read-only Canada staging re-measurement.
+Status: recorded.
+
+- FP-1 is now implemented once, in `tools/fp1.py`. The copy embedded in
+  `CLOUD_RUN_CANADA_STAGING_RUNTIME.md` is removed. The script is authoritative
+  where it and the document's field table disagree.
+- Re-measured Canada staging before the move. FP-1 for
+  `le-chateau-canada-staging-d2fix-31821289` at 100% traffic is unchanged from
+  the value recorded in PR #75, so staging has not drifted.
+- D3C now carries an FP-1 pre/post gate. Record FP-1 for the main-traffic
+  revision before the first D3C action and again after the last. An identical
+  pair is the accepted evidence that the 100%-traffic path was untouched. A
+  differing pair stops work, and the per-field digest table names the field
+  that moved.
+- A changed `revision` or `traffic_percent` in that pair means traffic moved,
+  which is outside D3C scope and requires the separate cutover gate. FP-1
+  refuses to run while traffic is split, so a split part way through D3C
+  surfaces as an error rather than a silent pass.
+
+No Cloud Run service, revision, traffic, image, environment variable, Cloud SQL
+row or schema, Delivery Area, fee, minimum, schedule, Pickup, Birthday,
+Reservation, payment, secret, production, Render, or DigitalOcean state was
+changed. Delivery remains closed and D3C has not started.

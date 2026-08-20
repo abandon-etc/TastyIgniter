@@ -9,3 +9,4 @@ Dockerfile.render text eol=lf
 docker/render/*.sh text eol=lf
 docker/render/*.template text eol=lf
 docker/render/*.ini text eol=lf
+tools/*.py text eol=lf

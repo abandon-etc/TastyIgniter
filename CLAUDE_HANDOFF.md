@@ -123,9 +123,9 @@ nor disproved: it has never been verified, and it never can be. Do not cite it
 as evidence of any runtime state, and do not compare a new measurement against
 it. It is kept in the table above only as a record of what the freeze claimed.
 
-It is superseded by fingerprint FP-1, defined with its field list, algorithm,
-reference implementation, and stated limits in
-`CLOUD_RUN_CANADA_STAGING_RUNTIME.md`. FP-1 is a new baseline whose history
+It is superseded by fingerprint FP-1, specified with its field list, algorithm,
+and stated limits in `CLOUD_RUN_CANADA_STAGING_RUNTIME.md` and implemented in
+`tools/fp1.py`. FP-1 is a new baseline whose history
 starts on 2026-08-20. It is not a recomputation of the void value, and the two
 are not comparable. The FP-1 baseline measured against the main-traffic
 revision in this table is
@@ -430,12 +430,17 @@ Create a Canada staging revision whose only intended gate change is
 modify the current 100%-traffic revision, cut over traffic, modify production,
 or start Birthday/payment work.
 
+Before the first D3C action, record FP-1 for the revision holding main traffic.
+Record it again after the last one. Section 19 states what the pair proves.
+
 ## 19. D3C acceptance criteria
 
 Use synthetic data and verify at minimum:
 
 - health, assets, runtime/config fingerprint, database connectivity, and clean
   logs on the tagged revision;
+- FP-1 for the main-traffic revision, captured before the first D3C action and
+  recomputed after the last, identical across the pair;
 - polygon inside, outside, and inclusive boundary behavior;
 - CAD 5.00 fee below the free threshold;
 - CAD 80.00 free threshold and CAD 20.00 minimum at below/equal/above edges;
@@ -450,6 +455,21 @@ Use synthetic data and verify at minimum:
 - Pickup, Birthday, Reservation, Admin, media, and health regressions;
 - no real Order, Customer, Reservation, Birthday, payment, or notification;
 - exact cleanup of synthetic data and disposable resources after approval.
+
+The FP-1 pair is the evidence that D3C never touched the live path. D3C only
+creates a 0%-traffic tagged revision, so the revision serving main traffic must
+be identical in configuration at both ends. Run `tools/fp1.py` before starting
+and again after finishing, and record both results in
+`CLOUD_RUN_CANADA_STAGING_RUNTIME.md`.
+
+An identical pair is the accepted evidence. "No change was intended" is not
+evidence and does not substitute for it. If the pair differs, stop and use the
+per-field digest table to name the field that moved before doing anything else.
+A changed `revision` or `traffic_percent` means traffic moved, which is outside
+D3C scope and needs the separate cutover gate.
+
+FP-1 refuses to run while traffic is split across revisions, so a split part way
+through D3C surfaces as an error instead of a silent pass.
 
 Only after every item passes may the agent request explicit user approval for
 a Canada staging main-traffic cutover.
