@@ -2904,3 +2904,36 @@ Environment: repository documentation only. Status: PR pending user merge.
 
 Documentation only. No code, runtime, schema, secret, business data, or
 production change. `DELIVERY_ENABLED` remains `false` and D3C has not started.
+
+## 2026-08-20 - Backfill the CLAUDE handoff baseline SHA
+
+Environment: repository documentation only. Status: PR open; eligible for
+auto-merge under the standing Level 0 docs-only authorization. No PR has been
+merged under that authorization before this one: PR #72 was merged before the
+authorization existed, and PR #73 is the change that granted it and was
+explicitly excluded from it, so neither relied on it.
+
+- `CLAUDE_HANDOFF.md` section 2 said the baseline SHA "cannot be recorded
+  until the PR is merged". PR #71 merged on 2026-08-20, so that sentence has
+  been stale ever since and left the frozen baseline unnamed, which weakened
+  the start-of-task containment check every later session depends on.
+- Recorded the baseline as `6c9331c1526778e474be2a980831f1e5505955b4`, the
+  merge commit of PR #71, `Freeze project baseline for Claude handoff`.
+- Verified rather than assumed. That commit has exactly two parents:
+  `f731f775e5d3f069a959641323b544007ca21552`, the PR #70 SHA already recorded
+  in section 2, and `c66eb10b5abefe14a474394a49f0c696b4e4d705`, the commit
+  that added `CLAUDE_HANDOFF.md`. GitHub reports the same merge commit for
+  PR #71, and the commit is contained in `origin/4.x`.
+- Dropped the now-redundant instruction to "identify that merge commit". The
+  fetch, containment, and clean-worktree checks are unchanged.
+- Swept every `.md` for comparable placeholders left unfilled after their
+  blocking merge. This was the only one. `<INSTANCE_CONNECTION_NAME>` in
+  `CLOUD_RUN_CANADA_STAGING_RUNTIME.md`, `ADMIN_CONFIGURATION_TRACKER.md`,
+  `CHANGELOG_AI.md`, and `RENDER_RUNTIME_READINESS.md` is a deliberate
+  redaction marker and must stay unfilled. The 2026-07-10 Birthday entry
+  referring to a flag being set "after the PR is merged" is a dated historical
+  record that was accurate when written and is not rewritten.
+
+Documentation only. Every changed path is `.md`. No code, runtime, schema,
+secret, business data, or production change. `DELIVERY_ENABLED` remains
+`false` and D3C has not started.
