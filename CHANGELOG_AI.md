@@ -2738,8 +2738,10 @@ Fix PR pending review; Q-011 remains Open and Delivery remains closed.
 - Expanded the focused synthetic suite to cover empty results, autocomplete,
   suggestion lookup, direct forward and reverse exceptions, preserved business
   coordinate validation, and programming-error propagation. PHP syntax and
-  Pint checks passed; the focused suite passed 7 tests with 42 assertions in an
-  isolated PHP 8.3 container without staging database access, migration, or
+  Pint checks passed; the focused suite passed 8 tests with 48 assertions in an
+  isolated PHP 8.3 container. The added success-path regression proves reverse
+  geocoding retains the provider-supplied formatted address rather than a
+  formatter reconstruction. Testing used no staging database, migration, or
   seed. A broader Delivery-suite attempt was blocked only by the intentionally
   absent local database/application key; no database was created or migrated.
 - Permanently deleted both disposable Q-011 Cloud Run Jobs after testing and

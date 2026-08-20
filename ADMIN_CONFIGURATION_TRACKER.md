@@ -1988,11 +1988,13 @@ geocoder logging and Livewire error privacy only.
   preserves business validation, and does not catch programming `Error`
   instances. It does not modify vendor/core or suppress all application
   logging.
-- Seven isolated redaction/regression tests passed with 42 assertions. They
+- Eight isolated redaction/regression tests passed with 48 assertions. They
   prove that synthetic address, URL, and credential markers are absent from
   validation payloads, only generic log events are emitted, direct forward and
   reverse exceptions fail closed, business coordinate validation is preserved,
-  and a programming error is not converted into address validation.
+  a programming error is not converted into address validation, and successful
+  reverse geocoding preserves the provider-supplied formatted address instead
+  of rebuilding it from address components.
 - Both disposable Q-011 Cloud Run Jobs were permanently deleted after the
   test. Cloud Run list readback confirmed that both exact names are absent.
   No synthetic database row, temporary revision, cache, or configuration was

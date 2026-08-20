@@ -152,7 +152,7 @@ final class DeliveryLocalSearch extends Component
         }
 
         $userLocation = $this->handleGeocodeResponse($collection);
-        $this->searchQuery = $userLocation->format();
+        $this->searchQuery = $userLocation->getFormattedAddress();
 
         return $userLocation;
     }

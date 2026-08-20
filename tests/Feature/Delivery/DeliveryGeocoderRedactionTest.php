@@ -7,6 +7,7 @@ namespace Tests\Feature\Delivery;
 use App\Livewire\DeliveryLocalSearch;
 use Error;
 use Igniter\Flame\Geolite\Facades\Geocoder;
+use Igniter\Flame\Geolite\Model\Location as GeoliteLocation;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Mockery;
@@ -173,6 +174,40 @@ final class DeliveryGeocoderRedactionTest extends TestCase
                 $exception->errors()['searchQuery'],
             );
         }
+    }
+
+    public function test_successful_reverse_geocode_preserves_provider_formatted_address(): void
+    {
+        Log::shouldReceive('warning')->never();
+        Log::shouldReceive('error')->never();
+
+        $providerFormattedAddress = 'Q011 Provider Canonical Address';
+        $location = GeoliteLocation::createFromArray([
+            'providedBy' => 'synthetic',
+            'latitude' => 1.25,
+            'longitude' => 2.5,
+            'formattedAddress' => $providerFormattedAddress,
+            'streetNumber' => '123',
+            'streetName' => 'Synthetic Street',
+            'locality' => 'Example City',
+            'postalCode' => 'H0H 0H0',
+        ]);
+
+        $this->assertNotSame($providerFormattedAddress, $location->format());
+
+        $geocoder = Mockery::mock();
+        $geocoder->shouldReceive('reverse')
+            ->once()
+            ->with(1.25, 2.5)
+            ->andReturn(collect([$location]));
+        Geocoder::swap($geocoder);
+
+        $component = new DeliveryLocalSearch;
+        $method = new ReflectionMethod($component, 'geocodeSearchPoint');
+        $result = $method->invoke($component, [1.25, 2.5]);
+
+        $this->assertSame($location, $result);
+        $this->assertSame($providerFormattedAddress, $component->searchQuery);
     }
 
     private function assertSanitizedValidation(ValidationException $exception): void
