@@ -2760,3 +2760,47 @@ production, Render, DigitalOcean, secret, or real-data change is included.
 Q-011 remains `Open — staging rerun required`; `DELIVERY_ENABLED=false` remains
 unchanged. Next step: review the updated PR #69. Do not merge or deploy until
 review passes.
+
+## 2026-08-20 - Resolved Delivery D3 Q-011 in a final clean staging rerun
+
+Environment: Canada staging and docs. Status: Resolved for the current tested
+failure path; Delivery remains globally closed.
+
+- Corrected the D3B Delivery schedule from Monday closed and
+  Tuesday-Saturday 12:00-21:00 to Monday-Friday 12:00-21:00 with Saturday and
+  Sunday closed. The write was scoped and transaction-protected; Pickup and
+  other D3B settings were unchanged.
+- Tested the merged PR #69 project-owned redaction at commit
+  `3fc841d12e65155c445c9c747ee7f97ec3ea0f49` in isolated 0%-traffic revision
+  `le-chateau-canada-staging-q011-3fc841d`. The stable revision retained 100%
+  traffic and `DELIVERY_ENABLED=false`.
+- The authoritative clean same-image execution passed Cloud SQL mount,
+  application bootstrap, database preflight, empty-result, forward/reverse,
+  autocomplete, place-lookup, business-validation, successful-reverse, and
+  fail-closed Delivery API checks.
+- Exact-window application and Cloud Run scanning found no full address,
+  provider URL, credential, raw provider exception, geometry, SQL/internal
+  ID, database diagnostic, or PHP path exposure. Public and Livewire failures
+  remained generic and fail-closed.
+- Desktop/mobile Pickup-only, Birthday, Reservation, Admin, and health
+  regression checks passed. D3B readback confirmed the retained polygon and
+  commercial values plus the corrected weekday schedule. Orders, Customers,
+  Reservations, Birthday records, slot holds, Payments, and Payment Logs were
+  unchanged.
+- Permanently deleted all four disposable Jobs after explicit approval and
+  confirmed exact resource absence. Removed Cloud Shell test files and local
+  temporary read-only clones. Historical audit logs remain under platform
+  retention; no temporary configuration or synthetic database row remains.
+- Updated `ADMIN_CONFIGURATION_TRACKER.md`, `CHANGELOG_AI.md`,
+  `DELIVERY_D3_BUSINESS_PARAMETER_PLAN.md`, and
+  `CLOUD_RUN_CANADA_STAGING_RUNTIME.md`. This is a documentation-only record;
+  it contains no runtime code, secret, complete synthetic address, provider
+  request URL, polygon vertex list, real data, or production change.
+- Public Nominatim fallback is not approved for production Delivery traffic.
+  Its identity, attribution, shared rate-limiting, and fallback operating model
+  remain a separate production decision and do not reopen the tested staging
+  redaction result.
+
+Q-011 is `Resolved` for the current Canada staging tested failure path. Review
+and merge this validation PR, keep `DELIVERY_ENABLED=false`, and freeze the
+project handoff baseline before any separately approved D3C enablement work.

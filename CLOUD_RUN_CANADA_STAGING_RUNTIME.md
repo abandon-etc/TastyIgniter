@@ -758,3 +758,46 @@ leaked to logs or public errors, and the Google/Nominatim quota,
 identification, attribution, and fallback policy must be accepted. No runtime,
 secret, database, schema, Delivery, tax, payment, mail, domain, or production
 configuration changed during D3A.
+
+## 2026-08-20 - Delivery D3 Q-011 final clean acceptance
+
+The merged project-owned geocoder redaction at commit
+`3fc841d12e65155c445c9c747ee7f97ec3ea0f49` was built as image digest
+`sha256:388a60cd43539746cc1e5725066a4fd7fd9bee0c538401ab8646da68608df2d1`
+and validated in tagged revision `le-chateau-canada-staging-q011-3fc841d` at 0%
+traffic. The accepted revision `le-chateau-canada-staging-d2fix-31821289`
+retained 100% traffic. `DELIVERY_ENABLED=false` remained unchanged throughout.
+
+Before the clean matrix, one scoped transaction corrected Delivery hours from
+Monday closed and Tuesday-Saturday 12:00-21:00 to Monday-Friday 12:00-21:00
+with Saturday and Sunday closed. Pickup and the polygon, fee, free threshold,
+minimum, surcharge, tax, and all other D3B values were unchanged.
+
+The authoritative execution `delivery-d3-q011-clean3-20260820-xc79z` ran from
+2026-08-20 18:15:57Z to 18:16:12Z. Cloud SQL mounting, application bootstrap,
+and database preflight passed without database diagnostics. The clean matrix
+passed empty-result, forward and reverse provider failure, autocomplete, place
+lookup, business validation, successful reverse, and closed Delivery API paths.
+Exact-window application and Cloud Run scans found no full address, provider
+URL, credential, raw provider exception, geometry, SQL/internal ID, database
+diagnostic, or PHP path. Public and Livewire errors remained generic and the
+Delivery path failed closed without writing an Order.
+
+Desktop and mobile regression passed for Pickup-only storefront behavior,
+Birthday and Reservation routes, read-only authenticated Admin access, health,
+and absence of browser console errors. The active and isolated task windows contained no
+error-severity, HTTP 5xx, PHP fatal, SQL connection, or storage permission
+event. Orders, Customers, Reservations, Birthday records, slot holds, Payments,
+and Payment Logs remained unchanged.
+
+All four disposable schedule/acceptance Jobs were permanently deleted after
+explicit approval, and exact API readback confirmed that each is absent. Cloud
+Shell test files and local temporary read-only clones were removed. Historical
+Cloud Logging entries remain under platform retention; no temporary config or
+synthetic database row remains. The tagged isolated revision remains at 0% for
+audit evidence.
+
+Q-011 is `Resolved` only for the current Canada staging tested failure path.
+Public Nominatim fallback is not approved for production Delivery traffic and
+remains a separate production operations gate. This validation does not enable
+Delivery or authorize a traffic change.

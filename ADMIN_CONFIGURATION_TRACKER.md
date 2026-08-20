@@ -147,7 +147,7 @@
 | Q-006 | 菜单页 / 购物车 / 结账入口 | 初次验证时当前本地时间不在营业时间内，前台显示 `CLOSED`，导致无法完成加入购物车和 checkout 验证。临时打开本地营业时间后，测试商品可加入购物车，数量可增加 / 减少，可移除商品，并可进入 checkout 表单。 | No | 前台流程 / 后台配置 | 已确认原因是测试时段不在营业时间内；测试后已从 `.local/backups/q006-before-temp-open-20260708-102353.json` 恢复原始营业时间和 collection 配置。未提交订单，未提交预约，未配置真实支付。 | Resolved |
 | Q-007 | Canada staging / Birthday Booking snapshot validation | UTC booking instants were stored correctly, but the default Eloquent `datetime` cast reinterpreted them in the Toronto application timezone after reload. | No | Birthday extension / datetime persistence | Resolved by PR #57 with the extension-owned `UtcDateTime` cast. Canada staging database round trips verified UTC hydration plus correct Toronto daylight-saving and standard-time display for start/end, priced, and cancelled instants. | Resolved |
 | Q-008 | Birthday Booking add-on snapshot hydration | Add-on snapshots could reload in source add-on ID order because the Booking relationship lacked an explicit historical ordering. | No | Birthday extension / snapshot presentation | Resolved by PR #57. The relationship now orders by immutable `sort_order_snapshot` and then snapshot row ID; Canada staging reloaded `First` before `Late` even though `Late` was created first. | Resolved |
-| Q-011 | Canada staging Delivery geocoding failure path | A controlled same-image synthetic failure on 2026-08-20 reproduced an encoded synthetic address and the provider request URL in application/Cloud Run logs. No credential, geometry, SQL, or internal ID exposure was observed in that tested path. PR #69 now sanitizes direct forward/reverse geocoder exceptions and the autocomplete/place-lookup provider boundaries while preserving business validation and allowing programming errors to surface. | Yes, blocks Delivery enablement only | Review updated Ready PR #69. After review and merge, deploy the project-owned redaction wrapper and rerun the complete staging log/public-error acceptance while `DELIVERY_ENABLED=false`. Public Nominatim is not approved for production Delivery traffic without a stable application identity, attribution, shared rate limiting, and an accepted operating model. | Open — staging rerun required |
+| Q-011 | Canada staging Delivery geocoding failure path | The PR #69 project-owned redaction wrapper was exercised in a same-image, 0%-traffic isolated revision. The final clean synthetic matrix covered empty results, forward/reverse failures, autocomplete, place lookup, business validation, successful reverse geocoding, and the closed Delivery API gate. Exact-window application and Cloud Run log scans found no full address, provider URL, credential, raw provider exception, geometry, SQL/internal ID, database diagnostic, or PHP path exposure. | No; resolved for the tested Canada staging failure path | Keep `DELIVERY_ENABLED=false` until a separately reviewed D3C enablement. Public Nominatim remains not approved for production Delivery traffic without stable identity, attribution, shared cross-instance rate limiting, and an accepted operating model. | Resolved |
 
 分类说明：
 
@@ -1954,10 +1954,10 @@ Delivery Area, fee conditions, Delivery minimum, and Delivery schedule only.
   returned 404. No Order, Customer, Reservation, Birthday, Payment, or Payment
   Log was created or modified by this task.
 
-Q-011 remains Open and blocks D3C Delivery enablement. Remaining business
-decisions that affect the D3C acceptance matrix also remain pending. Next step:
-review this documentation update, then complete Q-011 and the isolated D3C
-acceptance before changing `DELIVERY_ENABLED`.
+At completion of this D3B configuration step, Q-011 remained Open and blocked
+D3C Delivery enablement. The later final clean-rerun section records its current
+resolved status; remaining business decisions that affect the D3C acceptance
+matrix are still independent.
 
 ## 2026-08-20 - Delivery D3 Q-011 controlled failure reproduced
 
@@ -2018,3 +2018,57 @@ DigitalOcean, secret, or real-data change was made. Next step: review the
 updated PR #69; do not merge or deploy until review passes. After review and
 merge, deploy it to an isolated Canada staging revision with Delivery still
 closed, rerun Q-011, and only then decide whether Q-011 can be resolved.
+
+## 2026-08-20 - Delivery D3 Q-011 final clean rerun resolved
+
+Environment: Canada staging. Status: Resolved for the tested failure path.
+Impact: Delivery geocoder privacy gate only; Delivery remains globally closed.
+
+- Corrected the Delivery working-hours mapping in one scoped transaction. The
+  before-state was Monday closed, Tuesday-Saturday 12:00-21:00, and Sunday
+  closed. The verified after-state is Monday-Friday 12:00-21:00 with Saturday
+  and Sunday closed. Pickup and every other D3B business setting were
+  unchanged.
+- Built commit `3fc841d12e65155c445c9c747ee7f97ec3ea0f49` and tested image digest
+  `sha256:388a60cd43539746cc1e5725066a4fd7fd9bee0c538401ab8646da68608df2d1`
+  in isolated revision `le-chateau-canada-staging-q011-3fc841d` at 0% traffic.
+  The accepted revision `le-chateau-canada-staging-d2fix-31821289` retained
+  100% traffic and `DELIVERY_ENABLED=false` remained unchanged.
+- The authoritative clean execution
+  `delivery-d3-q011-clean3-20260820-xc79z` passed Cloud SQL mount, application
+  bootstrap, and database preflight without emitting database diagnostics. It
+  covered empty results, forward and reverse provider failures, autocomplete,
+  place lookup, business validation, successful reverse geocoding, and the
+  fail-closed Delivery API gate.
+- Exact-execution log scanning and public/Livewire acceptance found no full
+  synthetic address, provider URL, credential, raw provider exception,
+  geometry, SQL/internal ID, database diagnostic, or PHP path exposure.
+  Provider failure remained fail-closed, the cart/session stayed usable, and
+  no Delivery Order was written.
+- Desktop and mobile storefront checks passed for Pickup-only behavior,
+  Birthday and Reservation routes, authenticated read-only Admin access,
+  health, and absence of browser console errors. The active revision remained
+  healthy and the isolated and active task windows contained no error-severity,
+  HTTP 5xx, fatal PHP, SQL connection, or storage permission event.
+- Final D3B readback confirmed one default polygon area with 36 vertices,
+  CAD 5.00 base fee, free Delivery at CAD 80.00, CAD 20.00 minimum, distance
+  surcharge off, and the corrected weekday schedule. Orders, Customers,
+  Reservations, Birthday records, slot holds, Payments, and Payment Logs were
+  unchanged before and after the rerun.
+- Four disposable Jobs used for the schedule correction and clean acceptance
+  attempts were permanently deleted after explicit approval; exact resource
+  readback confirmed all four are absent. Cloud Shell test files and local
+  temporary read-only clones were removed. Historical audit logs remain only
+  under the platform retention policy; no temporary config or synthetic
+  database row remains.
+- Earlier non-authoritative attempts failed safely because of harness-only
+  boolean parsing and an unavailable development test dependency. A still
+  earlier aborted Job lacked its Cloud SQL socket. None used real customer
+  data, and all are excluded from the authoritative clean acceptance window.
+- Q-011 is therefore `Resolved` only for the current Canada staging tested
+  failure path. Public Nominatim fallback is not approved for production
+  Delivery traffic and remains a separate production operations decision.
+
+Next step: review and merge the Q-011 validation PR. Keep
+`DELIVERY_ENABLED=false`; freeze the project handoff baseline before any
+separately approved D3C enablement work.
