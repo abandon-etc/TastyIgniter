@@ -1,7 +1,7 @@
 # Delivery D3 Business Parameter Plan
 
 Date: 2026-07-19
-Updated: 2026-08-19
+Updated: 2026-08-20
 Environment: Canada staging audit, planning, and closed-gate configuration
 Status: Approved D3B configuration saved; D3C enablement remains blocked
 
@@ -216,6 +216,24 @@ off.
 Q-011 tracks this geocoder operations/privacy gate. If the synthetic failure
 test reproduces sensitive logging, fix it in a project-owned listener or
 wrapper PR before enabling Delivery; do not patch vendor.
+
+The 2026-08-20 controlled Canada staging failure reproduced the encoded
+synthetic address and provider request URL in application/Cloud Run logs. The
+tested path did not expose a credential, authorization header, geometry,
+SQLSTATE, or internal Location/area ID. Q-011 therefore remains Open. The
+project-owned redaction wrapper in PR #69 now covers direct forward/reverse
+facade exceptions and narrowed autocomplete/place-lookup provider boundaries;
+it is pending renewed review and must be deployed and retested before this gate
+can be closed.
+
+The native public Nominatim fallback is also not approved for production
+Delivery traffic. It inherits request identity rather than setting a stable
+application identity, has no shared cross-instance one-request-per-second
+limiter, and can receive concurrent fallback load during a Google failure.
+Public Nominatim policy also prohibits autocomplete. Production must use an
+accepted Google-only, self-hosted, commercial, or other project-owned reliable
+fallback design; that operating decision is separate from the Q-011 redaction
+fix.
 
 ## Server-side totals audit
 
@@ -455,8 +473,14 @@ rollback. Broad updates or deletes are forbidden.
 - The approved polygon, fee, free threshold, minimum, and weekly hours are
   configured. Remaining pending decisions in the table must be resolved before
   D3C enablement if they affect the launch acceptance matrix.
-- Q-011: synthetic geocoder failure logging, public Nominatim identification,
-  attribution, quota, and fallback behavior require staging acceptance before
-  Delivery can be enabled.
+- Q-011 remains `Open — staging rerun required`: the 2026-08-20 synthetic
+  failure exposed the encoded synthetic address and provider request URL in
+  application/Cloud Run logs.
+  Review the updated project redaction fix, then merge and deploy it only after
+  review passes. Rerun the complete staging acceptance before Delivery can be
+  enabled.
+- Public Nominatim fallback is not approved for production Delivery traffic;
+  stable identification, attribution, shared rate limiting, and an accepted
+  replacement/operating model remain a separate production gate.
 - Q-005, Q-010, and fresh-install migration ordering remain independent and
   are not changed by D3A.

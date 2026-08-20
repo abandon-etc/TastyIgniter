@@ -2710,3 +2710,53 @@ configuration complete; D3C enablement remains blocked.
 Next step: review the documentation diff. Q-011 and any remaining launch
 decisions must be resolved before an isolated D3C revision changes the global
 Delivery gate.
+
+## 2026-08-20 - Added project-owned Delivery geocoder error redaction
+
+Environment: Canada staging investigation and local isolated tests. Status:
+Fix PR pending review; Q-011 remains Open and Delivery remains closed.
+
+- Opened Ready PR #69, `Fix Delivery geocoder error redaction`, against `4.x`.
+- Synced from PR #68 merge SHA
+  `b653b55b2787700b7dd26edc95b36074a8bbe35f`. The active Canada staging
+  revision remained `le-chateau-canada-staging-d2fix-31821289` at 100% with
+  `DELIVERY_ENABLED=false`.
+- A disposable same-image controlled failure reproduced the encoded synthetic
+  address and provider request URL in application/Cloud Run logs. The tested
+  log window did not expose a credential, authorization header, geometry,
+  SQLSTATE, or internal Location/area ID.
+- Source audit traced the log leak to Orange's empty-geocode diagnostics and
+  found that autocomplete and suggestion lookup can also surface raw provider
+  exception messages in Livewire validation errors.
+- Updated the project-owned `DeliveryLocalSearch` wrapper after PR review. It
+  now sanitizes exceptions thrown directly by forward and reverse geocoder
+  facade calls before a collection is returned, and narrows autocomplete and
+  Google place-lookup handling to provider `Exception` boundaries. Logs contain
+  only a generic event plus safe operation category; business validation is
+  preserved and programming `Error` instances are not converted into address
+  validation. No vendor/core code or global error reporting was changed.
+- Expanded the focused synthetic suite to cover empty results, autocomplete,
+  suggestion lookup, direct forward and reverse exceptions, preserved business
+  coordinate validation, and programming-error propagation. PHP syntax and
+  Pint checks passed; the focused suite passed 8 tests with 48 assertions in an
+  isolated PHP 8.3 container. The added success-path regression proves reverse
+  geocoding retains the provider-supplied formatted address rather than a
+  formatter reconstruction. Testing used no staging database, migration, or
+  seed. A broader Delivery-suite attempt was blocked only by the intentionally
+  absent local database/application key; no database was created or migrated.
+- Permanently deleted both disposable Q-011 Cloud Run Jobs after testing and
+  confirmed that both exact names are absent from the Cloud Run Jobs list. No
+  synthetic database row, temporary revision, cache, or configuration was
+  retained; synthetic audit logs remain under the platform retention policy.
+- Recorded that public Nominatim fallback is not approved for production
+  Delivery traffic in its current form: request-derived identity is not a
+  stable application identity, there is no shared cross-instance rate limiter,
+  Google failure can fan out fallback traffic, and public autocomplete is
+  prohibited.
+
+No Delivery gate, traffic, Location, polygon, fee, minimum, schedule, Pickup,
+tax, database/schema, Order, Customer, Reservation, Birthday, payment, mail,
+production, Render, DigitalOcean, secret, or real-data change is included.
+Q-011 remains `Open — staging rerun required`; `DELIVERY_ENABLED=false` remains
+unchanged. Next step: review the updated PR #69. Do not merge or deploy until
+review passes.

@@ -147,7 +147,7 @@
 | Q-006 | 菜单页 / 购物车 / 结账入口 | 初次验证时当前本地时间不在营业时间内，前台显示 `CLOSED`，导致无法完成加入购物车和 checkout 验证。临时打开本地营业时间后，测试商品可加入购物车，数量可增加 / 减少，可移除商品，并可进入 checkout 表单。 | No | 前台流程 / 后台配置 | 已确认原因是测试时段不在营业时间内；测试后已从 `.local/backups/q006-before-temp-open-20260708-102353.json` 恢复原始营业时间和 collection 配置。未提交订单，未提交预约，未配置真实支付。 | Resolved |
 | Q-007 | Canada staging / Birthday Booking snapshot validation | UTC booking instants were stored correctly, but the default Eloquent `datetime` cast reinterpreted them in the Toronto application timezone after reload. | No | Birthday extension / datetime persistence | Resolved by PR #57 with the extension-owned `UtcDateTime` cast. Canada staging database round trips verified UTC hydration plus correct Toronto daylight-saving and standard-time display for start/end, priced, and cancelled instants. | Resolved |
 | Q-008 | Birthday Booking add-on snapshot hydration | Add-on snapshots could reload in source add-on ID order because the Booking relationship lacked an explicit historical ordering. | No | Birthday extension / snapshot presentation | Resolved by PR #57. The relationship now orders by immutable `sort_order_snapshot` and then snapshot row ID; Canada staging reloaded `First` before `Late` even though `Late` was created first. | Resolved |
-| Q-011 | Canada staging Delivery geocoding failure path | Orange logs provider diagnostics after a fully empty geocoder result. Provider exceptions may originate from request URLs, so D3B must prove with a synthetic failure that no full address, query URL, API credential, geometry, SQL, or internal ID reaches application logs or public errors. The public Nominatim fallback also requires an accepted identifying User-Agent/Referer, attribution, and one-request-per-second operating policy. | Yes, blocks Delivery enablement only | Delivery configuration / privacy / external provider operations | Run the controlled D3B synthetic failure and quota/fallback checks while `DELIVERY_ENABLED=false`. If sensitive output is reproduced, add a project-owned sanitizer/wrapper in a separate PR; do not modify vendor/core. | Open |
+| Q-011 | Canada staging Delivery geocoding failure path | A controlled same-image synthetic failure on 2026-08-20 reproduced an encoded synthetic address and the provider request URL in application/Cloud Run logs. No credential, geometry, SQL, or internal ID exposure was observed in that tested path. PR #69 now sanitizes direct forward/reverse geocoder exceptions and the autocomplete/place-lookup provider boundaries while preserving business validation and allowing programming errors to surface. | Yes, blocks Delivery enablement only | Review updated Ready PR #69. After review and merge, deploy the project-owned redaction wrapper and rerun the complete staging log/public-error acceptance while `DELIVERY_ENABLED=false`. Public Nominatim is not approved for production Delivery traffic without a stable application identity, attribution, shared rate limiting, and an accepted operating model. | Open — staging rerun required |
 
 分类说明：
 
@@ -1958,3 +1958,63 @@ Q-011 remains Open and blocks D3C Delivery enablement. Remaining business
 decisions that affect the D3C acceptance matrix also remain pending. Next step:
 review this documentation update, then complete Q-011 and the isolated D3C
 acceptance before changing `DELIVERY_ENABLED`.
+
+## 2026-08-20 - Delivery D3 Q-011 controlled failure reproduced
+
+Environment: Canada staging and local isolated tests. Status: Open; project
+redaction fix pending review and staging redeployment. Impact: Delivery
+geocoder logging and Livewire error privacy only.
+
+- The active revision remained `le-chateau-canada-staging-d2fix-31821289` at
+  100% traffic with `DELIVERY_ENABLED=false`; the storefront remained
+  Pickup-only and the retained D3B area, fee, minimum, and hours were not
+  changed.
+- A disposable same-image Job used a synthetic address marker and synthetic
+  failing endpoints. The application deliberately exercised the same empty
+  geocoder diagnostic log path used by Orange.
+- Application/Cloud Run logs contained the encoded synthetic address and the
+  provider request URL. No provider credential, authorization header,
+  geometry, SQLSTATE, or internal Location/area ID was observed in the tested
+  log window. This is sufficient to keep Q-011 Open.
+- Source audit found that Orange logs raw provider diagnostics for an empty
+  geocode result. Address autocomplete and suggestion lookup also convert raw
+  provider exception messages into Livewire validation errors. Staging debug
+  is false, but that setting does not sanitize explicit logs or validation
+  messages.
+- The project-owned wrapper now covers direct forward and reverse facade
+  exceptions before a collection is returned, as well as the autocomplete and
+  Google place-lookup provider calls. It emits only a generic event and safe
+  operation category, returns the existing generic invalid-address validation,
+  preserves business validation, and does not catch programming `Error`
+  instances. It does not modify vendor/core or suppress all application
+  logging.
+- Eight isolated redaction/regression tests passed with 48 assertions. They
+  prove that synthetic address, URL, and credential markers are absent from
+  validation payloads, only generic log events are emitted, direct forward and
+  reverse exceptions fail closed, business coordinate validation is preserved,
+  a programming error is not converted into address validation, and successful
+  reverse geocoding preserves the provider-supplied formatted address instead
+  of rebuilding it from address components.
+- Both disposable Q-011 Cloud Run Jobs were permanently deleted after the
+  test. Cloud Run list readback confirmed that both exact names are absent.
+  No synthetic database row, temporary revision, cache, or configuration was
+  retained. Synthetic Cloud Logging audit entries remain subject to the
+  platform retention policy; they contain no real customer data.
+- The native Nominatim provider inherits the incoming browser User-Agent or
+  Referer instead of supplying a stable application identity. There is no
+  shared cross-instance one-request-per-second limiter, and Cloud Run fan-out
+  could send concurrent fallback traffic. Public Nominatim also prohibits
+  autocomplete. Therefore, public Nominatim fallback is not approved for
+  production Delivery traffic; this remains a separate production operations
+  gate and does not expand the redaction fix.
+
+The broader Delivery suite was also attempted without a database or application
+key; database-dependent tests could not run in that isolated environment. No
+database was created or migrated for this remediation.
+
+No Delivery, Pickup, tax, polygon, fee, minimum, schedule, database schema,
+Order, Customer, Reservation, Birthday, payment, mail, production, Render,
+DigitalOcean, secret, or real-data change was made. Next step: review the
+updated PR #69; do not merge or deploy until review passes. After review and
+merge, deploy it to an isolated Canada staging revision with Delivery still
+closed, rerun Q-011, and only then decide whether Q-011 can be resolved.
