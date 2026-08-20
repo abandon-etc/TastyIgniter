@@ -2834,3 +2834,49 @@ docs-only handoff PR pending review; Delivery remains closed.
 
 The merge commit of the handoff PR becomes the `CLAUDE HANDOFF BASELINE`.
 Do not start D3C until that PR is merged.
+
+## 2026-08-20 - Confirmed Delivery D3 business decisions and removed leftover Jobs
+
+Environment: repository docs, Canada staging read-only audit, and an approved
+Cloud Run Jobs cleanup. Status: documentation PR pending review; Delivery
+remains globally closed.
+
+- Started from the frozen handoff baseline
+  `6c9331c1526778e474be2a980831f1e5505955b4` on clean `4.x` with no open pull
+  request, and created this focused documentation branch from that mainline.
+- Re-verified Canada staging directly instead of copying the freeze record.
+  Traffic, image digest, retained tagged revisions, runtime service account,
+  zero user-managed keys, Cloud SQL `RUNNABLE` state, media volume mount, the
+  five Secret Manager references, the successful regional Q-011 build, and
+  health `200 ok` all matched `CLAUDE_HANDOFF.md`. No secret value was read.
+- Added evidence the freeze did not contain: all 26 revisions were checked,
+  only the four Delivery-era revisions define `DELIVERY_ENABLED`, all four read
+  `false`, the other 22 predate the flag, and no revision has ever set it to
+  `true`.
+- Recorded the user's 2026-08-20 confirmation of the 24 remaining business
+  decisions in `DELIVERY_D3_BUSINESS_PARAMETER_PLAN.md`, replacing every
+  `Pending confirmation` entry with the confirmed value and its date.
+- Documented two accepted operational risks (unaudited admin fee edits, manual
+  holiday closure) and two outstanding numeric values (tax rate and Delivery
+  fee taxability, Google geocoding daily cap). Neither number blocks D3C
+  because staging tax remains disabled and D3C uses synthetic addresses.
+- Audited 17 previously undocumented Cloud Run Jobs from the July
+  initialization phase, decoding their inline scripts to classify three
+  database-writing, three configuration-writing, and eleven read-only jobs.
+  Confirmed zero literal credentials: every secret-like environment variable
+  resolved through Secret Manager.
+- Exported all 17 restorable definitions before deletion, deleted all 17 after
+  explicit per-target user confirmation, and verified zero Jobs remain with
+  17 of 17 absent on exact readback. Traffic, the Delivery gate, and health
+  were unchanged afterwards.
+- Corrected an earlier inconclusive observation: the bare `/healthz` 404 seen
+  through a generic web fetch is the documented Google frontend behaviour. The
+  configured liveness path `/healthz/` returns `200 ok`.
+
+No runtime, traffic, revision, image, environment variable, schema, business
+row, Delivery Area, fee, minimum, schedule, Pickup, Birthday, Reservation,
+payment, secret, production, Render, or DigitalOcean change is included beyond
+the approved Job deletion recorded above.
+
+Next step: review this documentation PR. Keep `DELIVERY_ENABLED=false` until a
+separately approved D3C isolated enablement.

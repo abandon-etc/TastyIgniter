@@ -2110,3 +2110,66 @@ No Cloud Run setting, revision, traffic, database row/schema, Delivery Area,
 fee, minimum, hours, Pickup, Birthday, Reservation, payment, production,
 Render, DigitalOcean, secret, or real data was changed. Do not start D3C before
 the handoff PR is merged.
+
+## 2026-08-20 - Delivery D3 business decisions and leftover Job cleanup
+
+Environment: repository documentation plus a Canada staging read-only audit and
+an approved Cloud Run Jobs cleanup. Status: all D3 business decisions confirmed;
+Delivery remains globally closed. Impact: business parameters, project records,
+and disposable job resources only.
+
+- Verified the frozen handoff baseline before any change. Clean `4.x` matched
+  `6c9331c1526778e474be2a980831f1e5505955b4`, GitHub reported zero open pull
+  requests, and the worktree was clean.
+- Independently read back Canada staging. Main traffic remained 100% on
+  `le-chateau-canada-staging-d2fix-31821289` with image digest
+  `sha256:72371b610a2dff66d29dcee09a2095c72c2f6bb0d932d33744db3444c3689102`,
+  `le-chateau-canada-staging-q011-3fc841d` and
+  `le-chateau-canada-staging-d2-fab804d2` remained tagged at 0%, health returned
+  `200 ok`, Cloud SQL read back `RUNNABLE` with automated backups enabled, the
+  runtime identity still had zero user-managed keys, the media bucket volume was
+  mounted at the documented path, and the revision bound the five documented
+  Secret Manager references. No secret value was read.
+- Extended the readback beyond the freeze record: all 26 revisions of the
+  service were checked for the Delivery gate. Only four define
+  `DELIVERY_ENABLED` —
+  `le-chateau-canada-staging-q011-3fc841d`,
+  `le-chateau-canada-staging-d2fix-31821289`,
+  `le-chateau-canada-staging-d2-fab804d2`, and
+  `le-chateau-canada-staging-d1-6a1ccc1d` — and all four read `false`. The
+  other 22 predate the flag and do not define it. No revision in this service
+  has ever enabled Delivery.
+- Resolved every remaining `Pending confirmation` row in
+  `DELIVERY_D3_BUSINESS_PARAMETER_PLAN.md`. Twenty-four business decisions were
+  confirmed by the user on 2026-08-20 and are recorded in that table.
+- Two confirmed decisions carry an accepted operational risk. Admin Delivery fee
+  changes are allowed without an approval workflow even though the platform
+  stores no actor or timestamp, and holiday closure relies on an operator
+  toggling Delivery off in admin for the day. Both were explained before
+  confirmation and accepted for first launch.
+- Two confirmed directions still need a number. The tax rate and whether the
+  Delivery fee is taxable in Quebec require accountant confirmation, and the
+  Google geocoding daily usage cap is not yet chosen. Staging tax remains
+  disabled, so neither blocks D3C.
+- Audited 17 previously undocumented Cloud Run Jobs left from the July
+  initialization phase. Three could write to the database
+  (`birthday-migration-f40531e4`, `tastyigniter-empty-migrate-178366`,
+  `tastyigniter-admin-create-178372`), three rewrote container configuration
+  (`tastyigniter-init-canada-1783653711`,
+  `tastyigniter-init-canada-1783654052`, `tastyigniter-init-canada-staging`),
+  and eleven were read-only probes. `tastyigniter-admin-create-178372` created
+  or reset a super-admin account and explains the previously unexplained
+  `tastyigniter-admin-password` secret.
+- Confirmed that none of the 17 stored a literal credential. Every password,
+  secret, token, and key environment variable resolved through Secret Manager;
+  the literal-value count was zero.
+- Exported all 17 restorable definitions to the operator's Cloud Shell home
+  directory, then deleted all 17 after explicit per-target confirmation. Exact
+  readback confirmed zero remaining Jobs in the region and 17 of 17 absent.
+  Post-deletion readback confirmed unchanged traffic, unchanged
+  `DELIVERY_ENABLED=false`, and health `200 ok`.
+
+No Cloud Run service, revision, traffic, image, environment variable, Cloud SQL
+row or schema, Delivery Area, fee, minimum, schedule, Pickup, Birthday,
+Reservation, payment, secret, production, Render, or DigitalOcean state was
+changed. Delivery remains closed and D3C has not started.
