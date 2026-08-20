@@ -302,6 +302,279 @@ For the Cloud Run staging runtime only, set FILESYSTEM_SKIP_VISIBILITY=true
 after the corresponding configuration change is deployed. The default remains
 disabled so Render staging keeps its existing public-disk behavior.
 
+## Runtime configuration fingerprint FP-1
+
+A fingerprint is a comparison marker for the serving runtime configuration. It
+answers one question: has the configuration that actually serves traffic
+changed since it was last accepted.
+
+### The previous fingerprint is void
+
+The 2026-08-20 freeze recorded a value it described as "a SHA-256 of
+normalized, redacted service metadata":
+
+`b82e3aa41eaba24a1bc54784f9f889209a83b178cda1baeec85f069337e41b1b`
+
+Neither the normalized field list nor the algorithm was ever recorded, in that
+document or anywhere else in this repository. Without them the hash input
+cannot be reconstructed, so the value cannot be recomputed from the live
+service or from any stored artifact.
+
+That value is therefore **void and permanently unverifiable**. It has never
+been confirmed. It also cannot be disproved, which is precisely the problem: it
+carries no evidence in either direction. Do not cite it as evidence of any past
+or present runtime state, and do not compare a new measurement against it.
+
+Defining an algorithm now does not recover it. Any algorithm written today
+would either coincidentally reproduce the digest or, far more likely, fail to
+reproduce it, and neither outcome would establish anything about the runtime as
+it stood in August. The value is retired, not repaired.
+
+FP-1 below replaces it. FP-1 is a new baseline whose history starts on
+2026-08-20. It is not a recomputation of the void value, and the two are not
+comparable.
+
+### Scope
+
+FP-1 covers the single Cloud Run revision holding main traffic. If traffic is
+split across more than one revision the computation stops with an error instead
+of choosing one, because a split is itself a state change that needs a decision
+rather than a fingerprint.
+
+FP-1 does **not** cover Cloud SQL instance state, IAM policy or role bindings,
+Secret Manager contents or versions, bucket contents, image layer contents
+behind the digest, or any revision that is not serving traffic. Those are
+verified separately.
+
+### Fields
+
+Twenty fields, in this fixed order.
+
+| # | Field | Source |
+| --- | --- | --- |
+| 1 | `service` | service name under test |
+| 2 | `region` | region under test |
+| 3 | `revision` | the `status.traffic[]` entry holding a percent |
+| 4 | `traffic_percent` | that same entry |
+| 5 | `image_digest` | `spec.containers[0].image`, the part after `@` |
+| 6 | `service_account` | `spec.serviceAccountName` |
+| 7 | `container_concurrency` | `spec.containerConcurrency` |
+| 8 | `timeout_seconds` | `spec.timeoutSeconds` |
+| 9 | `min_scale` | annotation `autoscaling.knative.dev/minScale` |
+| 10 | `max_scale` | annotation `autoscaling.knative.dev/maxScale` |
+| 11 | `cpu_limit` | `resources.limits.cpu` |
+| 12 | `memory_limit` | `resources.limits.memory` |
+| 13 | `container_port` | `ports[0].containerPort` |
+| 14 | `liveness_path` | `livenessProbe.httpGet.path` |
+| 15 | `startup_probe` | `startupProbe`, as `tcp:<port>` or `http:<path>` |
+| 16 | `cloudsql_instances` | annotation `run.googleapis.com/cloudsql-instances`, split on commas, sorted, rejoined |
+| 17 | `volume_mounts` | sorted `name:mountPath`, joined with `;` |
+| 18 | `volume_types` | sorted `name:type`, joined with `;` |
+| 19 | `secret_env` | sorted `ENV_NAME->secretName`, joined with `;` |
+| 20 | `plain_env` | sorted `NAME=value` for env entries without `valueFrom`, joined with `;` |
+
+Field 16 records the connection name itself, not a count. A count cannot
+distinguish one attached instance from a different attached instance, so
+swapping the database would leave a count-based fingerprint unchanged.
+
+### Algorithm
+
+1. Collect the twenty values into memory.
+2. For each field, in the order above, compute
+   `sha256(field_name + U+001F + value)` and take the first sixteen lowercase
+   hex characters. The U+001F unit separator provides domain separation, so two
+   fields that happen to share a value do not share a digest.
+3. Render the per-field table as `field_name=digest`, one per line, joined with
+   LF, no trailing newline, encoded UTF-8.
+4. FP-1 is the full lowercase SHA-256 hex of that table.
+
+Because the total is taken over the published table rather than over the
+plaintext, anyone holding the table can re-verify the total without access to
+the service.
+
+### What the digests do and do not protect
+
+The per-field digests exist to localize a change. They are not a
+confidentiality control.
+
+A digest over a single low-entropy value can be confirmed by brute force:
+anyone able to guess a candidate value can hash it and compare. For `service`,
+`region`, `revision`, `image_digest`, and `traffic_percent` nothing is lost,
+because those are already recorded in plaintext in this document and in
+`CLAUDE_HANDOFF.md`. For `cloudsql_instances` and `plain_env` the practical
+effect is a confirmation oracle: a party who already holds a candidate value
+can confirm it, but no party learns a value it did not already possess. The
+project and region components of the Cloud SQL connection name are public in
+this repository in any case, so only the instance name is at stake.
+
+A keyed hash would remove even that, but the key would have to be read in order
+to compute a fingerprint, which conflicts with the rule that the agent never
+reads a secret value. The weaker guarantee is accepted deliberately.
+
+Field plaintext is assembled in memory and is never printed, logged, written to
+disk, pasted into chat, or committed. Only the per-field table and the total
+are recorded.
+
+### Reference implementation
+
+Documentation, not a committed executable. It is reproduced here so the
+algorithm has exactly one definition.
+
+```python
+#!/usr/bin/env python3
+"""Compute runtime configuration fingerprint FP-1 for a Cloud Run service.
+
+Emits a per-field digest table and a total. Field plaintext is held in memory
+and is never printed, logged, or written to disk. The total is the SHA-256 of
+the printed table, so the table alone is enough to re-verify the total.
+
+Usage: fp1.py SERVICE REGION
+"""
+import hashlib
+import json
+import subprocess
+import sys
+
+FIELD_DIGEST_LEN = 16
+
+
+def gcloud(args):
+    out = subprocess.run(
+        ['gcloud'] + args + ['--format=json'],
+        capture_output=True, text=True, check=True, shell=(sys.platform == 'win32'),
+    ).stdout
+    return json.loads(out)
+
+
+def probe_repr(p):
+    if not p:
+        return ''
+    if p.get('tcpSocket'):
+        return 'tcp:%s' % p['tcpSocket'].get('port', '')
+    if p.get('httpGet'):
+        return 'http:%s' % p['httpGet'].get('path', '')
+    return ','.join(sorted(p))
+
+
+def collect(service, region):
+    svc = gcloud(['run', 'services', 'describe', service, '--region', region])
+    traffic = [t for t in svc['status']['traffic'] if t.get('percent')]
+    if len(traffic) != 1:
+        sys.exit('FP-1 requires exactly one revision holding traffic; found %d'
+                 % len(traffic))
+    revision, percent = traffic[0]['revisionName'], traffic[0]['percent']
+
+    rev = gcloud(['run', 'revisions', 'describe', revision, '--region', region])
+    spec, meta = rev['spec'], rev['metadata']
+    ann = meta.get('annotations', {})
+    c = spec['containers'][0]
+    env = c.get('env', [])
+    limits = c.get('resources', {}).get('limits', {})
+
+    plain = sorted('%s=%s' % (e['name'], e.get('value', ''))
+                   for e in env if 'valueFrom' not in e)
+    secret = sorted('%s->%s' % (e['name'], e['valueFrom']['secretKeyRef']['name'])
+                    for e in env if 'valueFrom' in e)
+    mounts = sorted('%s:%s' % (m['name'], m['mountPath'])
+                    for m in c.get('volumeMounts', []))
+    vtypes = sorted('%s:%s' % (v['name'],
+                               ','.join(sorted(k for k in v if k != 'name')))
+                    for v in spec.get('volumes', []))
+    sql = ann.get('run.googleapis.com/cloudsql-instances', '')
+
+    return [
+        ('service', service),
+        ('region', region),
+        ('revision', revision),
+        ('traffic_percent', percent),
+        ('image_digest', c['image'].split('@', 1)[1] if '@' in c['image'] else ''),
+        ('service_account', spec.get('serviceAccountName', '')),
+        ('container_concurrency', spec.get('containerConcurrency', '')),
+        ('timeout_seconds', spec.get('timeoutSeconds', '')),
+        ('min_scale', ann.get('autoscaling.knative.dev/minScale', '')),
+        ('max_scale', ann.get('autoscaling.knative.dev/maxScale', '')),
+        ('cpu_limit', limits.get('cpu', '')),
+        ('memory_limit', limits.get('memory', '')),
+        ('container_port', (c.get('ports') or [{}])[0].get('containerPort', '')),
+        ('liveness_path', (c.get('livenessProbe') or {}).get('httpGet', {}).get('path', '')),
+        ('startup_probe', probe_repr(c.get('startupProbe'))),
+        ('cloudsql_instances', ','.join(sorted(x for x in sql.split(',') if x))),
+        ('volume_mounts', ';'.join(mounts)),
+        ('volume_types', ';'.join(vtypes)),
+        ('secret_env', ';'.join(secret)),
+        ('plain_env', ';'.join(plain)),
+    ]
+
+
+def main(service, region):
+    fields = collect(service, region)
+    lines = []
+    for name, value in fields:
+        h = hashlib.sha256(('%s\x1f%s' % (name, value)).encode('utf-8'))
+        lines.append('%s=%s' % (name, h.hexdigest()[:FIELD_DIGEST_LEN]))
+    table = '\n'.join(lines)
+    total = hashlib.sha256(table.encode('utf-8')).hexdigest()
+
+    print(table)
+    print('FP-1=%s' % total)
+
+
+if __name__ == '__main__':
+    main(*sys.argv[1:3])
+```
+
+Invoke as `python fp1.py le-chateau-canada-staging northamerica-northeast1`.
+
+### 2026-08-20 - FP-1 baseline
+
+Measured against `le-chateau-canada-staging-d2fix-31821289` at 100% traffic.
+
+```
+service=330721e68dbdebf5
+region=275c3a0b958a75f3
+revision=16902db2789831f6
+traffic_percent=1cfc7e35164b4323
+image_digest=3533f2fa9acec34e
+service_account=5d8780e8e9a243c1
+container_concurrency=889d4cbc1dd8749c
+timeout_seconds=ed5aed1a06b67f6b
+min_scale=3410dd7920b37ed2
+max_scale=ed7ba4217ea5fb63
+cpu_limit=6b84ea67338bb767
+memory_limit=0217dac1b2e58267
+container_port=43535c99f7811895
+liveness_path=a2893497647741ff
+startup_probe=abdbf2f9331e7e36
+cloudsql_instances=d0ee9e7bd4cdf4c2
+volume_mounts=5a81908d33877dab
+volume_types=29415030ecef9a3b
+secret_env=f540407c39968e6d
+plain_env=1534c173d7dac8ff
+FP-1=2127efd6d63de53e6d9fbc5388f9db3fee72d0575eec25a09b9f99e9ad8565d3
+```
+
+Verification performed, each stated because it ran:
+
+- Two independent runs produced byte-identical output.
+- The total was recomputed from the published table alone and matched.
+- `cloudsql_instances` was confirmed to carry the connection name rather than
+  an empty string: the digest of an empty value is `d35846a8e2b56c20`, which
+  differs from the recorded `d0ee9e7bd4cdf4c2`, and the recorded digest
+  reproduces from the live annotation value.
+- Substituting a different instance name, and separately a different project,
+  each changed field 16. A count-based field, the alternative considered
+  and rejected, would have detected neither.
+- Collecting the same fields from the retained 0% revision
+  `le-chateau-canada-staging-q011-3fc841d` changed exactly two field digests,
+  `revision` and `image_digest`, leaving the other eighteen identical. That
+  matches two revisions differing only in identity and image, and confirms the
+  table localizes a change rather than merely signalling one. This used a probe
+  variant of the reference implementation, since FP-1 proper refuses a
+  non-serving revision.
+
+No runtime, traffic, revision, image, environment variable, secret, or database
+state was changed by this measurement. It is read-only.
+
 ## 2026-07-10 - Validation record
 
 PR #40 was deployed from git SHA `44940004` to Cloud Run Canada staging.

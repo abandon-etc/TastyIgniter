@@ -2937,3 +2937,52 @@ explicitly excluded from it, so neither relied on it.
 Documentation only. Every changed path is `.md`. No code, runtime, schema,
 secret, business data, or production change. `DELIVERY_ENABLED` remains
 `false` and D3C has not started.
+
+## 2026-08-20 - Replace the void runtime fingerprint with FP-1
+
+Environment: repository documentation plus a read-only Canada staging
+measurement. Status: PR open; eligible for auto-merge under the standing
+Level 0 docs-only authorization.
+
+- `CLAUDE_HANDOFF.md` section 5 recorded a runtime fingerprint and instructed
+  future sessions to "recompute it with the same normalized fields", but the
+  normalized fields and the algorithm were never written down anywhere in the
+  repository. The instruction was impossible to follow, which meant the freeze
+  carried a comparison marker that no one could ever compare against.
+- Marked
+  `b82e3aa41eaba24a1bc54784f9f889209a83b178cda1baeec85f069337e41b1b` void and
+  permanently unverifiable. Documenting an algorithm now cannot recover it: any
+  algorithm written today would either coincidentally reproduce the digest or,
+  far more likely, fail to, and neither outcome establishes anything about the
+  August runtime. The wording deliberately does not imply the old value was
+  ever checked. It was not, and it never can be.
+- Defined FP-1 in `CLOUD_RUN_CANADA_STAGING_RUNTIME.md`: scope, a fixed
+  twenty-field list with sources, the algorithm, a reference implementation,
+  and an explicit statement of what FP-1 does not cover, which is Cloud SQL
+  instance state, IAM bindings, Secret Manager contents, bucket contents,
+  image layers behind the digest, and any non-serving revision.
+- Stored a per-field digest table, not only a total. A single opaque total
+  reports that something changed without saying what; the table names the
+  field. Demonstrated against the retained 0% revision
+  `le-chateau-canada-staging-q011-3fc841d`, where exactly `revision` and
+  `image_digest` differ from the serving revision and the other eighteen
+  fields are identical.
+- Made the total the SHA-256 of the published table rather than of the
+  plaintext, so the table alone re-verifies the total and field plaintext never
+  needs to leave memory.
+- Chose a digest of the connection name over an instance count for field 16.
+  A count cannot detect a database swap. Verified that a different instance
+  name and a different project each change the field digest, and that the
+  field carries the connection name rather than an empty string.
+- Stated the confidentiality limit plainly: per-field digests over low-entropy
+  values are confirmation oracles, not secrecy. A keyed hash would close that
+  gap but would require reading a secret value to compute a fingerprint, which
+  the project rules forbid, so the weaker guarantee is accepted deliberately.
+- Recorded the 2026-08-20 FP-1 baseline for
+  `le-chateau-canada-staging-d2fix-31821289` at 100% traffic:
+  `2127efd6d63de53e6d9fbc5388f9db3fee72d0575eec25a09b9f99e9ad8565d3`.
+
+The measurement was read-only. Documentation only; every changed path is
+`.md`. No code, runtime, traffic, revision, image, environment variable,
+schema, secret, business data, or production change. `DELIVERY_ENABLED` remains
+`false` and D3C has not started.

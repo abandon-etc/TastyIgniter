@@ -109,15 +109,28 @@ older deployment note.
 | Retained failed D2 revision | `le-chateau-canada-staging-d2-fab804d2`, 0% |
 | Global Delivery gate | `DELIVERY_ENABLED=false` |
 | Health | HTTP 200, body `ok` |
-| Redacted runtime fingerprint | `b82e3aa41eaba24a1bc54784f9f889209a83b178cda1baeec85f069337e41b1b` |
+| Redacted runtime fingerprint | `b82e3aa41eaba24a1bc54784f9f889209a83b178cda1baeec85f069337e41b1b` — **void, never verified**, see below |
 
 The latest Ready revision is the retained 0%-traffic Q-011 revision. It is not
 the active/main-traffic revision. Traffic allocation, not latest-Ready order,
 defines the live staging runtime.
 
-The fingerprint is a SHA-256 of normalized, redacted service metadata and is
-only a comparison marker. It includes no secret value. Recompute it with the
-same normalized fields before claiming an exact runtime match.
+That fingerprint is **void**. The freeze described it as a SHA-256 of
+normalized, redacted service metadata but never recorded the normalized field
+list or the algorithm, and neither can be reconstructed from anything still
+held in this repository or in GCP. The value can therefore be neither confirmed
+nor disproved: it has never been verified, and it never can be. Do not cite it
+as evidence of any runtime state, and do not compare a new measurement against
+it. It is kept in the table above only as a record of what the freeze claimed.
+
+It is superseded by fingerprint FP-1, defined with its field list, algorithm,
+reference implementation, and stated limits in
+`CLOUD_RUN_CANADA_STAGING_RUNTIME.md`. FP-1 is a new baseline whose history
+starts on 2026-08-20. It is not a recomputation of the void value, and the two
+are not comparable. The FP-1 baseline measured against the main-traffic
+revision in this table is
+`2127efd6d63de53e6d9fbc5388f9db3fee72d0575eec25a09b9f99e9ad8565d3`, with the
+per-field digest table recorded alongside the definition.
 
 ## 6. Delivery D1, D2, and D3
 
