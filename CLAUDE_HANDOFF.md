@@ -438,6 +438,32 @@ Classify every task before acting. Level 3 always stops for explicit approval.
   update phase status, and continue the next already-approved low/medium-risk
   step without asking an empty “continue?” question.
 
+### Executing an approved merge
+
+The user approves a merge in conversation and the agent performs the merge. The
+decision stays with the user; only the mechanical step moved. Four conditions
+are mandatory.
+
+1. The approval request states the PR number, the head SHA, and every changed
+   path with its added and deleted line counts. This replaces what the user
+   would otherwise have read on the pull request page.
+2. The head SHA is re-read immediately before merging. If it differs from the
+   SHA that was approved, the merge stops and approval is requested again
+   against the new SHA. An approval never carries over to a commit it did not
+   name.
+3. The merge method is squash, matching the existing history.
+4. The merge is read back immediately afterwards and the resulting SHA is
+   reported.
+
+If a permission layer blocks the merge, report it and stop. Do not work around
+it.
+
+This procedure does not apply to a change to the merge, risk, destructive, or
+secret rules, nor to the standing authorization itself. The user merges those
+directly, for the same reason PR #73 was excluded from the authorization it
+granted: an agent must not be the one to land an expansion of its own
+permissions.
+
 ## 16. Destructive-operation rules
 
 Every deletion or difficult-to-recover action requires explicit confirmation,

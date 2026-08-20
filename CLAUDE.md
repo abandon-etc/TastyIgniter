@@ -60,6 +60,16 @@ Classify before acting. Level 3 always stops for explicit approval.
 Never merge merely because checks are absent. CI failure, merge conflict, a new
 blocking finding, or scope expansion stops the merge.
 
+The user approves merges in conversation and the agent executes them. The
+approval request must state the PR number, head SHA, and changed paths with
+line counts. The head SHA is re-read immediately before merging and a changed
+SHA voids the approval. The method is squash. The merge is read back and the
+resulting SHA reported. A blocked merge is reported, never worked around.
+
+Changes to the merge, risk, destructive, or secret rules, and to the standing
+authorization itself, are merged by the user directly. See `CLAUDE_HANDOFF.md`
+section 15.
+
 ## Verification standard
 
 Run checks proportionate to the change and report exact results.

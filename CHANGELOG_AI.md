@@ -3173,3 +3173,33 @@ rather than contradicting it.
 No runtime, traffic, revision, image, environment variable, schema, secret,
 business data, or production change. `DELIVERY_ENABLED` remains `false` on the
 revision serving main traffic.
+
+## 2026-08-20 - The agent executes approved merges
+
+Environment: repository documentation only. Status: PR open for the user to
+merge directly. This change modifies the merge rules, so it is excluded from
+the standing docs-only authorization and from the procedure it introduces.
+
+- Recorded the change the user directed: merges are approved in conversation
+  and executed by the agent. The decision stays with the user; only the
+  mechanical step moved.
+- Recorded the four mandatory conditions rather than the headline alone,
+  because each replaces something the user previously got for free by merging
+  on the pull request page. Disclosure of PR number, head SHA, and per-file
+  line counts replaces reading the page. Re-checking the head SHA immediately
+  before merging replaces seeing the page's current state, and a changed SHA
+  voids the approval instead of carrying over. Squash matches existing history.
+  Read-back with the resulting SHA replaces watching the merge land.
+- Recorded that a merge blocked by a permission layer is reported and stopped,
+  never worked around.
+- Recorded the exclusion: changes to the merge, risk, destructive, or secret
+  rules, and to the standing authorization itself, are merged by the user
+  directly. This mirrors why PR #73 was excluded from the authorization it
+  granted. An agent must not land an expansion of its own permissions.
+- Added the rule to `AGENT_WORKFLOW.md` section 8 as well as the two documents
+  named in the instruction. `CLAUDE.md` declares that file authoritative for
+  merge gates, so leaving it silent would have left three documents
+  disagreeing about how a merge happens.
+
+Documentation only. Every changed path is `.md`. No code, runtime, schema,
+secret, business data, or production change.

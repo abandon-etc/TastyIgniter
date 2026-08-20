@@ -212,6 +212,12 @@ Merge policy:
 CI failure, merge conflict, a new review blocker, or scope expansion stops the
 merge. Never merge merely because checks are absent.
 
+The agent executes an approved merge itself, under the four mandatory
+conditions in `CLAUDE_HANDOFF.md` section 15: full disclosure at approval time,
+head SHA re-checked immediately before merging, squash, and read-back. Changes
+to the merge, risk, destructive, or secret rules are merged by the user
+directly.
+
 ## 9. Post-merge continuation
 
 After the user approves merge:
