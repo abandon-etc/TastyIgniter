@@ -3127,3 +3127,49 @@ the user approved it with a mandatory regression condition.
 No runtime, traffic, revision, image, environment variable, schema, secret,
 business data, or production change. The measurements were read-only.
 `DELIVERY_ENABLED` remains `false` on the revision serving main traffic.
+
+## 2026-08-20 - Redact URLs from log records
+
+Environment: repository, plus a read-only Canada staging observation. Status:
+PR open. Level 1, stops for user merge confirmation.
+
+- D3C's first functional case exposed the leak. The Canada staging tagged
+  revision logged, at `staging.ERROR`, a raw provider exception containing a
+  Google console URL. Section 20 lists a provider URL appearing in logs as a
+  stop condition, so D3C stopped there and the user classified it as blocking.
+- Established where it comes from before fixing it. Project-owned code does not
+  log raw provider exceptions: `App\Livewire\DeliveryLocalSearch` catches
+  provider failures without binding the exception and logs only an event name
+  and operation. The entry originates in the upstream geocoder provider, and
+  vendor code is inspection-only.
+- Added `App\Logging\RedactUrlProcessor`, a Monolog processor that strips
+  absolute URLs from a record's message, context strings, and extra strings,
+  leaving non-string values and record identity untouched. The log record is the
+  last project-owned point before a record reaches a handler, so the redaction
+  belongs there rather than in vendor code.
+- Installed it through `App\Logging\RedactSensitiveLogData`, a channel tap
+  referenced from the `stderr` and `single` channels in `config/logging.php`.
+  The runtime uses `LOG_CHANNEL=stderr`; `single` is covered too so the same
+  leak cannot reappear under a different channel.
+- Verified the fix rather than asserting it, despite there being no CI and no
+  local PHP. A container running PHP 8.3.32 and PHPUnit 11.5.56 executed
+  `tests/Unit/Logging/RedactUrlProcessorTest.php`: 12 tests, 19 assertions, all
+  passing. The test asserts against the exact message observed on the D3C
+  revision, not a paraphrase.
+- Recorded the residual limitation in `CLAUDE_HANDOFF.md` section 10 and
+  asserted it in the test. A Throwable placed in log context is normalized after
+  processors run, so a URL inside an exception object is not redacted. Closing
+  that needs formatter-level redaction and is a separate decision.
+- Noted for the pending continuous integration decision: the suite can be run in
+  a container today. What blocked verification was tooling, not the code.
+- Not yet verified end to end. That the processor works is established; that the
+  tap is installed in the deployed application is not, and is the purpose of the
+  authorized Cloud Build reproduction on the live failure path.
+
+Q-011's acceptance covered the failure paths tested at the time. This failure
+mode, an unactivated provider API, was not among them, so this extends that work
+rather than contradicting it.
+
+No runtime, traffic, revision, image, environment variable, schema, secret,
+business data, or production change. `DELIVERY_ENABLED` remains `false` on the
+revision serving main traffic.
