@@ -147,7 +147,7 @@
 | Q-006 | 菜单页 / 购物车 / 结账入口 | 初次验证时当前本地时间不在营业时间内，前台显示 `CLOSED`，导致无法完成加入购物车和 checkout 验证。临时打开本地营业时间后，测试商品可加入购物车，数量可增加 / 减少，可移除商品，并可进入 checkout 表单。 | No | 前台流程 / 后台配置 | 已确认原因是测试时段不在营业时间内；测试后已从 `.local/backups/q006-before-temp-open-20260708-102353.json` 恢复原始营业时间和 collection 配置。未提交订单，未提交预约，未配置真实支付。 | Resolved |
 | Q-007 | Canada staging / Birthday Booking snapshot validation | UTC booking instants were stored correctly, but the default Eloquent `datetime` cast reinterpreted them in the Toronto application timezone after reload. | No | Birthday extension / datetime persistence | Resolved by PR #57 with the extension-owned `UtcDateTime` cast. Canada staging database round trips verified UTC hydration plus correct Toronto daylight-saving and standard-time display for start/end, priced, and cancelled instants. | Resolved |
 | Q-008 | Birthday Booking add-on snapshot hydration | Add-on snapshots could reload in source add-on ID order because the Booking relationship lacked an explicit historical ordering. | No | Birthday extension / snapshot presentation | Resolved by PR #57. The relationship now orders by immutable `sort_order_snapshot` and then snapshot row ID; Canada staging reloaded `First` before `Late` even though `Late` was created first. | Resolved |
-| Q-011 | Canada staging Delivery geocoding failure path | A controlled same-image synthetic failure on 2026-08-20 reproduced an encoded synthetic address and the provider request URL in application/Cloud Run logs. No credential, geometry, SQL, or internal ID exposure was observed in that tested path. The upstream autocomplete paths can also surface provider exception messages in Livewire validation errors. | Yes, blocks Delivery enablement only | Merge Ready PR #69 and deploy the separate project-owned redaction wrapper, then rerun the complete staging log/public-error acceptance while `DELIVERY_ENABLED=false`. Public Nominatim is not approved for production Delivery traffic without a stable application identity, attribution, shared rate limiting, and an accepted operating model. | Open |
+| Q-011 | Canada staging Delivery geocoding failure path | A controlled same-image synthetic failure on 2026-08-20 reproduced an encoded synthetic address and the provider request URL in application/Cloud Run logs. No credential, geometry, SQL, or internal ID exposure was observed in that tested path. PR #69 now sanitizes direct forward/reverse geocoder exceptions and the autocomplete/place-lookup provider boundaries while preserving business validation and allowing programming errors to surface. | Yes, blocks Delivery enablement only | Review updated Ready PR #69. After review and merge, deploy the project-owned redaction wrapper and rerun the complete staging log/public-error acceptance while `DELIVERY_ENABLED=false`. Public Nominatim is not approved for production Delivery traffic without a stable application identity, attribution, shared rate limiting, and an accepted operating model. | Open — staging rerun required |
 
 分类说明：
 
@@ -1981,12 +1981,18 @@ geocoder logging and Livewire error privacy only.
   provider exception messages into Livewire validation errors. Staging debug
   is false, but that setting does not sanitize explicit logs or validation
   messages.
-- A separate project-owned wrapper replaces raw diagnostics with generic event
-  codes and returns the existing generic invalid-address validation message.
-  It does not modify vendor/core or suppress all application logging.
-- Three isolated redaction tests passed with 20 assertions. They prove that
-  synthetic address, URL, and credential markers are absent from validation
-  payloads and that only generic log events are emitted.
+- The project-owned wrapper now covers direct forward and reverse facade
+  exceptions before a collection is returned, as well as the autocomplete and
+  Google place-lookup provider calls. It emits only a generic event and safe
+  operation category, returns the existing generic invalid-address validation,
+  preserves business validation, and does not catch programming `Error`
+  instances. It does not modify vendor/core or suppress all application
+  logging.
+- Seven isolated redaction/regression tests passed with 42 assertions. They
+  prove that synthetic address, URL, and credential markers are absent from
+  validation payloads, only generic log events are emitted, direct forward and
+  reverse exceptions fail closed, business coordinate validation is preserved,
+  and a programming error is not converted into address validation.
 - Both disposable Q-011 Cloud Run Jobs were permanently deleted after the
   test. Cloud Run list readback confirmed that both exact names are absent.
   No synthetic database row, temporary revision, cache, or configuration was
@@ -2000,9 +2006,13 @@ geocoder logging and Livewire error privacy only.
   production Delivery traffic; this remains a separate production operations
   gate and does not expand the redaction fix.
 
+The broader Delivery suite was also attempted without a database or application
+key; database-dependent tests could not run in that isolated environment. No
+database was created or migrated for this remediation.
+
 No Delivery, Pickup, tax, polygon, fee, minimum, schedule, database schema,
 Order, Customer, Reservation, Birthday, payment, mail, production, Render,
-DigitalOcean, secret, or real-data change was made. Next step: review and merge
-the redaction fix PR, deploy it to an isolated Canada staging revision with
-Delivery still closed, rerun Q-011, and only then decide whether Q-011 can be
-resolved.
+DigitalOcean, secret, or real-data change was made. Next step: review the
+updated PR #69; do not merge or deploy until review passes. After review and
+merge, deploy it to an isolated Canada staging revision with Delivery still
+closed, rerun Q-011, and only then decide whether Q-011 can be resolved.

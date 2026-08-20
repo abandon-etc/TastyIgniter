@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace App\Livewire;
 
 use App\Delivery\DeliveryAvailabilityGate;
+use Exception;
+use Igniter\Flame\Geolite\Facades\Geocoder;
+use Igniter\Flame\Geolite\GeoQuery;
+use Igniter\Flame\Geolite\Model\Coordinates;
 use Igniter\Local\Facades\Location;
 use Igniter\Local\Models\Location as LocationModel;
 use Igniter\Main\Traits\ConfigurableComponent;
@@ -13,15 +17,12 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
-use Throwable;
 
 final class DeliveryLocalSearch extends Component
 {
     use ConfigurableComponent;
     use SearchesNearby {
         onSearchNearby as private performSearchNearby;
-        onSelectSuggestion as private performSelectSuggestion;
-        updatedSearchQuery as private performUpdatedSearchQuery;
     }
 
     public bool $hideSearch = false;
@@ -65,20 +66,95 @@ final class DeliveryLocalSearch extends Component
 
     public function updatedSearchQuery(): void
     {
-        try {
-            $this->performUpdatedSearchQuery();
-        } catch (Throwable) {
-            $this->reportProviderFailureAndThrow();
+        if (! $this->searchAutocompleteEnabled) {
+            return;
         }
+
+        if (strlen($this->searchQuery) < 3) {
+            $this->isSearching = false;
+            $this->searchPoint = null;
+            $this->dispatch('resetMap');
+
+            return;
+        }
+
+        $this->isSearching = true;
+        $query = GeoQuery::create($this->searchQuery);
+
+        try {
+            $suggestions = Geocoder::driver()->placesAutocomplete($query);
+        } catch (Exception) {
+            $this->reportProviderFailureAndThrow('autocomplete');
+        }
+
+        $this->placesSuggestions = $suggestions->toArray();
     }
 
     public function onSelectSuggestion(int $index): void
     {
-        try {
-            $this->performSelectSuggestion($index);
-        } catch (Throwable) {
-            $this->reportProviderFailureAndThrow();
+        $suggestion = $this->placesSuggestions[$index] ?? null;
+        if (! $this->searchAutocompleteEnabled || ! $suggestion) {
+            return;
         }
+
+        $this->isSearching = false;
+        $this->searchQuery = $suggestion['title'] ?? null;
+
+        if (array_get($suggestion, 'provider') === 'nominatim') {
+            $placeCoordinates = new Coordinates(
+                (float) $suggestion['data']['latitude'],
+                (float) $suggestion['data']['longitude'],
+            );
+        } else {
+            try {
+                $placeCoordinates = Geocoder::driver('google')
+                    ->getPlaceCoordinates(GeoQuery::create($suggestion['placeId']));
+            } catch (Exception) {
+                $this->reportProviderFailureAndThrow('place_lookup');
+            }
+        }
+
+        $this->searchPoint = [$placeCoordinates->getLatitude(), $placeCoordinates->getLongitude()];
+
+        $this->dispatch(
+            'updateDeliveryLocationMap',
+            lat: $this->searchPoint[0],
+            lng: $this->searchPoint[1],
+            geocoder: $suggestion['provider'],
+        );
+    }
+
+    protected function geocodeSearchQuery($searchQuery)
+    {
+        try {
+            $collection = Geocoder::geocode($searchQuery);
+        } catch (Exception) {
+            $this->reportProviderFailureAndThrow('forward_geocode');
+        }
+
+        return $this->handleGeocodeResponse($collection);
+    }
+
+    protected function geocodeSearchPoint($searchPoint)
+    {
+        throw_if(count(array_filter($searchPoint)) !== 2,
+            ValidationException::withMessages([
+                $this->searchField => lang('igniter.local::default.alert_no_search_query'),
+            ]),
+        );
+
+        [$latitude, $longitude] = $searchPoint;
+
+        try {
+            $collection = Geocoder::reverse($latitude, $longitude);
+        } catch (Exception) {
+            $this->reportProviderFailureAndThrow('reverse_geocode');
+        }
+
+        $userLocation = $this->handleGeocodeResponse($collection);
+        $this->searchQuery = $userLocation->format();
+
+        return $userLocation;
     }
 
     protected function handleGeocodeResponse($collection)
@@ -106,10 +182,11 @@ final class DeliveryLocalSearch extends Component
         ]);
     }
 
-    private function reportProviderFailureAndThrow(): never
+    private function reportProviderFailureAndThrow(string $operation): never
     {
         Log::warning('Delivery geocoder provider request failed.', [
             'event' => 'delivery_geocoder_provider_failure',
+            'operation' => $operation,
         ]);
 
         $this->throwSanitizedGeocoderValidation();

@@ -2728,13 +2728,20 @@ Fix PR pending review; Q-011 remains Open and Delivery remains closed.
 - Source audit traced the log leak to Orange's empty-geocode diagnostics and
   found that autocomplete and suggestion lookup can also surface raw provider
   exception messages in Livewire validation errors.
-- Added a project-owned `DeliveryLocalSearch` wrapper that logs only generic
-  geocoder event codes and returns the existing generic invalid-address
-  validation error. No vendor/core code or global error reporting was changed.
-- Added focused synthetic redaction tests for an empty result, autocomplete
-  provider failure, and suggestion lookup failure. PHP syntax checks passed;
-  the focused suite passed 3 tests with 20 assertions in an isolated PHP 8.3
-  container without staging database access, migration, or seed.
+- Updated the project-owned `DeliveryLocalSearch` wrapper after PR review. It
+  now sanitizes exceptions thrown directly by forward and reverse geocoder
+  facade calls before a collection is returned, and narrows autocomplete and
+  Google place-lookup handling to provider `Exception` boundaries. Logs contain
+  only a generic event plus safe operation category; business validation is
+  preserved and programming `Error` instances are not converted into address
+  validation. No vendor/core code or global error reporting was changed.
+- Expanded the focused synthetic suite to cover empty results, autocomplete,
+  suggestion lookup, direct forward and reverse exceptions, preserved business
+  coordinate validation, and programming-error propagation. PHP syntax and
+  Pint checks passed; the focused suite passed 7 tests with 42 assertions in an
+  isolated PHP 8.3 container without staging database access, migration, or
+  seed. A broader Delivery-suite attempt was blocked only by the intentionally
+  absent local database/application key; no database was created or migrated.
 - Permanently deleted both disposable Q-011 Cloud Run Jobs after testing and
   confirmed that both exact names are absent from the Cloud Run Jobs list. No
   synthetic database row, temporary revision, cache, or configuration was
@@ -2748,6 +2755,6 @@ Fix PR pending review; Q-011 remains Open and Delivery remains closed.
 No Delivery gate, traffic, Location, polygon, fee, minimum, schedule, Pickup,
 tax, database/schema, Order, Customer, Reservation, Birthday, payment, mail,
 production, Render, DigitalOcean, secret, or real-data change is included.
-Next step: merge the redaction fix, deploy it to an isolated Canada staging
-revision with `DELIVERY_ENABLED=false`, rerun Q-011, and keep D3C blocked until
-that staging acceptance passes.
+Q-011 remains `Open — staging rerun required`; `DELIVERY_ENABLED=false` remains
+unchanged. Next step: review the updated PR #69. Do not merge or deploy until
+review passes.
