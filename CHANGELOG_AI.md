@@ -2986,3 +2986,42 @@ The measurement was read-only. Documentation only; every changed path is
 `.md`. No code, runtime, traffic, revision, image, environment variable,
 schema, secret, business data, or production change. `DELIVERY_ENABLED` remains
 `false` and D3C has not started.
+
+## 2026-08-20 - Make tools/fp1.py the single FP-1 implementation
+
+Environment: repository, plus a read-only Canada staging re-measurement.
+Status: PR open. Level 1, and it adds a non-`.md` path, so it falls outside the
+standing docs-only authorization and stops for user merge confirmation. The
+user authorized this specific change explicitly and once.
+
+- Committed the FP-1 reference implementation as `tools/fp1.py` and removed the
+  110-line copy embedded in `CLOUD_RUN_CANADA_STAGING_RUNTIME.md`. Two copies
+  of an implementation drift, and reproducibility is the whole value of a
+  fingerprint.
+- Declared precedence instead of leaving it implicit: where the document's
+  field table and the script disagree, the script wins and the table is the
+  bug. The field table stays, because a reader needs it to interpret a digest
+  table, and the 2026-08-20 baseline digests are unchanged.
+- Verified the committed script rather than assuming the move was lossless.
+  Invoked as `tools/fp1.py` it reproduced the recorded baseline
+  `2127efd6d63de53e6d9fbc5388f9db3fee72d0575eec25a09b9f99e9ad8565d3`, and its
+  output was byte-identical to the copy that produced the original
+  measurement. The only difference from that copy is an added argument guard
+  that prints usage and exits 1 rather than raising TypeError.
+- Confirmed Canada staging had not drifted: FP-1 measured before the move
+  equals the value recorded in PR #75.
+- Added the FP-1 pre/post gate to the D3C plan in `CLAUDE_HANDOFF.md` sections
+  18 and 19. FP-1 for the main-traffic revision is recorded before the first
+  D3C action and recomputed after the last. An identical pair is the accepted
+  evidence that D3C never touched the live path, and "no change was intended"
+  is explicitly not accepted in its place. A differing pair stops work, and the
+  per-field digest table names the field that moved.
+- Recorded two consequences of that gate. A changed `revision` or
+  `traffic_percent` means traffic moved, which is outside D3C scope and needs
+  the separate cutover gate. FP-1 refuses to run while traffic is split across
+  revisions, so a split part way through D3C surfaces as an error instead of a
+  silent pass.
+
+The measurement was read-only. No runtime, traffic, revision, image,
+environment variable, schema, secret, business data, or production change.
+`DELIVERY_ENABLED` remains `false` and D3C has not started.
