@@ -359,9 +359,22 @@ Classify every task before acting. Level 3 always stops for explicit approval.
 ## 15. Merge rules
 
 - Create Ready PRs only after no blocking self-review finding remains.
-- Level 0 docs-only PRs may be auto-merged only if the user has explicitly
-  granted standing docs-only merge authorization. No such authorization is
-  assumed by this handoff.
+- Level 0 docs-only PRs may be auto-merged under the standing authorization the
+  user granted on 2026-08-20. That authorization applies only when **all** of
+  the following hold:
+  1. every changed path ends in `.md`;
+  2. the change records decisions, findings, or state the user already
+     confirmed, and introduces no new business, pricing, tax, schedule, or
+     policy value the user has not confirmed;
+  3. Review A and Review B leave no blocking finding;
+  4. `git diff --check` and the sensitive-data scan are clean.
+  A PR is still created, and the merge is reported to the user with the PR
+  number and what changed.
+  The authorization does **not** cover any non-`.md` path (including
+  `.env.example`, configuration, code, and CI/workflow files), any change to
+  the risk, merge, destructive, or secret rules, any change to the
+  authorization itself, or any Level 1/2/3 work. Those still stop for
+  confirmation.
 - Level 1 normally stops once at `Ready to merge` for user confirmation.
 - Level 2 may combine an approved merge and isolated staging execution, but
   main-traffic cutover still requires separate approval.

@@ -2880,3 +2880,27 @@ the approved Job deletion recorded above.
 
 Next step: review this documentation PR. Keep `DELIVERY_ENABLED=false` until a
 separately approved D3C isolated enablement.
+
+## 2026-08-20 - Add CLAUDE.md and record docs-only merge authorization
+
+Environment: repository documentation only. Status: PR pending user merge.
+
+- Added `CLAUDE.md`. Claude Code loads it automatically at session start, while
+  `AGENT_WORKFLOW.md` and `CLAUDE_HANDOFF.md` are not, so a fresh session
+  previously began without the baseline check, verification standard, merge
+  gates, destructive-operation rules, secret handling, or standing boundaries
+  in context.
+- Kept `CLAUDE.md` a pointer rather than a copy. Both source documents are
+  declared authoritative and win any disagreement, so the summary cannot drift
+  into silently contradicting them.
+- Recorded the standing Level 0 docs-only merge authorization the user granted
+  on 2026-08-20, with its four conditions and its exclusions, in
+  `CLAUDE_HANDOFF.md` section 15, `AGENT_WORKFLOW.md` section 8, and
+  `CLAUDE.md`. The previous text asserting that no such authorization existed
+  is replaced.
+- Excluded this PR from that authorization and left it for user merge, because
+  it is the change that grants the authorization. Self-merging it would mean
+  self-certifying a permission expansion.
+
+Documentation only. No code, runtime, schema, secret, business data, or
+production change. `DELIVERY_ENABLED` remains `false` and D3C has not started.
