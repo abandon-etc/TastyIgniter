@@ -2072,3 +2072,41 @@ Impact: Delivery geocoder privacy gate only; Delivery remains globally closed.
 Next step: review and merge the Q-011 validation PR. Keep
 `DELIVERY_ENABLED=false`; freeze the project handoff baseline before any
 separately approved D3C enablement work.
+
+## 2026-08-20 - Claude handoff baseline freeze
+
+Environment: repository, Canada staging read-only audit, and documentation.
+Status: docs-only handoff PR pending review. Impact: project process and
+handoff records only.
+
+- Clean `4.x` was synchronized to PR #70 merge SHA
+  `f731f775e5d3f069a959641323b544007ca21552`; no open Delivery implementation
+  PR required continuation at freeze time.
+- Fresh Cloud Run readback confirmed
+  `le-chateau-canada-staging-d2fix-31821289` at 100% traffic,
+  `le-chateau-canada-staging-q011-3fc841d` tagged at 0%, HTTP `200 ok`, and
+  `DELIVERY_ENABLED=false`. The Q-011 revision is latest Ready but is not the
+  main-traffic revision.
+- Read-only infrastructure checks confirmed the configured runtime identity,
+  zero user-managed service-account keys, runnable Cloud SQL reference,
+  readable Storage and Artifact references, five of five resolvable Secret
+  references without reading values, and a successful regional Q-011 build.
+- `CLAUDE_HANDOFF.md` freezes the completed D1/D2/D3B and Q-011 state, Birthday
+  and payment boundaries, known issues, fallbacks, production gates, exact D3C
+  next phase, acceptance criteria, and stop conditions.
+- `AGENT_WORKFLOW.md` introduces risk-based autonomous review: Level 0-3,
+  implementation Review A, adversarial Review B, proportional verification,
+  Ready PR rules, merge gates, destructive-operation approval, secret handling,
+  and automatic continuation after an approved merge.
+- Level 0 docs and routine Level 1/2 work no longer require a second agent by
+  default. Payment, authentication/authorization, privacy architecture,
+  destructive migration, money/availability races, production incidents,
+  security boundaries, major refactors, and user-requested reviews still do.
+- No standing docs-only auto-merge permission is assumed. The handoff PR must
+  stop at the merge gate, and its eventual merge SHA becomes the
+  `CLAUDE HANDOFF BASELINE`.
+
+No Cloud Run setting, revision, traffic, database row/schema, Delivery Area,
+fee, minimum, hours, Pickup, Birthday, Reservation, payment, production,
+Render, DigitalOcean, secret, or real data was changed. Do not start D3C before
+the handoff PR is merged.
