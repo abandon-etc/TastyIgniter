@@ -118,6 +118,11 @@ is **Delivery D3C isolated enablement**: a Canada staging revision whose only
 intended gate change is `DELIVERY_ENABLED=true`, at 0% main traffic behind a
 tagged URL, verified with synthetic data only.
 
+CI has never run in this repository. Both workflows report `active`, but the
+run history is empty, so an empty check list on a pull request means untested,
+not passing. `CLAUDE_HANDOFF.md` section 10 records this as an open decision
+point to settle after D3C and before substantive code work.
+
 `CLAUDE_HANDOFF.md` sections 18-20 hold the exact next phase, the D3C
 acceptance criteria, and the stop conditions. Treat that document as current
 truth rather than this paragraph.
