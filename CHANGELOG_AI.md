@@ -2804,3 +2804,33 @@ failure path; Delivery remains globally closed.
 Q-011 is `Resolved` for the current Canada staging tested failure path. Review
 and merge this validation PR, keep `DELIVERY_ENABLED=false`, and freeze the
 project handoff baseline before any separately approved D3C enablement work.
+
+## 2026-08-20 - Prepared the Claude migration handoff freeze
+
+Environment: repository, Canada staging read-only audit, and docs. Status:
+docs-only handoff PR pending review; Delivery remains closed.
+
+- Synced clean `4.x` to PR #70 merge SHA
+  `f731f775e5d3f069a959641323b544007ca21552` and confirmed no open Delivery
+  implementation PR before creating the handoff branch.
+- Performed a fresh read-only GCP audit. Main traffic remained 100% on
+  `le-chateau-canada-staging-d2fix-31821289`; Q-011 revision
+  `le-chateau-canada-staging-q011-3fc841d` remained tagged at 0%; health returned
+  `200 ok`; and `DELIVERY_ENABLED=false` remained unchanged.
+- Confirmed the runtime identity has no user-managed key, the Cloud SQL
+  reference is runnable, the Storage reference is readable, five unique Secret
+  Manager references resolve without reading values, the tested Artifact image
+  is readable, and the regional Q-011 build status is `SUCCESS`.
+- Added `CLAUDE_HANDOFF.md` as the standalone project baseline covering
+  infrastructure, Delivery, Birthday, payment, security, known issues,
+  production gates, fallbacks, exact D3C next phase, acceptance, and stop
+  conditions.
+- Added `AGENT_WORKFLOW.md` with Level 0-3 risk classification, internal Review
+  A/B, verification, PR/merge gates, destructive approval, secret handling,
+  and post-merge continuation. No standing auto-merge permission is assumed.
+- This task made no runtime, traffic, Delivery, Pickup, Birthday, Reservation,
+  payment, schema, production, Render, DigitalOcean, secret, real-data, or
+  fallback-infrastructure change.
+
+The merge commit of the handoff PR becomes the `CLAUDE HANDOFF BASELINE`.
+Do not start D3C until that PR is merged.
