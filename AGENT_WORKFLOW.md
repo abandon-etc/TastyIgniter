@@ -201,7 +201,9 @@ Before creating a PR:
 
 Merge policy:
 
-- Level 0: auto-merge only under explicit standing docs-only authorization.
+- Level 0: auto-merge is permitted under the standing docs-only authorization
+  granted 2026-08-20. See `CLAUDE_HANDOFF.md` section 15 for the exact
+  conditions and exclusions. Anything outside them stops for confirmation.
 - Level 1: normally request one merge confirmation.
 - Level 2: an already-approved task may continue through merge and isolated
   staging, but main-traffic cutover is a separate gate.
