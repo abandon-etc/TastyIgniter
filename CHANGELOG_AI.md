@@ -3173,3 +3173,37 @@ rather than contradicting it.
 No runtime, traffic, revision, image, environment variable, schema, secret,
 business data, or production change. `DELIVERY_ENABLED` remains `false` on the
 revision serving main traffic.
+
+## 2026-08-20 - Geocoding daily cap and container-based testing
+
+Environment: repository documentation only. Status: PR open; eligible for
+auto-merge under the standing Level 0 docs-only authorization.
+
+- Backfilled the Google geocoding daily usage cap at 500 requests per day with
+  a budget alert, closing the last open numeric value in the geocoder decision.
+  Recorded the reasoning rather than the number alone, because the number is
+  not derived from expected usage. Geocoding is free for the first 10,000
+  requests a month and USD 5.00 per 1,000 after that; D3C costs a few hundred
+  requests and ordinary trading is around 2,700 a month, so both are free. The
+  cap exists for a looping defect, which can burn a month of free allowance in
+  an hour. At 500 a day the worst case is roughly USD 25.00 a month and the
+  anomaly surfaces early.
+- Corrected the row reference while making the change. The pending cap value
+  was in decision 24, `Geocoder provider`, not decision 23, `Provider
+  unavailable`, which concerns fail-closed behaviour and carries no cap. The
+  described text identified the row unambiguously, so the intent was clear; the
+  index was not.
+- Recorded that the PHP suite can be run in a container. On 2026-08-20 a
+  container running PHP 8.3.32 and PHPUnit 11.5.56 executed a project test file
+  with no local PHP toolchain and no CI. This changes the continuous
+  integration decision from a bet on whether enabling it would fail broadly
+  into something measurable beforehand: run the suite in a container, triage
+  what it reports, then decide.
+- Recorded a deferred static check for the Monolog redaction gap. The existing
+  test asserts that the gap exists but cannot stop new code from passing a
+  Throwable into log context, which is how the gap would begin to matter. A
+  check that fails when project-owned code does so would close that route.
+
+Documentation only. Every changed path is `.md`. No code, runtime, schema,
+secret, business data, or production change. `DELIVERY_ENABLED` remains `false`
+on the revision serving main traffic.

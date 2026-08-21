@@ -2147,10 +2147,11 @@ and disposable job resources only.
   stores no actor or timestamp, and holiday closure relies on an operator
   toggling Delivery off in admin for the day. Both were explained before
   confirmation and accepted for first launch.
-- Two confirmed directions still need a number. The tax rate and whether the
-  Delivery fee is taxable in Quebec require accountant confirmation, and the
-  Google geocoding daily usage cap is not yet chosen. Staging tax remains
-  disabled, so neither blocks D3C.
+- One confirmed direction still needs a number. The tax rate and whether the
+  Delivery fee is taxable in Quebec require accountant confirmation. Staging
+  tax remains disabled, so it does not block D3C. The Google geocoding daily
+  usage cap was set at 500 requests per day, with a budget alert, on
+  2026-08-20.
 - Audited 17 previously undocumented Cloud Run Jobs left from the July
   initialization phase. Three could write to the database
   (`birthday-migration-f40531e4`, `tastyigniter-empty-migrate-178366`,
