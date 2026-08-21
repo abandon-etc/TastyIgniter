@@ -3405,3 +3405,48 @@ authorization.
 Documentation only. Every changed path is `.md`. No code, runtime, schema,
 secret, business data, or production change. No key value and no billing
 identifier is recorded in the repository.
+
+## 2026-08-21 - D3C acceptance methodology and the first matrix findings
+
+Environment: Canada staging, 0%-traffic revisions only. Status: PR open;
+eligible for auto-merge under the standing Level 0 docs-only authorization.
+
+- Recorded that rendering is not execution, and applied it backwards. An item
+  worded as offering or preserving something is not passed by seeing the
+  element. Two rows previously counted as passed were downgraded: pickup being
+  offered while the provider was unavailable, where the link was never
+  followed, and delivery being closed outside hours, where a label was read but
+  no order was attempted and refused.
+- Recorded that a tagged 0%-traffic URL is not isolated until `APP_URL`,
+  `ASSET_URL`, and `CLOUD_RUN_SERVICE_URL` are pinned to it. The application
+  builds redirects from `APP_URL`, so the first server-issued redirect lands on
+  the revision serving main traffic, where the Delivery gate is closed and the
+  selection is normalised away. The failure is silent: the page looks normal
+  and only the hostname differs. One in-area address result taken before the
+  fix was discarded and re-run rather than reasoned about.
+- Recorded a blocking defect. On Friday 2026-08-21 at 12:04 Montreal, inside
+  configured delivery hours of Monday to Friday 12:00-21:00, the storefront
+  reported delivery closed and the server offered no delivery time slots at
+  all, while pickup at the same moment was available. The 25-minute delivery
+  preparation time does not explain it; the earliest slot would fall inside the
+  window. Root cause is not yet identified, and it blocks fee, threshold, and
+  checkout verification.
+- Recorded that time-dependent checks wait for their real window rather than
+  having conditions manufactured, with the approval and restoration protocol
+  for the case where waiting genuinely cannot work.
+- Recorded the shared database as a structural limit on isolation. It has now
+  blocked two per-revision changes: an invalid provider key, and different
+  opening hours. A separate database for isolated testing is noted as a future
+  direction and not undertaken.
+- Recorded that address autocomplete does not function because the Places API
+  is not enabled on the project, along with what a customer experiences as a
+  result, so that enabling it can be decided as a business question with
+  costing rather than assumed.
+- Recorded that the one-hour gap between delivery closing at 21:00 and the shop
+  closing at 22:00 is deliberate and achieved through the two schedules
+  differing. No document claimed a missing cut-off, so nothing was corrected;
+  the fact is recorded so that none does later.
+
+No runtime change beyond deploying 0%-traffic revisions. Main traffic remained
+on its revision throughout, and its fingerprint was unchanged before and after
+every deployment.
