@@ -5,8 +5,11 @@
 # Set the default behavior, in case people don't have core.autocrlf set.
 text=auto
 
+# Shell scripts are entrypoints in Linux images. A CRLF checkout breaks
+# the shebang and the container exits 127 before it can listen.
+*.sh text eol=lf
+
 Dockerfile.render text eol=lf
-docker/render/*.sh text eol=lf
 docker/render/*.template text eol=lf
 docker/render/*.ini text eol=lf
 tools/*.py text eol=lf
