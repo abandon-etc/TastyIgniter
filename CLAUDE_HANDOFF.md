@@ -414,12 +414,40 @@ This is an operational risk with a date on it, not a background concern. The
 upgrade has to happen before that date whether or not launch is ready, and the
 date belongs in the launch schedule rather than in someone's memory.
 
-The remaining credit and the expiry date are **not recorded here yet**.
-Neither is exposed by the Cloud Billing API: `gcloud billing accounts
-describe` returns only currency, display name, and open state. Both are
-readable from `Billing > Credits` in the console for the billing account
-linked to this project, whose currency is CAD. Record the actual values here
-once read; the trial amount varies by currency and must not be assumed.
+Read from the console on 2026-08-21. The billing account currency is CAD.
+
+| Item | Value |
+| --- | --- |
+| Trial credit granted | CA$425.27 |
+| Trial credit remaining | CA$204.13, 48% |
+| Trial period | 2026-07-09 to 2026-10-08 |
+| Days remaining at readback | 48 |
+| Gross cost, 2026-08-01 to 2026-08-21 | CA$103 |
+| Net cost for that period | CA$0.00, fully offset by credit and free tier |
+
+Neither figure is exposed by the Cloud Billing API; `gcloud billing accounts
+describe` returns only currency, display name, and open state. Both come from
+`Billing > Credits` in the console.
+
+**The effective deadline is earlier than 2026-10-08.** The console states that
+the trial ends at whichever comes first, the credit being spent or the period
+ending, and that it can be neither paused nor extended. August ran at roughly
+CA$5.00 a day gross, so CA$204.13 covers about 41 more days and lands near
+2026-10-01, about a week before the period ends.
+
+That date is an estimate from an observed rate, not a date Google has given.
+Treat 2026-10-01 as the working deadline, and re-read the balance rather than
+trusting the projection: the rate will move as D3C and later phases add usage.
+
+When the trial ends the console states that every resource created during it
+stops. That is the Cloud Run service, the Cloud SQL instance and its data, and
+everything else listed above.
+
+**Schedule the upgrade for mid-September 2026**, not the week before the
+deadline. Upgrading, setting the 500-per-day Geocoding quota, and creating the
+budget alert are one operation, for the reason given in the gate above.
+
+The budget alert does not exist yet. It is outstanding.
 
 ## 12. Fallback infrastructure
 
