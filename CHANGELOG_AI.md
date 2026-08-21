@@ -3450,3 +3450,62 @@ eligible for auto-merge under the standing Level 0 docs-only authorization.
 No runtime change beyond deploying 0%-traffic revisions. Main traffic remained
 on its revision throughout, and its fingerprint was unchanged before and after
 every deployment.
+
+## 2026-08-21 - Weekday schedules are shifted by one under a Canadian locale
+
+Environment: repository documentation, plus code inspection and a container
+probe. Status: PR open; eligible for auto-merge under the standing Level 0
+docs-only authorization.
+
+- Found the cause of delivery reporting itself closed on a Friday inside its own
+  hours, from code and a reproducible probe, with no database access and no
+  waiting. `Igniter\Flame\Translation\Localization` calls `Carbon::setLocale()`
+  on every request; the site runs `fr_CA`; Carbon 3.13.1 resolves the first day
+  of the week from the locale and returns Sunday for `fr_CA` and `en_CA` while
+  returning Monday for the default, `en`, and `fr`. `WorkingHour::$weekDays`
+  numbers rows from Monday, but `WorkingHour::getDay()` resolves them through
+  `startOfWeek()`. Hours entered as Monday to Friday are applied as Sunday to
+  Thursday.
+- Recorded a false lead deliberately, because discarding it was the step that
+  mattered. `HasWorkingHours::getWorkingHourByDateAndType` uses `format('N')`,
+  Monday=1, against Monday=0 storage. It fits the symptom exactly and is a real
+  off-by-one, but it has no callers anywhere and never runs. Checking callers
+  before believing it prevented a repair to dead code and a false claim of a fix.
+- Surveyed what else is affected. Delivery, restricted to five days, is the only
+  schedule that exposes it. Collection and opening are open every day, so the
+  shift lands on an open day and stays invisible; reservations use the opening
+  schedule and inherit that. Birthday is structurally immune: it builds
+  availability from fixed slots holding only code, start, end, label, and
+  capacity, and never constructs a weekly schedule.
+- Recorded that the latent cases are the dangerous ones. Restricting any of those
+  schedules by day, for a holiday or a single closure, brings the same failure
+  back.
+- Recorded a forbidden repair. Entering Sunday to Thursday in the admin to obtain
+  Monday to Friday behaviour works immediately and permanently decouples what the
+  screen says from what the system means. Anyone later correcting the screen to
+  read correctly breaks it again, with nothing to explain why. The correct
+  direction is to fix the first day of the week on the project side, with the
+  blast radius on anything resting on week boundaries assessed before proposing
+  it.
+- Recorded locale-dependent behaviour as a standing risk category, this being the
+  second such defect after the Q-005 language fallback, and added a money
+  handling check under `fr_CA` to the acceptance table because the decimal
+  separator differs and the fee, free threshold, and minimum are compared
+  numerically.
+- Recorded the delivery hours change confirmed on 2026-08-21, from Monday to
+  Friday 12:00-21:00 to every day 12:00-21:00, keeping the original value and the
+  change date rather than overwriting them. The stored schedule is deliberately
+  not updated yet: opening it to seven days would hide the defect exactly as
+  pickup already does, and would destroy the Sunday observation that is the
+  remaining end-to-end confirmation.
+- Removed the weekend-closed acceptance item, which is no longer expected
+  behaviour, and restated the hours item as delivery being unorderable before
+  12:00 and after 21:00 on any day.
+- Added four acceptance checks for the owner's delivery on/off switch, which
+  decision 6's holiday plan depends on and which had never been tested: how long
+  it takes to take effect, what happens to a customer already mid-order, whether
+  delivery disappears or only blocks at checkout, and whether switching back on
+  fully restores. They require writing to a shared setting and will stop for
+  approval first.
+
+Documentation only. Every changed path is `.md`. No stored value was changed.
