@@ -111,24 +111,25 @@ non-sensitive error category.
 
 ## Current state
 
-As of 2026-08-20, Delivery is configured but globally closed
-(`DELIVERY_ENABLED=false`), and all 24 previously pending business decisions in
-`DELIVERY_D3_BUSINESS_PARAMETER_PLAN.md` are confirmed. The next approved phase
-is **Delivery D3C isolated enablement**: a Canada staging revision whose only
-intended gate change is `DELIVERY_ENABLED=true`, at 0% main traffic behind a
-tagged URL, verified with synthetic data only.
+Delivery is configured but globally closed. `DELIVERY_ENABLED` is the gate:
+false means the storefront is Pickup-only whatever the stored Delivery settings
+say. All 24 business decisions in `DELIVERY_D3_BUSINESS_PARAMETER_PLAN.md` are
+confirmed.
 
 CI has never run in this repository. Both workflows report `active`, but the
 run history is empty, so an empty check list on a pull request means untested,
-not passing. `CLAUDE_HANDOFF.md` section 10 records this as an open decision
-point to settle after D3C and before substantive code work.
+not passing. `CLAUDE_HANDOFF.md` section 10 records this.
 
-`CLAUDE_HANDOFF.md` sections 18-20 hold the exact next phase, the D3C
-acceptance criteria, and the stop conditions. Treat that document as current
-truth rather than this paragraph.
+D3C is in progress. Its current state, acceptance table, deployed test
+revisions, and outstanding items live in `D3C_PROGRESS.md`. Do not restate any
+of them here. `CLAUDE_HANDOFF.md` sections 18-20 hold the phase definition, the
+acceptance criteria, and the stop conditions.
 
 ## Records to update
 
 Substantive changes append a dated entry to `CHANGELOG_AI.md` and, when
 configuration or runtime state is involved, to `ADMIN_CONFIGURATION_TRACKER.md`
 and the relevant runtime document.
+
+Anything that changes as work proceeds belongs in `D3C_PROGRESS.md` and nowhere
+else. One fact, one file. See `AGENT_WORKFLOW.md` section 8a.
