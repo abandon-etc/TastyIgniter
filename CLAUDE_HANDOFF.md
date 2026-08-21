@@ -351,6 +351,75 @@ including the untouched case, and
 registration and the configuration shape. The remaining step is verified on a
 deployed revision by reading back which provider answered.
 
+### Weekday schedules are shifted by one under a Canadian locale
+
+Delivery reports itself closed on Friday inside its configured Monday to Friday
+window. Root cause is confirmed from code plus a reproducible probe, without
+database access.
+
+1. `Igniter\Flame\Translation\Localization` calls `Carbon::setLocale()` on
+   every request. This site runs `fr_CA`.
+2. Carbon 3.13.1 resolves the first day of the week from the locale. Under
+   `fr_CA` and `en_CA`, `startOfWeek()` returns **Sunday**; under the default,
+   `en`, and `fr` it returns Monday. Verified by running Carbon directly.
+3. `WorkingHour::$weekDays` is `['Mon','Tue','Wed','Thu','Fri','Sat','Sun']`, so
+   the admin labels stored index 0 as Monday.
+4. `WorkingHour::getDay()` computes `startOfWeek()->addDays($weekday)` and
+   formats the day name, so index 0 resolves to Sunday.
+
+A schedule entered as Monday to Friday is therefore interpreted as Sunday to
+Thursday, and Friday and Saturday become closed.
+
+**A false lead worth recording.** `HasWorkingHours::getWorkingHourByDateAndType`
+uses `format('N')`, which is Monday=1, against Monday=0 storage. It is a genuine
+off-by-one and it fits the symptom exactly, but the method has no callers
+anywhere in vendor, app, or extensions. It is dead code and not on the live
+path. Checking callers before believing it prevented a fix to something that
+does not run, followed by a false claim of repair.
+
+#### What else is affected
+
+| Schedule | Days configured | Effect |
+| --- | --- | --- |
+| Delivery | Monday to Friday | Exposed. Currently failing |
+| Collection, pickup | All seven | Latent. Any shift still lands on an open day |
+| Opening | All seven | Latent, as above |
+| Reservation | Uses the opening schedule | Affected only if opening hours are ever restricted by day |
+| Birthday | Not applicable | Structurally immune |
+
+Birthday builds availability from `config('birthday_booking.slots')` through
+`App\BirthdayBooking\BirthdaySlot`, whose fields are code, start, end, label,
+and capacity. It holds no weekday and never constructs a `WorkingSchedule`.
+
+The latent cases are the dangerous ones: they are invisible only because those
+schedules are open every day. Restricting any of them by day, for a holiday, a
+seasonal change, or a single closure, brings the same failure back.
+
+#### Do not fix it by compensating in the admin
+
+Entering Sunday to Thursday to obtain Monday to Friday behaviour works
+immediately and is forbidden. It permanently decouples what the screen says
+from what the system means: the interface would read Sunday while the effect is
+Monday. Anyone who later corrects it to what it should say, including the owner,
+breaks it again, and nothing on the screen explains why.
+
+The correct direction is to fix the first day of the week on the project side so
+that the admin is what-you-see-is-what-you-get. Assess the blast radius before
+proposing it: anything else that rests on week boundaries, such as weekly
+reporting or period statistics, moves with it. Do not change it globally without
+that assessment.
+
+### Locale-dependent behaviour is a standing risk here
+
+This is the second defect caused by locale, after the Q-005 language fallback.
+The site runs `fr_CA`, which differs from the common defaults in more than
+translation: the first day of the week, and decimal and currency formatting.
+
+Treat locale-sensitive behaviour as a category to check rather than assume.
+Money handling under `fr_CA` is on the acceptance list for this reason: the
+decimal separator differs, and the CA$5.00 fee, the CA$80.00 free threshold, and
+the CA$20.00 minimum are all compared numerically somewhere.
+
 ### Nominatim production gate
 
 Public Nominatim is not approved for production Delivery traffic for the
