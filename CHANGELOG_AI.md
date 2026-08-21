@@ -3253,9 +3253,9 @@ auto-merge under the standing Level 0 docs-only authorization.
   the Cloud Billing API does not expose either figure.
 - Recorded that the effective deadline is earlier than the period end. The
   console states the trial ends at whichever comes first, credit spent or
-  period elapsed, and cannot be paused or extended. August ran near CA$5.00 a day, so
-  the remaining balance covers roughly 41 days and lands about 2026-10-01,
-  around a week early.
+  period elapsed, and cannot be paused or extended. August ran near CA$5.00 a
+  day, so the remaining balance covers roughly 41 days and lands about
+  2026-10-01, around a week early.
 - Labelled that date as an estimate from an observed rate rather than a date
   Google has given, and said to re-read the balance rather than trust the
   projection, because D3C and later phases will change the rate.
