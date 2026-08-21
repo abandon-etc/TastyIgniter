@@ -3240,3 +3240,34 @@ authorization.
 Documentation only. Every changed path is `.md`. No code, runtime, schema,
 secret, business data, or production change. No billing account identifier is
 recorded in the repository.
+
+## 2026-08-21 - Record the actual free-trial figures and the working deadline
+
+Environment: repository documentation only. Status: PR open; eligible for
+auto-merge under the standing Level 0 docs-only authorization.
+
+- Replaced the trial placeholder recorded a day earlier with figures read from
+  the console: CA$425.27 granted, CA$204.13 remaining at 48%, trial period
+  2026-07-09 to 2026-10-08 with 48 days left, and CA$103 gross against CA$0.00
+  net for 2026-08-01 to 2026-08-21. The placeholder existed for one PR because
+  the Cloud Billing API does not expose either figure.
+- Recorded that the effective deadline is earlier than the period end. The
+  console states the trial ends at whichever comes first, credit spent or
+  period elapsed, and cannot be paused or extended. August ran near CA$5.00 a day, so
+  the remaining balance covers roughly 41 days and lands about 2026-10-01,
+  around a week early.
+- Labelled that date as an estimate from an observed rate rather than a date
+  Google has given, and said to re-read the balance rather than trust the
+  projection, because D3C and later phases will change the rate.
+- Recorded the console's stated consequence: every resource created during the
+  trial stops when it ends, which is the whole of Canada staging including the
+  Cloud SQL data.
+- Recorded the scheduling decision: upgrade in mid-September 2026 rather than
+  the week before the deadline, with the upgrade, the 500-per-day quota, and
+  the budget alert performed as one operation.
+- Recorded that the budget alert does not exist yet.
+- The billing account identifier is deliberately still not written into the
+  repository. It is a financial identifier and the gate does not need it.
+
+Documentation only. Every changed path is `.md`. No code, runtime, schema,
+secret, business data, or production change.
