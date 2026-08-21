@@ -3207,3 +3207,36 @@ auto-merge under the standing Level 0 docs-only authorization.
 Documentation only. Every changed path is `.md`. No code, runtime, schema,
 secret, business data, or production change. `DELIVERY_ENABLED` remains `false`
 on the revision serving main traffic.
+
+## 2026-08-20 - Two billing production gates
+
+Environment: repository documentation only, plus a read-only billing lookup.
+Status: PR open; eligible for auto-merge under the standing Level 0 docs-only
+authorization.
+
+- Recorded that the confirmed Geocoding daily cap of 500 requests is not in
+  place, because a free-trial billing account cannot edit quota overrides. The
+  value is decided but unenforced, and the document now says so rather than
+  implying the cap protects anything today.
+- Recorded the coupling that makes this dangerous, as a production gate. What
+  protects the project now is the trial itself: trial usage draws down trial
+  credit and a real bill requires a manual upgrade. That protection ends at the
+  instant of upgrade, which is the same instant the quota becomes settable. The
+  gate is written as "in the same act", because a gap between upgrading and
+  capping is exactly the window a looping defect would spend through.
+- Recorded the trial expiry as a second production gate. Google states that
+  resources created under a free trial may be removed and not recovered if the
+  trial ends without an upgrade. The whole of Canada staging sits in that
+  project, so the expiry is a dated operational risk that belongs in the launch
+  schedule.
+- Did not record the remaining credit or the expiry date, and said why rather
+  than leaving a bare gap. Neither is exposed by the Cloud Billing API;
+  `gcloud billing accounts describe` returns only currency, display name, and
+  open state. Both are readable from the console credits page, and the document
+  names that page and its owner.
+- Noted that the billing account currency is CAD, so the trial amount must be
+  read rather than assumed from a figure quoted in another currency.
+
+Documentation only. Every changed path is `.md`. No code, runtime, schema,
+secret, business data, or production change. No billing account identifier is
+recorded in the repository.
