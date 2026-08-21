@@ -335,6 +335,13 @@ failure would be pre-existing state becoming visible, not a regression
 introduced by enabling CI. Budget a triage pass for it rather than treating the
 first red run as a blocker on whichever change happens to trigger it.
 
+The suite can be run in a container today, which changes the shape of this
+decision. On 2026-08-20 a container running PHP 8.3.32 and PHPUnit 11.5.56
+executed a project test file successfully, with no local PHP toolchain and no
+CI. Whether enabling CI would fail broadly is therefore measurable in advance
+rather than a bet: run the suite in a container, triage what it reports, then
+decide. What blocked verification was tooling, not the code.
+
 ### Log redaction does not reach inside a Throwable
 
 `App\Logging\RedactUrlProcessor` strips absolute URLs from a log record's
@@ -349,6 +356,12 @@ an exception object directly. It is asserted in
 `tests/Unit/Logging/RedactUrlProcessorTest.php` so it stays visible rather than
 being assumed closed. Closing it would need formatter-level redaction, which is
 a larger change and a separate decision.
+
+The test asserts that the gap exists. It cannot stop new code from introducing
+a Throwable into log context, which is the way the gap would actually start to
+matter. A static check that fails when project-owned code passes a Throwable
+into a logging call would close that route. Recorded as a deferred task, not a
+blocker.
 
 ## 11. Production gates
 

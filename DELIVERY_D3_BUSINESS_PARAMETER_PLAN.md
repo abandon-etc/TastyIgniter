@@ -374,11 +374,23 @@ fee composition while using only native server-side behavior.
 ## User decision table
 
 The `User final value` column records only values explicitly confirmed by the
-user. As of 2026-08-20 every row in this table is confirmed. Two confirmed
-directions still carry an outstanding numeric value: the tax rate and Delivery
-fee applicability await accountant confirmation, and the Google geocoding daily
-usage cap is not yet chosen. Neither blocks D3C isolated acceptance, because
-staging tax remains disabled and D3C uses synthetic addresses only.
+user. As of 2026-08-20 every row in this table is confirmed. One confirmed
+direction still carries an outstanding numeric value: the tax rate and Delivery
+fee applicability await accountant confirmation. That does not block D3C
+isolated acceptance, because staging tax remains disabled and D3C uses
+synthetic addresses only.
+
+The Google geocoding daily usage cap, left open when the direction was
+confirmed, was set on 2026-08-20 at 500 requests per day with a budget alert.
+
+Geocoding bills nothing for the first 10,000 requests a month and USD 5.00 per
+1,000 after that. D3C consumes a few hundred requests, and ordinary trading of
+roughly 30 orders a day at one to three lookups each is about 2,700 a month, so
+both sit inside the free allowance at zero cost. The cap is therefore not aimed
+at ordinary use. It is aimed at a defect that loops: an unbounded retry can
+burn a month of free allowance within an hour. At 500 a day the worst case is
+roughly USD 25.00 a month and the anomaly surfaces early, instead of arriving
+later as a bill.
 
 | Parameter | Options | Technical constraint | Recommended value | User final value |
 | --- | --- | --- | --- | --- |
@@ -419,7 +431,7 @@ staging tax remains disabled and D3C uses synthetic addresses only.
 | Multiple Location match | Nearest / manual choice | Native flow selects nearest matching Location | Keep native nearest while only one Location exists | Keep native nearest matching Location; confirmed 2026-08-20 |
 | No Delivery Area | Block Delivery | Native launch requires at least one area | Fail closed | Fail closed and block Delivery ordering; confirmed 2026-08-20 |
 | Provider unavailable | Retry / Pickup / contact | Chain can fail; no sensitive diagnostics in response | Fail closed, preserve cart, offer Pickup | Fail closed, preserve the cart, offer Pickup, expose no diagnostics; confirmed 2026-08-20 |
-| Geocoder provider | Chain / Google / Nominatim | Quota, billing, attribution, and log-redaction gates apply | Retain Chain only after Q-011 acceptance | Google only for production Delivery traffic, with a daily usage cap; the public Nominatim fallback is retired; direction confirmed 2026-08-20, cap value pending |
+| Geocoder provider | Chain / Google / Nominatim | Quota, billing, attribution, and log-redaction gates apply | Retain Chain only after Q-011 acceptance | Google only for production Delivery traffic, with a daily usage cap; the public Nominatim fallback is retired; daily cap 500 requests with a budget alert; confirmed 2026-08-20 |
 
 ## D3B implementation plan: configure while closed
 
