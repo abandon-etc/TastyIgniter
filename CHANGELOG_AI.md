@@ -3271,3 +3271,41 @@ auto-merge under the standing Level 0 docs-only authorization.
 
 Documentation only. Every changed path is `.md`. No code, runtime, schema,
 secret, business data, or production change.
+
+## 2026-08-21 - Verify the redaction wiring through the real channel
+
+Environment: repository, container-run tests. Status: PR open. Level 1, stops
+for user merge confirmation.
+
+- Added `tests/Feature/Logging/RedactUrlChannelTest.php`. The unit test proves
+  the processor redacts; this proves the configured channel installs it, which
+  is the part that could only be guessed before.
+- Verified the wiring rather than assuming it. Booting the application shows
+  the `stderr` channel carrying
+  `Illuminate\Log\Context\ContextLogProcessor` and
+  `App\Logging\RedactUrlProcessor`. The `single` channel carries it too.
+- Established where the observed leak actually comes from, which is not where
+  it looked. `AbstractProvider::log()` in `tastyigniter/core` never writes to
+  Laravel; it appends to an in-memory array. The `staging.ERROR` entry is
+  written by `Igniter\Orange\Livewire\Concerns\SearchesNearby`, which calls
+  `Log::error(implode(PHP_EOL, Geocoder::getLogs()))`.
+- That resolves the open question about coverage. The provider's raw text lands
+  in the record message, not in context, so `RedactUrlProcessor` does cover the
+  path that leaked on Canada staging. A test asserts it using the observed
+  message shape.
+- Demonstrated the residual gap instead of describing it. A record carrying an
+  exception in context, formatted through the configured handler's real
+  `LineFormatter`, still contains the URL inside the serialized exception, and
+  also carries the PHP file path and a stack trace. Section 20 lists a PHP path
+  as its own leak class, so an exception reaching the log costs more than the
+  URL alone.
+- Ran the tests: PHP 8.3.32, PHPUnit 11.5.56, 18 tests and 29 assertions across
+  the unit and feature files, all passing.
+- These ran in a container against a real `composer install`, which required
+  `--prefer-source`. Every `tastyigniter/*` dist artifact fails checksum
+  verification against `composer.lock`; `Dockerfile.cloudrun` already sidesteps
+  this by setting `preferred-install` to source for those packages, which is
+  why builds succeed while a plain local install does not.
+
+No runtime, traffic, revision, image, environment variable, schema, secret,
+business data, or production change.
