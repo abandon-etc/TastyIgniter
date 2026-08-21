@@ -351,11 +351,34 @@ inside an exception object passed as context is not covered.
 
 Project-owned code does not pass exceptions into log context; see
 `App\Livewire\DeliveryLocalSearch`, which catches provider failures without
-binding the exception. The gap therefore matters only for vendor code that logs
-an exception object directly. It is asserted in
-`tests/Unit/Logging/RedactUrlProcessorTest.php` so it stays visible rather than
-being assumed closed. Closing it would need formatter-level redaction, which is
-a larger change and a separate decision.
+binding the exception. The gap therefore matters only for code that logs an
+exception object directly, which in practice means Laravel's own exception
+handler. It is asserted in `tests/Unit/Logging/RedactUrlProcessorTest.php` and
+again through the real channel in
+`tests/Feature/Logging/RedactUrlChannelTest.php`, so it stays visible rather
+than being assumed closed. Closing it would need formatter-level redaction,
+which is a larger change and a separate decision.
+
+The gap is demonstrated, not inferred. Running a record with an exception in
+context through the configured `stderr` handler and its real `LineFormatter`
+leaves the URL intact inside the serialized exception, and the same output also
+carries the PHP file path and a stack trace. Section 20 lists a PHP path as a
+leak class of its own, so an exception reaching the log costs more than the
+URL.
+
+### Where geocoder provider errors actually reach the log
+
+Worth recording, because it is not where it looks. `AbstractProvider::log()`
+in `tastyigniter/core` does not write to Laravel at all; it appends to an
+in-memory array read back through `getLogs()`. The entry that appears as
+`staging.ERROR: Provider "…" could not geocode address, "…"` is written by
+`Igniter\Orange\Livewire\Concerns\SearchesNearby`, which calls
+`Log::error(implode(PHP_EOL, Geocoder::getLogs()))`.
+
+That places the provider's raw text in the record **message**, not in context,
+which is why `RedactUrlProcessor` covers the leak observed on Canada staging.
+`App\Livewire\DeliveryLocalSearch` uses that concern, so the path is live for
+Delivery address lookups.
 
 The test asserts that the gap exists. It cannot stop new code from introducing
 a Throwable into log context, which is the way the gap would actually start to
