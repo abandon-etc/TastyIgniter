@@ -245,6 +245,68 @@ what is being verified, not by clause number.
 known issues, production gates, phase definitions, and stop conditions. Durable
 detail rather than progress.
 
+## 8b. Acceptance methodology
+
+Learned during D3C, at the cost of results that had to be discarded.
+
+### Rendering is not execution
+
+An acceptance item worded as *offers X*, *directs to X*, *preserves X*, or
+*keeps X reachable* is not satisfied by seeing the element on screen. Follow it
+through: click it, complete the flow, confirm the outcome. Record which of the
+two happened, because they are different evidence:
+
+- **rendered** — a screen element was observed;
+- **executed** — the action was carried out and its result confirmed.
+
+An item whose subject *is* the rendering, such as "no technical detail is
+shown", is properly satisfied by observation. Everything else is not.
+
+Label every acceptance row with its evidence type. A row marked passed on
+*rendered* alone, where the wording promises behaviour, is not passed.
+
+### An isolated test URL is not isolated until the URLs are pinned
+
+A Cloud Run revision at 0% traffic behind a tagged URL is only isolated for as
+long as nothing sends the browser elsewhere. The application builds links and
+redirects from `APP_URL`, which points at the service's main hostname, so the
+first server-issued redirect leaves the tagged revision and lands on whichever
+revision serves main traffic.
+
+Deploy test revisions with `APP_URL`, `ASSET_URL`, and `CLOUD_RUN_SERVICE_URL`
+all set to the tagged URL. Without that, only single-page checks are valid.
+
+**The failure is silent.** The revision serving main traffic renders a normal
+page, and the only visible difference is the hostname. A multi-step result
+obtained without pinning looks correct and is not; discard it rather than
+reason about whether it was probably fine. Check the hostname, not the
+plausibility of the result.
+
+### Time-dependent checks wait for the time
+
+Opening hours, cut-offs, and weekday or weekend behaviour live in the shared
+database. Editing them to force a condition changes the live site at the same
+instant, which destroys the isolation the phase depends on. Waiting also
+produces stronger evidence than manipulation: the system is observed under the
+conditions it will actually meet.
+
+Schedule each such check into its real window and record which windows exist,
+including the ones that come round rarely. A weekend-only check missed on
+Saturday costs a week.
+
+Where a condition genuinely cannot be reached by waiting, stop and ask before
+changing anything. If a change is approved: record the exact prior state, keep
+the window as short as possible, restore immediately afterwards, verify the
+restoration field by field, and record the period during which shared state was
+altered and what else it could have affected.
+
+### One database limits what can be verified
+
+Every revision of a service shares one database. Anything stored there cannot
+be varied for a single revision, and changing it changes the live site too.
+Record any acceptance item that cannot be verified by observation for this
+reason, rather than substituting a weaker check for it.
+
 ## 9. Post-merge continuation
 
 After the user approves merge:
