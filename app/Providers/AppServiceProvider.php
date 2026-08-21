@@ -9,6 +9,7 @@ use App\Delivery\DeliveryApiWriteGuard;
 use App\Delivery\DeliveryAvailabilityGate;
 use App\Delivery\DeliveryCheckoutGuard;
 use App\Delivery\DeliveryOrderTypeListener;
+use App\Delivery\GeocoderChainOverride;
 use App\Delivery\LocationDeliveryAction;
 use App\Livewire\BirthdayReservation;
 use App\Livewire\DeliveryLocalSearch;
@@ -28,6 +29,14 @@ class AppServiceProvider extends ServiceProvider
     public function register()
     {
         $this->app->singleton(DeliveryAvailabilityGate::class);
+
+        // afterResolving, not resolving: TastyIgniter's own resolving callback
+        // rewrites the geocoder configuration from the settings table, and
+        // afterResolving is guaranteed to run once every resolving callback
+        // has, without depending on provider registration order.
+        $this->app->afterResolving('geocoder', static function ($geocoder, $app): void {
+            GeocoderChainOverride::apply($app['config']);
+        });
         $this->app->singleton(BirthdayRules::class);
         $this->app->singleton(BirthdayAvailabilityService::class);
         $this->app->singleton(BirthdayReservationRules::class);

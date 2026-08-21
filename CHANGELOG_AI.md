@@ -3309,3 +3309,54 @@ for user merge confirmation.
 
 No runtime, traffic, revision, image, environment variable, schema, secret,
 business data, or production change.
+
+## 2026-08-21 - Pin the geocoder chain per deployment
+
+Environment: repository, container-run tests. Status: PR open. Level 1, stops
+for user merge confirmation.
+
+- Added `App\Delivery\GeocoderChainOverride` with two environment variables,
+  `DELIVERY_GEOCODER_DRIVER` and `DELIVERY_GEOCODER_PROVIDERS`, read through
+  `config/delivery.php`. Neither is set anywhere today, and when neither is set
+  the stored configuration stands exactly as before.
+- The reason is coordinate attributability, not convenience. Google and
+  Nominatim can place the same address tens of metres apart, and Delivery Area
+  boundaries are decided at that scale. A transient Google failure falls
+  through to Nominatim silently, so a boundary result taken against the stored
+  chain
+  cannot be attributed to a known coordinate source. Decision 24 also fixes
+  production on Google alone, so a matrix run against the stored chain would
+  validate a configuration production will not have.
+- Registered with `afterResolving` rather than `resolving`. The package's own
+  resolving callback rewrites the same keys from the settings table, so a
+  resolving registration would have depended on provider registration order to
+  win. `afterResolving` runs once every resolving callback has.
+- Selection only. There is no flag that makes a provider fail. Naming no
+  providers leaves a deployment with none configured, which is a configuration
+  rather than a trapdoor, and is how the `Provider unavailable` acceptance item
+  will be reached.
+- Established why a configuration file alone would not have worked.
+  TastyIgniter overwrites `igniter-geocoder.default` and the Google key at
+  resolve time from the settings table, so a published config file is
+  clobbered. This also
+  confirms the earlier finding that the key cannot be invalidated per revision.
+- Confirmed the cache timing this depends on. `config:cache` runs in
+  `docker/cloudrun/start.sh` at container start, not at image build, so
+  deploy-time environment variables are read correctly.
+- Tests: 16 tests and 24 assertions across the unit and feature files, all
+  passing on PHP 8.3.32 with PHPUnit 11.5.56.
+- Stated the gap rather than papering over it. The resolve-and-apply path has
+  no automated test, because resolving the geocoder needs the settings table
+  and the default country row. The unit test covers the logic including the
+  untouched case; the feature test covers the registration and the
+  configuration shape; the rest is verified on a deployed revision.
+- Ran the full suite while here and recorded the result against the continuous
+  integration decision: 187 tests, 301 assertions, 82 errors, zero failures. 78
+  of the errors are `PDOException: could not find driver`, because the
+  `php:8.3-cli` image has no `pdo_mysql`. That is a missing extension in the
+  runner, not a defect, and it moderates the earlier "expect broad failure"
+  expectation recorded in section 10.
+
+No runtime, traffic, revision, image, environment variable, schema, secret,
+business data, or production change. `DELIVERY_ENABLED` remains `false` on the
+revision serving main traffic.

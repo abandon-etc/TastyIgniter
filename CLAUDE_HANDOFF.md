@@ -304,6 +304,53 @@ extension creates `ti_reservations`. The already-initialized Canada staging
 database is not affected. Fix this in a separate focused PR; do not hide it
 inside Delivery or payment work.
 
+### Pinning the geocoder chain for a deployment
+
+TastyIgniter resolves the geocoder driver and the Google API key from the
+settings table, which every revision of a service shares. The provider chain is
+therefore a property of the database, not of the deployment: two revisions
+cannot be given different chains, and a chain cannot be pinned for one revision
+without changing it for the revision serving main traffic.
+
+`App\Delivery\GeocoderChainOverride` narrows that, driven by two environment
+variables read through `config/delivery.php`:
+
+| Variable | Unset | Set |
+| --- | --- | --- |
+| `DELIVERY_GEOCODER_DRIVER` | stored driver stands | pins `igniter-geocoder.default` |
+| `DELIVERY_GEOCODER_PROVIDERS` | stored chain stands | selects the named providers, in the order named |
+
+When neither is set nothing changes, which is the state in every environment
+today. A provider named but not configured is skipped rather than invented,
+and each selected provider carries its existing configuration across untouched.
+
+It is registered with `afterResolving`, not `resolving`, because the package's
+own resolving callback rewrites the same configuration from the settings table.
+`afterResolving` runs once every resolving callback has, so the override does
+not depend on provider registration order.
+
+**Why acceptance needs it.** Google and Nominatim can place the same address
+tens of metres apart, and Delivery Area boundaries are decided at that scale.
+If a transient Google failure falls through to Nominatim without saying so, an
+inside-or-outside result cannot be attributed to a known coordinate source.
+Decision 24 also fixes production on Google alone with the public Nominatim
+fallback retired, so a boundary matrix run against the stored chain would be
+validating a configuration production will not have.
+
+**It cannot inject a failure.** There is no flag that makes a provider fail.
+Naming no providers leaves a deployment with none configured, which is a
+configuration and not a trapdoor, and is how the `Provider unavailable`
+acceptance item is reached.
+
+The resolve-and-apply path is not covered by an automated test. Resolving the
+geocoder reads the settings table and the default country row, which the test
+environment has no database for.
+`tests/Unit/Delivery/GeocoderChainOverrideTest` covers the override logic
+including the untouched case, and
+`tests/Feature/Delivery/GeocoderChainOverrideChannelTest` covers the
+registration and the configuration shape. The remaining step is verified on a
+deployed revision by reading back which provider answered.
+
 ### Nominatim production gate
 
 Public Nominatim is not approved for production Delivery traffic for the
@@ -341,6 +388,16 @@ executed a project test file successfully, with no local PHP toolchain and no
 CI. Whether enabling CI would fail broadly is therefore measurable in advance
 rather than a bet: run the suite in a container, triage what it reports, then
 decide. What blocked verification was tooling, not the code.
+
+That measurement has now been taken, and it moderates the expectation above.
+The full suite run in a container on 2026-08-21 reported 187 tests, 301
+assertions, 82 errors and **zero failures**. Of those errors, 78 are
+`PDOException: could not find driver`: the `php:8.3-cli` image used for the
+run has no `pdo_mysql` extension. They are not assertion failures and not
+defects in the code; they are a missing extension in the runner. A CI image
+built with the extensions the application already declares, against a database,
+should be far greener than "expect broad failure" suggested. Confirm that
+before deciding, rather than carrying either expectation forward on faith.
 
 ### Log redaction does not reach inside a Throwable
 
