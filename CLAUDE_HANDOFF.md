@@ -380,6 +380,47 @@ production launch, separately approve and verify at least:
 
 Never experiment directly in production.
 
+### Upgrading to a paid account must set the Geocoding quota in the same act
+
+The Geocoding daily usage cap of 500 requests, confirmed on 2026-08-20, is not
+in place. A free-trial billing account cannot edit quota overrides, so the
+value is recorded but unenforced.
+
+What protects the project today is the trial itself. Trial usage draws down the
+trial credit, and producing a real bill requires manually upgrading the
+account. That protection ends at the instant of upgrade, and the quota becomes
+settable at that same instant.
+
+Set the cap **inside the same operation as the upgrade**. Not afterwards, not
+as a follow-up task, not in the same week. Between upgrading and setting the
+cap there is no ceiling on Geocoding spend, and the failure the cap exists for
+is a looping defect that spends fast.
+
+The quota lives under `APIs & Services > Geocoding API > Quotas & System
+Limits`, on the requests-per-day limit for the Canada staging project.
+
+### The free trial has an expiry that can delete Canada staging
+
+Google states that resources created under a free trial may be removed, and not
+recovered, if the trial ends without an upgrade to a paid account.
+
+Everything in Canada staging sits in that project: the Cloud Run service and
+every revision, the Cloud SQL instance with its configuration and data, the
+Artifact Registry images, the media bucket, and the Secret Manager entries. The
+Render and DigitalOcean fallbacks are outside it, but they do not carry the
+Canada staging state.
+
+This is an operational risk with a date on it, not a background concern. The
+upgrade has to happen before that date whether or not launch is ready, and the
+date belongs in the launch schedule rather than in someone's memory.
+
+The remaining credit and the expiry date are **not recorded here yet**.
+Neither is exposed by the Cloud Billing API: `gcloud billing accounts
+describe` returns only currency, display name, and open state. Both are
+readable from `Billing > Credits` in the console for the billing account
+linked to this project, whose currency is CAD. Record the actual values here
+once read; the trial amount varies by currency and must not be assumed.
+
 ## 12. Fallback infrastructure
 
 Render staging and its DigitalOcean database remain operational fallbacks. Do
