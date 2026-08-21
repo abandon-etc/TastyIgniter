@@ -524,10 +524,46 @@ stops. That is the Cloud Run service, the Cloud SQL instance and its data, and
 everything else listed above.
 
 **Schedule the upgrade for mid-September 2026**, not the week before the
-deadline. Upgrading, setting the 500-per-day Geocoding quota, and creating the
-budget alert are one operation, for the reason given in the gate above.
+deadline. Four things are done in the same sitting:
 
-The budget alert does not exist yet. It is outstanding.
+1. upgrade the billing account to paid;
+2. set the Geocoding daily cap to 500 requests;
+3. create the budget alert;
+4. split the browser API key from the server API key.
+
+They are one operation because their risks all become real at the same instant.
+Upgrading ends the trial's spending ceiling. A public launch points the exposed
+browser key at the open internet. A paid account means a real invoice rather
+than a credit balance. Doing them on separate days leaves a window in which the
+protection of one has ended and the protection meant to replace it does not yet
+exist.
+
+The budget alert does not exist yet. Until the account is upgraded it is the
+only spend alarm available, because a trial account cannot set a quota
+override.
+
+### The Maps key is public and unrestricted
+
+`Igniter\Orange\Livewire\Concerns\SearchesNearby` exposes `$mapKey` as a
+public Livewire property, taken from `setting('maps_api_key')`. The same
+setting supplies the server-side geocoder's `apiKey`, so one key serves both a
+browser context and a server context. The key carries no HTTP referrer or IP
+restriction, and its API allow-list includes Geocoding, which is billable.
+
+**This is pre-existing, not a D3C regression.** The revision serving main
+traffic exposes the key with `DELIVERY_ENABLED=false`, and always has. Do not
+record it as something D3C introduced.
+
+Removing Places from the key's allow-list was considered and rejected as
+useless: neither `places.googleapis.com` nor `places-backend.googleapis.com` is
+enabled on the project, so Places calls already fail for any holder of the key.
+Project-level API enablement, not the allow-list, is the operative control. The
+live exposure is Geocoding, which is enabled and is required.
+
+The fix is two keys: a browser key restricted by referrer and limited to Maps
+JavaScript, and a server key that is never rendered. TastyIgniter supplies both
+from one setting, so separating them needs a project-owned change. It is item 4
+of the upgrade above.
 
 ## 12. Fallback infrastructure
 

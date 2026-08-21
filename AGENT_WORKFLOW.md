@@ -212,6 +212,39 @@ Merge policy:
 CI failure, merge conflict, a new review blocker, or scope expansion stops the
 merge. Never merge merely because checks are absent.
 
+## 8a. Where a fact belongs
+
+One fact is maintained in one file. Anything that changes as work proceeds
+lives in `D3C_PROGRESS.md` alone; every other document points at it rather than
+repeating it. A fact copied into a second file will diverge, and the copy that
+is read is then the one that is wrong.
+
+**`CLAUDE.md` is the rule layer and changes rarely.** It is loaded in full at
+the start of every session, so it is kept under 150 lines; content that grows
+past that moves into the document it already points to.
+
+Update it only when a rule, boundary, or gate changes, when a phase starts or
+completes, when a standing authorization is granted, or when a new global
+constraint is found. A single pull request, a single acceptance item, a defect
+fix, or an ordinary documentation edit does not touch it. Its current-state
+section carries no progress: no phase position, no next step, no completion
+count. It carries only facts that outlive the current work, plus pointers.
+
+**`D3C_PROGRESS.md` is the state layer and is a snapshot.** It is overwritten
+as work moves, stays within a page, and is deliberately not a history;
+`CHANGELOG_AI.md` is append-only and keeps that. It holds the acceptance table,
+which doubles as the acceptance record, the deployed test revisions and what
+each is for, the outstanding items with owners, and the next concrete action.
+
+Refresh it whenever a group of acceptance items completes, and again before
+context runs short rather than after. Its readers include the project owner,
+who is not technical and reads it directly: describe each check in terms of
+what is being verified, not by clause number.
+
+**`CLAUDE_HANDOFF.md` is the reference layer.** Architecture, infrastructure,
+known issues, production gates, phase definitions, and stop conditions. Durable
+detail rather than progress.
+
 ## 9. Post-merge continuation
 
 After the user approves merge:

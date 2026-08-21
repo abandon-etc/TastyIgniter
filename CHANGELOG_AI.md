@@ -3360,3 +3360,48 @@ for user merge confirmation.
 No runtime, traffic, revision, image, environment variable, schema, secret,
 business data, or production change. `DELIVERY_ENABLED` remains `false` on the
 revision serving main traffic.
+
+## 2026-08-21 - Layer the documents and record the exposed Maps key
+
+Environment: repository documentation only, plus read-only checks against GCP.
+Status: PR open; eligible for auto-merge under the standing Level 0 docs-only
+authorization.
+
+- Split the documents by rate of change, and recorded the rule in
+  `AGENT_WORKFLOW.md` section 8a so it does not depend on conversation memory.
+  `CLAUDE.md` is the rule layer and changes rarely. `D3C_PROGRESS.md` is the
+  state layer and is a snapshot. `CLAUDE_HANDOFF.md` is the reference layer.
+  One fact is maintained in one file; other documents point rather than repeat.
+- Cleared progress out of the `CLAUDE.md` current-state section. It no longer
+  says which phase is next or how far the work has got. What stays is what
+  outlives the current work: the gate semantics of `DELIVERY_ENABLED`, the 24
+  confirmed decisions, that CI has never run, and pointers.
+- Added `D3C_PROGRESS.md`. It carries the acceptance table, which doubles as
+  the acceptance record, the deployed test revisions and their purposes, the
+  outstanding items with owners, and the next concrete action. It is written
+  for the project owner as well as for an agent, so checks are described by
+  what they verify rather than by clause number.
+- Recorded that `CLAUDE.md` is kept under 150 lines because it loads in full
+  every session. It is 133 lines after this change.
+- Recorded the exposed Maps key as a production gate.
+  `Igniter\Orange\Livewire\Concerns\SearchesNearby` renders `$mapKey` from
+  `setting('maps_api_key')`, the same setting that supplies the server-side
+  geocoder key, and that key has no referrer or IP restriction while its
+  allow-list includes billable Geocoding.
+- Recorded explicitly that this is pre-existing and not a D3C regression. The
+  revision serving main traffic exposes the key with `DELIVERY_ENABLED=false`,
+  so a later reader cannot mistake it for something the phase introduced.
+- Recorded why removing Places from the key's allow-list was rejected rather
+  than done. Neither Places API is enabled on the project, so those calls
+  already fail for any holder of the key; project-level enablement, not the
+  allow-list, is the operative control. The live exposure is Geocoding, which
+  is enabled and required.
+- Extended the September upgrade to four things done in one sitting: upgrade,
+  set the 500-per-day cap, create the budget alert, and split the browser key
+  from the server key. The reason is recorded: their risks all become real at
+  the same instant, so separating them leaves a window where one protection has
+  ended and its replacement does not yet exist.
+
+Documentation only. Every changed path is `.md`. No code, runtime, schema,
+secret, business data, or production change. No key value and no billing
+identifier is recorded in the repository.
