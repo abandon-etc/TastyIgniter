@@ -3679,3 +3679,57 @@ Level 0 docs-only authorization.
 
 Documentation only. Every changed path is `.md`. No stored value was changed,
 and no runtime action was taken by this work.
+
+## 2026-08-22 - Saturday delivery refusal executed on both copies; the address suggestion defect
+
+Environment: Canada staging, the two 0%-traffic Google-pinned copies, via
+their pinned tagged URLs, hostnames verified. Status: PR open; eligible for
+auto-merge under the standing Level 0 docs-only authorization.
+
+- Executed the delivery-closed refusal on both copies. With delivery selected
+  and an in-area address set, adding an item on Saturday was refused at the
+  moment of adding with "Your selected order time is outside our Delivery
+  hours", and the basket stayed empty, on the fixed and the unfixed copy
+  alike. Saturday is closed on both versions, so agreement is exactly what
+  the discrimination table predicts; the acceptance row moves to partly
+  passed, with the before-noon and after-21:00 legs on open days still
+  waiting for their windows. The refusal message is English on a French site
+  and merges into Q-001, with "Delivery" in place of "Cueillette".
+- Walked the Sunday reading's path end to end a day early, deliberately, so
+  that a tooling surprise would surface on Saturday rather than inside the
+  one-shot window. It surfaced two.
+- First: the address suggestion feature is broken on the Google-pinned
+  copies. The suggestion service was never enabled for the project, every
+  suggestion call is refused, and the raw technical error - the provider's
+  web address, the customer's full typed text, and the project's internal
+  number - is rendered in the customer-facing ordering dialog. The service
+  being off is deployment configuration and possibly deliberate; the raw
+  error reaching a customer is a defect regardless, since the page already
+  knows how to say "no suggestions". Selecting delivery is still possible:
+  the home-page widget accepts a fully typed address and checks it
+  server-side, and that path works on both copies. The Sunday procedure in
+  `D3C_PROGRESS.md` now spells this out.
+- Second: the browser pane used for testing, while hidden, does not deliver
+  real clicks to the lower part of a tall dialog even though the page reports
+  the click point clear; an event probe showed the trusted click arriving
+  with the document root as its target. Confirmed as a tooling artifact, not
+  a site defect, by the same probe method as the keyboard case. For the
+  refusal check the form was submitted through the page's own submit call
+  instead, which is sound for this check because its subject is the server's
+  answer to the request, unlike the keyboard check, whose subject was input
+  delivery itself. Recorded so that tomorrow's reading is not lost to the
+  same artifact: display the pane, or submit the form from the page.
+- With delivery selected, no order dates or times are offered on either copy
+  today, confirming by observation the earlier claim that the reading cannot
+  be taken before Sunday.
+- Recorded that the basket shows "Min. Order Amount: $80.00" for delivery
+  where the configured minimum is CA$20.00 and CA$80.00 is the free-delivery
+  threshold. Rendered only; whether a CA$20-80 basket is actually accepted is
+  a Monday check, once delivery is orderable. Also English on a French site.
+- The addresses used were the restaurant's own public street address, on both
+  copies. Nothing was stored: every add was refused, both baskets ended
+  empty, and no order, customer, or reservation was created.
+
+Documentation only in this PR; every changed path is `.md`. The runtime was
+read and exercised but not changed: no stored value was touched, and main
+traffic stayed on its revision.
