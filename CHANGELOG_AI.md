@@ -3544,3 +3544,39 @@ authorization.
 
 No runtime change beyond deploying a 0%-traffic revision. Main traffic stayed on
 its revision and its fingerprint was unchanged before and after.
+
+## 2026-08-22 - Saturday acceptance results
+
+Environment: Canada staging, 0%-traffic copies only. Status: PR open; eligible
+for auto-merge under the standing Level 0 docs-only authorization.
+
+- Cleared both rows that had been downgraded to rendered-only or left unstarted
+  because the shop was closed, this time to the executed standard.
+- Pickup reachable after an address-provider failure: passed. An item was added
+  during opening hours, a delivery address was submitted and failed for want of
+  a provider, and the basket was then followed through to a working pickup
+  checkout showing "Cueillette, in 25 minutes" with the basket intact. Stopped
+  at the confirm step; no order was placed.
+- Basket kept through a failed address lookup: passed. The item and the totals
+  survived unchanged at CA$13.99, and no delivery fee was added, which confirms
+  the order stayed in pickup rather than half-entering delivery.
+- Answered the question of whether a basket can be filled while closed. It
+  cannot: the refusal happens at the moment of adding rather than at checkout,
+  the basket stays empty, and the customer is told the order time is outside
+  opening hours. The opposite case was confirmed during opening hours on
+  Saturday, so the refusal is attributable to the hours rather than to anything
+  else.
+- Recorded that the refusal message is English on a French site and mixes in the
+  French word Cueillette. That is a third locale-related defect after the
+  language fallback and the weekday shift.
+- Marked the pickup 22:00 cut-off as executed rather than rendered: an order was
+  attempted at 22:31 and refused, rather than a closed label being read.
+- Scanned the checkout page, a surface not previously examined. Everything is
+  absent except the already-recorded Maps key, which appears on every page
+  including the live one. No new leak class.
+
+Saturday gives no information about the weekday fix: delivery is closed by
+configuration on Saturday on both the fixed and the unfixed copy. The Sunday
+window remains the only runtime confirmation.
+
+No runtime change. Main traffic stayed on its revision, fingerprint unchanged.

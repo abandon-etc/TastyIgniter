@@ -3,7 +3,7 @@
 Snapshot of where Delivery D3C acceptance stands. Overwritten as work moves;
 it is not a history. `CHANGELOG_AI.md` keeps the history.
 
-Last updated: 2026-08-21, late evening.
+Last updated: 2026-08-22, Saturday afternoon.
 
 Delivery is being switched on for testing only, on copies of the staging site
 that receive no visitors. The live site is untouched throughout, and has been
@@ -76,8 +76,8 @@ preserved, or reachable is not passed on *rendered* alone.
 | Address provider unavailable: order refused safely | Passed | Executed |
 | Address provider unavailable: nothing technical shown | Passed | Rendered, which is what this check is about |
 | Address provider unavailable: logs stay clean | Passed | Executed |
-| Address provider unavailable: pickup still offered **and reachable** | Not passed | Rendered only; the link was never followed |
-| Address provider unavailable: basket kept | Not started | Needs a URL-pinned copy |
+| Address provider unavailable: pickup still offered **and reachable** | Passed | Executed: followed through from the basket to a working pickup checkout |
+| Address provider unavailable: basket kept | Passed | Executed: the item survived a failed address lookup, with no delivery fee added |
 | Delivery closed before 12:00 and after 21:00, every day | Not passed | Rendered only; no order was attempted and refused |
 | Delivery open during its hours | **Failed** | Executed. See above |
 | Address lookup works with one provider pinned | Passed | Executed |
@@ -93,6 +93,27 @@ preserved, or reachable is not passed on *rendered* alone.
 | Nothing else broken: pickup, birthday, reservations, admin, media, health | Not started | |
 | No real orders, customers, reservations, payments, or emails created | Holding | Nothing real created so far |
 | Test data cleaned up afterwards | Not started | |
+
+### A basket cannot be filled while the shop is closed
+
+Answered on 2026-08-21 at 22:31, after pickup had closed at 22:00, and confirmed
+against the opposite case on 2026-08-22 at 14:0x during opening hours.
+
+Adding to the basket while closed is **refused at the moment of adding**, not
+deferred to checkout. The basket stays empty and the customer is told why:
+
+> Your selected order time is outside our Cueillette hours
+
+During opening hours the same action succeeds immediately.
+
+For the owner: a customer arriving before opening cannot choose their food in
+advance and come back to it. They are told why, but they have to start again
+during opening hours. The facts are recorded here; whether that matters enough
+to change is a business question.
+
+The refusal message is in English on a French site, and mixes in the French word
+Cueillette. That is a third locale-related defect, after the language fallback
+and the weekday shift.
 
 ### The owner's delivery on/off switch
 
@@ -120,8 +141,8 @@ test. Each check waits for its real window.
 | Delivery appears open on Sunday, confirming the cause | Sunday only |
 | Delivery stops taking orders at 21:00 | Any evening, once delivery works |
 | Pickup still open after delivery has stopped | Any evening, once delivery works |
-| Pickup stops at 22:00 | Any evening |
-| Can a basket be filled while closed | Before 12:00, or after 22:00 |
+| Pickup stops at 22:00 | Done 2026-08-21 22:31, executed: an order was attempted and refused |
+| Can a basket be filled while closed | Done 2026-08-21 22:31. See below |
 
 Delivery's own timing checks cannot be taken until it can be ordered at all;
 until then, closed cannot be told apart from the defect.
