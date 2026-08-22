@@ -265,6 +265,23 @@ shown", is properly satisfied by observation. Everything else is not.
 Label every acceptance row with its evidence type. A row marked passed on
 *rendered* alone, where the wording promises behaviour, is not passed.
 
+### A test that truly reproduces a defect also exercises the fix
+
+Writing the weekday correction produced a case worth keeping. The first draft of
+the listener called `WorkingSchedule::getType()` unguarded. That method is
+declared to return `string` but is backed by a nullable property, so on a
+schedule with no type it threw, **out of an event listener**, which would have
+broken page rendering rather than degrading.
+
+Nothing in review caught it. The test caught it, and only because the test built
+a real schedule and ran the real listener over it instead of asserting against a
+double. The listener now degrades to a no-op.
+
+The lesson is not "write tests". It is that a test written to genuinely
+reproduce a defect has to exercise the same code path the defect lives on, and
+that path then gets examined under conditions the happy path never creates. A
+test that mocks its way to the assertion would have passed and taught nothing.
+
 ### An isolated test URL is not isolated until the URLs are pinned
 
 A Cloud Run revision at 0% traffic behind a tagged URL is only isolated for as

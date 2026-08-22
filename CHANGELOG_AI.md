@@ -3509,3 +3509,38 @@ docs-only authorization.
   approval first.
 
 Documentation only. Every changed path is `.md`. No stored value was changed.
+
+## 2026-08-21 - Weekday schedule correction deployed, awaiting the Sunday reading
+
+Environment: repository plus a 0%-traffic Canada staging deployment. Status: PR
+open; eligible for auto-merge under the standing Level 0 docs-only
+authorization.
+
+- Recorded that the weekday defect is fixed and deployed to
+  `d3c-fix-be6835a9` at 0% of traffic, and that it is **not yet confirmed in the
+  deployed environment**. The distinction is kept explicit rather than letting
+  "fixed" imply "verified in place".
+- Recorded the Sunday window as one-shot and high priority. Only Friday and
+  Sunday distinguish the fixed from the unfixed behaviour; Friday's window
+  closed at 21:00 on 2026-08-21 and the next is a week away. Changing the
+  delivery hours to every day would make both versions open every day and
+  destroy the difference permanently, so the hours must not change before the
+  reading is taken.
+- Recorded what happens if the window is missed: the fix stands on unit tests
+  alone and the record must say it was never confirmed in the deployed
+  environment.
+- Recorded that no same-day comparison is possible, with the reason rather than
+  the conclusion alone. The hours display is built from `ScheduleItem::
+  getHours()`, the saved settings, not from the corrected schedule, so it does
+  not move. The only storefront path that consults the corrected schedule is
+  `Location::checkOrderTime()`, and at line 360 it returns early when future
+  orders are disabled and the shop is closed, before `isOpenAt()` is reached,
+  identically on both copies.
+- Recorded the `getType()` hardening as a methodology case in
+  `AGENT_WORKFLOW.md` section 8b. The first draft threw out of an event
+  listener, which would have broken page rendering. Review did not catch it; the
+  test did, and only because the test built a real schedule and ran the real
+  listener rather than asserting against a double.
+
+No runtime change beyond deploying a 0%-traffic revision. Main traffic stayed on
+its revision and its fingerprint was unchanged before and after.
