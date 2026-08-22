@@ -3,7 +3,7 @@
 Snapshot of where Delivery D3C acceptance stands. Overwritten as work moves;
 it is not a history. `CHANGELOG_AI.md` keeps the history.
 
-Last updated: 2026-08-22, Saturday afternoon.
+Last updated: 2026-08-22, Saturday evening.
 
 Delivery is being switched on for testing only, on copies of the staging site
 that receive no visitors. The live site is untouched throughout, and has been
@@ -89,8 +89,13 @@ preserved, or reachable is not passed on *rendered* alone.
 | Unrecognised, incomplete, out-of-area addresses; changing an address | Not started | |
 | Switching between pickup and delivery, both ways | Not started | |
 | Old sessions cleared, totals correct, resistant to tampering, API rules enforced | Not started | |
-| Desktop, mobile at 390px, keyboard use, clean browser console | Not started | |
-| Nothing else broken: pickup, birthday, reservations, admin, media, health | Not started | |
+| Mobile at 390px: no sideways scrolling, no broken images | Passed | Executed |
+| Browser console clean | Passed | Executed: no messages |
+| Keyboard: focus is visible, no tab-order traps | Passed | Executed |
+| Keyboard: an item can be added to the basket | **Inconclusive** | Could not be settled with the available tooling. See below |
+| Every control announces what it is | **Failed** | Executed: the add buttons have no name at all |
+| Nothing else broken: pickup, birthday, reservations, media, health | Passed | Executed: ten pages, all served |
+| Nothing else broken: admin | Not started | No admin access |
 | No real orders, customers, reservations, payments, or emails created | Holding | Nothing real created so far |
 | Test data cleaned up afterwards | Not started | |
 
@@ -117,6 +122,33 @@ translations recorded as Q-001, and the French word is the order type name,
 which the owner entered as configuration. Quebec's French-language requirements
 make this a production gate rather than a cosmetic issue; see
 `CLAUDE_HANDOFF.md` section 11.
+
+### Accessibility findings on the menu
+
+Both are in the theme rather than in anything Delivery added, so they are
+present on the live site too. Neither is caused by this phase.
+
+**The add buttons have no name.** Each menu item has a round "+" button
+containing only a decorative icon, with no text, no label, and no title. A
+screen reader announces "button" and nothing else, so a blind customer cannot
+tell which dish a button belongs to, or that it adds to the basket at all.
+Verified by inspection of every such button on the page.
+
+**Whether the keyboard can add an item is unresolved.** Pressing Enter on the
+focused button through the test tooling produced no request to the server at
+all, which would mean a keyboard-only customer cannot order. But clicking the
+same button directly does work, and a browser turns Enter on a focused button
+into a click, so the more likely explanation is that the tooling never delivered
+the keypress as an activation.
+
+That is recorded as inconclusive rather than as a pass or a failure. It needs
+checking by a person on a real keyboard, which takes a minute and settles it.
+If it turns out to be real it is severe, because ordering by keyboard would be
+impossible.
+
+Six text links are shorter than the 24 pixels that the accessibility guidance
+asks for: the two language links, "Back", "More info", "change", and the cookie
+notice link. Widths are fine; only the heights are small. Also in the theme.
 
 ### The owner's delivery on/off switch
 
