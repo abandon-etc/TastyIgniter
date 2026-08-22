@@ -112,8 +112,11 @@ during opening hours. The facts are recorded here; whether that matters enough
 to change is a business question.
 
 The refusal message is in English on a French site, and mixes in the French word
-Cueillette. That is a third locale-related defect, after the language fallback
-and the weekday shift.
+Cueillette. That is not a new defect: the English comes from the missing
+translations recorded as Q-001, and the French word is the order type name,
+which the owner entered as configuration. Quebec's French-language requirements
+make this a production gate rather than a cosmetic issue; see
+`CLAUDE_HANDOFF.md` section 11.
 
 ### The owner's delivery on/off switch
 

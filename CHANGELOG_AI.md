@@ -3580,3 +3580,38 @@ configuration on Saturday on both the fixed and the unfixed copy. The Sunday
 window remains the only runtime confirmation.
 
 No runtime change. Main traffic stayed on its revision, fingerprint unchanged.
+
+## 2026-08-22 - Three locale-adjacent symptoms, three separate causes
+
+Environment: repository documentation, plus code and configuration inspection.
+Status: PR open; eligible for auto-merge under the standing Level 0 docs-only
+authorization.
+
+- Tested the proposal that the English refusal message, the money format, and
+  Q-001 share a root cause. One of the three merges; the other does not.
+- Corrected the framing first. The locale is not failing to apply. Localization
+  sets the application locale and `Carbon::setLocale()` from the same value, and
+  the weekday shift is itself proof that Carbon received a Canadian locale.
+  Recording these as "localisation not in effect" would have been wrong and
+  would have pointed two of the three fixes in the wrong direction.
+- English text on a French page merges into Q-001. The key
+  `alert_outside_hours` exists only in the package's `lang/en/default.php`. The
+  project already carries local overrides under `lang/vendor/`, including
+  `igniter-cart/fr_CA/default.php`, but not this key, so it falls back to
+  English. The French word inside the English sentence is the order type name,
+  which comes from stored configuration rather than a language file.
+- The money format does not merge. `config/currency.php` in the package sets
+  `formatter` to null and the project publishes no override, so amounts are
+  formatted by `number_format()` from the separators held on the currency
+  record. The locale-driven `PHPIntl` formatter exists but is not in use.
+  Changing translations would not change how money reads.
+- The weekday shift merges with neither. It is caused by the locale working.
+- Recorded Quebec's French-language requirements as a production gate rather
+  than a defect, because it is not a technical judgement. The observable fact is
+  recorded, that customer-facing English is served from a Montreal restaurant's
+  checkout, along with the questions professional advice needs to answer. No
+  legal conclusion is stated, and none should be inferred from this record.
+- Recorded that translation work must not begin on an assumed reading of the
+  requirement, because what needs translating depends on the answer.
+
+Documentation only. Every changed path is `.md`. No stored value was changed.
