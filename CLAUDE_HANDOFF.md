@@ -409,16 +409,39 @@ proposing it: anything else that rests on week boundaries, such as weekly
 reporting or period statistics, moves with it. Do not change it globally without
 that assessment.
 
-### Locale-dependent behaviour is a standing risk here
+### Locale-adjacent findings have three separate causes
 
-This is the second defect caused by locale, after the Q-005 language fallback.
-The site runs `fr_CA`, which differs from the common defaults in more than
-translation: the first day of the week, and decimal and currency formatting.
+Three symptoms look like one problem and are not. Treating them as one would
+mean fixing two of them wrongly.
 
-Treat locale-sensitive behaviour as a category to check rather than assume.
-Money handling under `fr_CA` is on the acceptance list for this reason: the
-decimal separator differs, and the CA$5.00 fee, the CA$80.00 free threshold, and
-the CA$20.00 minimum are all compared numerically somewhere.
+**The locale is working.** `Igniter\Flame\Translation\Localization` sets the
+application locale and `Carbon::setLocale()` from the same value, and the
+weekday shift is proof that Carbon received a Canadian locale. Nothing here is
+caused by the locale failing to apply.
+
+| Symptom | Cause | Fixed by |
+| --- | --- | --- |
+| Delivery closed on Friday | Locale working, and `startOfWeek()` moving with it | `App\Delivery\WeekdayScheduleCorrection` |
+| English text on a French page | Missing French strings, which is Q-001 | Importing or writing the translations |
+| Money shown as `$13.99` rather than `13,99 $` | Currency configuration, not locale | A currency or formatter decision |
+
+On the second: the message key `alert_outside_hours` exists only in the
+package's `lang/en/default.php`. The project already carries local overrides
+under `lang/vendor/`, including `igniter-cart/fr_CA/default.php`, but this key
+is not among them, so it falls back to English. The French word in the middle of
+the English sentence is the order type name, which comes from stored
+configuration the owner entered in French rather than from a language file.
+
+On the third: `config/currency.php` in the package sets `formatter` to null and
+the project publishes no override, so amounts are formatted by `number_format()`
+using the separators held on the currency record. The locale-driven `PHPIntl`
+formatter exists but is not in use. Changing translations would not change how
+money reads.
+
+Money handling stays on the acceptance list, but for its own reason: the
+CA$5.00 fee, the CA$80.00 free threshold, and the CA$20.00 minimum are compared
+numerically somewhere, and that comparison is worth confirming regardless of how
+the amounts are displayed.
 
 ### Nominatim production gate
 
@@ -528,6 +551,35 @@ production launch, separately approve and verify at least:
 - Fresh-install migration ordering and migration safety.
 
 Never experiment directly in production.
+
+### French-language requirements are unresolved
+
+Quebec has statutory French-language requirements for commercial websites, under
+the Charter of the French Language as amended by Bill 96. The Canada staging
+storefront currently shows English text to customers: the checkout refusal
+message reads "Your selected order time is outside our Cueillette hours", and it
+is not the only string affected, because the package translations were never
+imported. That is Q-001, still open, translation count 0 of 2992.
+
+This is recorded as a production gate rather than a defect because it is not a
+technical judgement. Nothing here establishes what the law requires of this
+business, and this document does not attempt to. What is recorded is the
+observable fact that customer-facing English text is being served from a
+Montreal restaurant's checkout, and that the position needs to be settled before
+launch.
+
+The owner needs professional advice on this. The questions that advice should
+answer, at minimum:
+
+- which customer-facing surfaces are in scope, and whether staging is in scope
+  at all before launch;
+- whether French must be present, or present and at least equally prominent;
+- what applies to text that comes from an upstream package rather than from the
+  business;
+- what applies to the admin interface, which staff rather than customers use.
+
+The technical work that follows depends on those answers. Do not begin
+translating on the assumption of a particular reading.
 
 ### Upgrading to a paid account must set the Geocoding quota in the same act
 
