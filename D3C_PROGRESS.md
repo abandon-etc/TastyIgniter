@@ -3,41 +3,66 @@
 Snapshot of where Delivery D3C acceptance stands. Overwritten as work moves;
 it is not a history. `CHANGELOG_AI.md` keeps the history.
 
-Last updated: 2026-08-21, afternoon.
+Last updated: 2026-08-21, late evening.
 
 Delivery is being switched on for testing only, on copies of the staging site
 that receive no visitors. The live site is untouched throughout, and has been
 verified unchanged before and after every deployment.
 
-## Blocking problem, cause found
+## The weekday defect: fixed, awaiting one runtime confirmation
 
-**Delivery reports itself closed on Friday, inside its own opening hours.**
-Confirmed at 12:04 Montreal: the shop offered no delivery times at all, while
-pickup at the same moment was available.
+Delivery reported itself closed on Friday, inside its own opening hours.
 
-**Cause:** the site runs in Canadian French, and under that setting the software
-library that handles dates treats the week as starting on Sunday, while the
-opening-hours screen numbers its rows starting on Monday. The two disagree by
-one day, so hours entered as Monday to Friday are applied as Sunday to Thursday.
-Friday and Saturday end up closed.
+**Cause:** the site runs in Canadian French, and under that setting the date
+library treats the week as starting on Sunday, while the opening-hours screen
+numbers its rows starting on Monday. Hours entered as Monday to Friday were
+applied as Sunday to Thursday, so Friday and Saturday closed.
 
-Full technical detail, the scope, and the fix that must **not** be used are in
-`CLAUDE_HANDOFF.md` section 10.
+**Fixed** in `App\Delivery\WeekdayScheduleCorrection`, deployed to
+`d3c-fix-be6835a9` at 0% of visitors. Proven by unit tests that first assert the
+faulty condition is present, then assert the correction repairs it.
 
-Pickup never showed the problem because pickup is open every day, so a
-one-day shift still lands on an open day. The same is true of the general
-opening hours, which reservations use. Birthday bookings are unaffected: they
-do not use weekly schedules at all.
+**Not yet confirmed in the deployed environment.** See the window below.
 
-### One prediction still to check, on a Sunday
+Pickup never showed the problem because pickup is open every day, so a one-day
+shift still lands on an open day. The same is true of the general opening hours,
+which reservations use. Birthday bookings are unaffected: they do not use weekly
+schedules at all. Both were confirmed against the stored rows, which show no
+disabled day outside delivery.
 
-If the cause is right, **delivery will appear open on Sunday**, even though the
-configuration says Sunday is closed. Open confirms it. Closed would mean the
-explanation is wrong and the search reopens.
+## The Sunday window is one-shot, and it is the last chance
 
-This is the last piece of end-to-end proof, because the stored day numbers
-themselves have not been read. The opening hours must not be changed before it
-is taken, or the check becomes impossible.
+**Priority: high. Sunday only.**
+
+Of the seven days, only two tell the fixed and unfixed versions apart:
+
+| Day | Unfixed | Fixed |
+| --- | --- | --- |
+| Sunday | open | closed |
+| Friday | closed | open |
+| Monday to Thursday | open | open |
+| Saturday | closed | closed |
+
+Friday's window closed at 21:00 on 2026-08-21; the next is a week away. That
+leaves Sunday.
+
+**Changing the delivery hours to every day destroys the difference
+permanently**, because then every day is open on both versions. So the hours
+must not be changed until the Sunday reading is taken.
+
+If the Sunday window is missed and the hours are changed regardless, the fix
+stands on unit tests alone, and the record must say plainly that it was never
+confirmed in the deployed environment.
+
+**How to take it:** on Sunday between 12:00 and 22:00 Montreal, open both
+`d3c-fix-be6835a9` and `d3c-g2-1f8f0c75`, select delivery on each, and compare.
+The unfixed copy should offer delivery; the fixed copy should refuse it.
+
+There is no way to take this reading sooner. The hours display is built from the
+saved settings rather than from the corrected schedule, so it does not move. The
+only place the corrected schedule is consulted is the order-time check, and
+while the shop is closed that check returns early, before the schedule is
+reached, identically on both copies.
 
 ## Acceptance checks
 
@@ -111,7 +136,8 @@ All receive 0% of visitors.
 
 | Name | Purpose | Usable for multi-step flows |
 | --- | --- | --- |
-| `d3c-g2-1f8f0c75` | Main testing, address lookups pinned to Google only | Yes |
+| `d3c-fix-be6835a9` | The weekday fix, pinned to Google. Use for the Sunday reading | Yes |
+| `d3c-g2-1f8f0c75` | Unfixed comparison, pinned to Google. Use for the Sunday reading | Yes |
 | `d3c-pu2-1f8f0c75` | Provider-unavailable testing, no address provider | Yes |
 | `d3c-g-1f8f0c75` | Superseded by `g2` | No |
 | `d3c-pu-1f8f0c75` | Superseded by `pu2` | No |
@@ -161,6 +187,7 @@ improvement, not part of this phase.
 
 ## Next action
 
-Wait for the admin report on delivery hours and the on/off switch. Meanwhile,
-finish the pickup-reachable and basket-kept checks on `d3c-pu2-1f8f0c75`, which
-do not depend on delivery being orderable.
+Take the Sunday reading between 12:00 and 22:00 Montreal, comparing
+`d3c-fix-be6835a9` against `d3c-g2-1f8f0c75`. Until then, do not change the
+delivery hours. Meanwhile the checks that do not need delivery to be orderable
+can continue on `d3c-pu2-1f8f0c75` during opening hours.
