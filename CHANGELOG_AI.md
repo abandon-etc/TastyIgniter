@@ -3615,3 +3615,35 @@ authorization.
   requirement, because what needs translating depends on the answer.
 
 Documentation only. Every changed path is `.md`. No stored value was changed.
+
+## 2026-08-22 - Saturday regression, mobile, and accessibility
+
+Environment: Canada staging, 0%-traffic copies only. Status: PR open; eligible
+for auto-merge under the standing Level 0 docs-only authorization.
+
+- Regression smoke across ten pages that do not depend on Delivery: health, home,
+  menu, reservation, locations, contact, about, policy, login, register. All
+  served, all with plausible sizes.
+- At 390 pixels wide: no sideways scrolling, no element wider than the viewport,
+  no broken images. Browser console carried no messages at all.
+- Focus is visibly indicated, and no element carries a positive tabindex, so tab
+  order is not distorted.
+- Recorded a verified accessibility failure. Each menu item's add button
+  contains only a decorative icon, with no text, no aria-label, and no title, so
+  it has no accessible name. A screen reader announces "button" with no
+  indication of the dish or the action.
+- Recorded whether the keyboard can add an item as inconclusive rather than
+  guessing. Enter on the focused button through the tooling produced no request
+  to the server, which would be severe if real, but clicking the same button
+  directly works and a browser turns Enter on a focused button into a click. The
+  likelier reading is that the tooling never delivered the keypress as an
+  activation. It needs a person at a real keyboard to settle, which is recorded
+  as the next step rather than assumed either way.
+- Recorded six text links below the 24-pixel guidance height. Widths are fine.
+- All of the above are theme-level and present on the live site. None was
+  introduced by this phase, and the record says so, so that a later reader does
+  not treat them as regressions from enabling Delivery.
+- Split the admin regression into its own row and left it unstarted: there is no
+  admin access from here.
+
+No runtime change. Main traffic stayed on its revision, fingerprint unchanged.
