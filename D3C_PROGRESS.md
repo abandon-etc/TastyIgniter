@@ -58,6 +58,18 @@ confirmed in the deployed environment.
 `d3c-fix-be6835a9` and `d3c-g2-1f8f0c75`, select delivery on each, and compare.
 The unfixed copy should offer delivery; the fixed copy should refuse it.
 
+**The path was walked end to end on Saturday and works.** Selecting delivery
+needs a delivery address, and the address suggestion feature is broken (see the
+findings below), but the home-page widget accepts a typed address without
+suggestions: enter the restaurant's own street address into "Entrez votre
+adresse de livraison" and press the check button. The menu then opens with
+delivery selected. Add any item and complete its options; the add is either
+refused with an hours message or the item enters the basket, and that is the
+reading. On Saturday, closed on both versions, both copies refused with
+"Your selected order time is outside our Delivery hours" and kept the basket
+empty, agreeing exactly as the table above predicts. Sunday they must
+disagree: the unfixed copy accepts the item, the fixed copy refuses.
+
 There is no way to take this reading sooner. The hours display is built from the
 saved settings rather than from the corrected schedule, so it does not move. The
 only place the corrected schedule is consulted is the order-time check, and
@@ -78,9 +90,10 @@ preserved, or reachable is not passed on *rendered* alone.
 | Address provider unavailable: logs stay clean | Passed | Executed |
 | Address provider unavailable: pickup still offered **and reachable** | Passed | Executed: followed through from the basket to a working pickup checkout |
 | Address provider unavailable: basket kept | Passed | Executed: the item survived a failed address lookup, with no delivery fee added |
-| Delivery closed before 12:00 and after 21:00, every day | Not passed | Rendered only; no order was attempted and refused |
+| Delivery closed before 12:00 and after 21:00, every day | Partly passed | Executed for Saturday, closed all day: a delivery order was attempted on both copies on 2026-08-22 in the afternoon and refused at the moment of adding, basket kept empty. The before-12:00 and after-21:00 legs on open days still need their windows |
 | Delivery open during its hours | **Failed** | Executed. See above |
-| Address lookup works with one provider pinned | Passed | Executed |
+| Address lookup works with one provider pinned | Passed | Executed: the home-page widget geocodes the typed address server-side and it works on both copies |
+| Address autocomplete on the Google-pinned copies | **Failed** | Executed: the suggestion call is refused by the provider, and the raw technical error is shown to the customer. See below |
 | An in-area address is accepted | Passed | Executed, one address |
 | Delivery area: outside, and exactly on the boundary | Blocked | Needs delivery to be orderable |
 | Delivery fee of CA$5.00 below the free threshold | Partly seen | Rendered as a running total; not confirmed against a real basket |
@@ -154,6 +167,52 @@ Six text links are shorter than the 24 pixels that the accessibility guidance
 asks for: the two language links, "Back", "More info", "change", and the cookie
 notice link. Widths are fine; only the heights are small. Also in the theme.
 
+### Saturday delivery findings on the Google-pinned copies
+
+Taken on 2026-08-22 in the afternoon, on `d3c-fix-be6835a9` and
+`d3c-g2-1f8f0c75`, both pinned URLs confirmed by hostname.
+
+**Delivery refuses orders while closed, on both copies.** With delivery
+selected and an in-area address set, adding an item on a Saturday is refused
+at the moment of adding with "Your selected order time is outside our Delivery
+hours", and the basket stays empty. With delivery selected, no order dates or
+times are offered at all on either copy. The order-type dialog and the menu
+header both show CLOSED, and the checkout button is replaced by CLOSED.
+
+The refusal message is English on a French site, like the pickup one: it
+merges into Q-001, with "Delivery" in place of "Cueillette".
+
+**The address suggestion feature is broken, and it fails loudly.** Typing into
+the delivery address field calls the provider's suggestion service, which
+refuses the request because that service was never switched on for the
+project. The customer then sees the raw technical error in the ordering
+dialog: the provider's web address, the full text of what they typed, and the
+project's internal number. Nothing sensitive to any customer is revealed, but
+it is unprofessional, confusing, and exposes internals that a page should not
+show. Two parts need separating:
+
+- *The service being off* is deployment configuration, not code, and may be
+  deliberate: the same suggestion service costs money per call. Whether to
+  enable it is an owner and deployment decision.
+- *The raw error reaching the customer* is a real defect regardless. A failed
+  suggestion lookup should degrade to "no suggestions", which is exactly what
+  the same page already renders next to the error.
+
+Ordering is still possible without suggestions: the home-page widget accepts a
+fully typed address and checks it server-side, which works on both copies.
+That server-side path is the one the earlier "address lookup" pass exercised.
+
+**The basket shows "Min. Order Amount: $80.00" for delivery.** The configured
+minimum is CA$20.00; CA$80.00 is the free-delivery threshold. Either the label
+shows the wrong parameter or the minimum is misconfigured. Rendered only, and
+it cannot be told apart until delivery is orderable: check on Monday whether a
+basket between CA$20.00 and CA$80.00 is accepted. Also English on a French
+site.
+
+One menu observation in passing: Puff-Puff carries a stored minimum quantity
+of 3, so its dialog opens at three pieces. That is stored menu data, possibly
+intentional; noted for the owner rather than as a defect.
+
 ### The owner's delivery on/off switch
 
 The holiday plan agreed in decision 6 is "turn delivery off in the admin for the
@@ -178,6 +237,7 @@ test. Each check waits for its real window.
 | Check | Window |
 | --- | --- |
 | Delivery appears open on Sunday, confirming the cause | Sunday only |
+| Delivery refused on a closed day | Done 2026-08-22 afternoon, executed on both copies: an order was attempted and refused |
 | Delivery stops taking orders at 21:00 | Any evening, once delivery works |
 | Pickup still open after delivery has stopped | Any evening, once delivery works |
 | Pickup stops at 22:00 | Done 2026-08-21 22:31, executed: an order was attempted and refused |
