@@ -3647,3 +3647,35 @@ for auto-merge under the standing Level 0 docs-only authorization.
   admin access from here.
 
 No runtime change. Main traffic stayed on its revision, fingerprint unchanged.
+
+## 2026-08-22 - Keyboard add-to-basket settled by hand; the negative reading withdrawn
+
+Environment: the user's own browser and keyboard, plus repository
+documentation. Status: PR open; eligible for auto-merge under the standing
+Level 0 docs-only authorization.
+
+- The user tested keyboard add-to-basket by hand on a real keyboard: Enter on
+  the focused add button adds the item. The acceptance row moves from
+  inconclusive to passed, evidence *executed*, and the record states it was
+  carried out by a person rather than through tooling.
+- Withdrew the earlier automated reading, and recorded why it was never
+  evidence. An event probe installed on the button captured zero events while
+  Enter was sent through the browser extension — not even a keydown. A control
+  run dispatching keydown and click from page JavaScript was captured
+  normally, so the probe itself worked. The keypress never reached the page:
+  "no server request" measured the tooling, not the site. Both automation
+  toolsets share the limitation.
+- Recorded the methodology in `AGENT_WORKFLOW.md` section 8b: the first
+  application of "never claim a check that did not run" to a negative result.
+  The principle had so far constrained only positive claims — no pass without
+  execution. It equally constrains failures: a test that never executed cannot
+  record a defect.
+- Kept the add buttons' missing accessible name strictly separate; it stands
+  as a confirmed failure, unaffected by the keyboard result. The two are
+  different accessibility dimensions: a keyboard customer can order, but a
+  customer who depends on a screen reader still hears only "button", with no
+  dish and no action. Attribution unchanged: theme-level, present on the live
+  site, not introduced by this phase.
+
+Documentation only. Every changed path is `.md`. No stored value was changed,
+and no runtime action was taken by this work.
