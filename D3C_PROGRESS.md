@@ -92,7 +92,7 @@ preserved, or reachable is not passed on *rendered* alone.
 | Mobile at 390px: no sideways scrolling, no broken images | Passed | Executed |
 | Browser console clean | Passed | Executed: no messages |
 | Keyboard: focus is visible, no tab-order traps | Passed | Executed |
-| Keyboard: an item can be added to the basket | **Inconclusive** | Could not be settled with the available tooling. See below |
+| Keyboard: an item can be added to the basket | Passed | Executed by hand: the user, on a real keyboard. Tooling cannot deliver this keypress; see below |
 | Every control announces what it is | **Failed** | Executed: the add buttons have no name at all |
 | Nothing else broken: pickup, birthday, reservations, media, health | Passed | Executed: ten pages, all served |
 | Nothing else broken: admin | Not started | No admin access |
@@ -125,26 +125,30 @@ make this a production gate rather than a cosmetic issue; see
 
 ### Accessibility findings on the menu
 
-Both are in the theme rather than in anything Delivery added, so they are
-present on the live site too. Neither is caused by this phase.
+The confirmed defects here are in the theme rather than in anything Delivery
+added, so they are present on the live site too. None was caused by this phase.
 
 **The add buttons have no name.** Each menu item has a round "+" button
 containing only a decorative icon, with no text, no label, and no title. A
 screen reader announces "button" and nothing else, so a blind customer cannot
 tell which dish a button belongs to, or that it adds to the basket at all.
-Verified by inspection of every such button on the page.
+Verified by inspection of every such button on the page. The keyboard result
+below does not touch this finding: they are different accessibility
+dimensions, and a customer who depends on a screen reader still hears only
+"button", whichever input device they use.
 
-**Whether the keyboard can add an item is unresolved.** Pressing Enter on the
-focused button through the test tooling produced no request to the server at
-all, which would mean a keyboard-only customer cannot order. But clicking the
-same button directly does work, and a browser turns Enter on a focused button
-into a click, so the more likely explanation is that the tooling never delivered
-the keypress as an activation.
+**The keyboard can add an item: passed.** Settled on 2026-08-22 by the user,
+by hand, on a real keyboard: Enter on the focused button adds the dish to the
+basket. Ordering by keyboard is possible.
 
-That is recorded as inconclusive rather than as a pass or a failure. It needs
-checking by a person on a real keyboard, which takes a minute and settles it.
-If it turns out to be real it is severe, because ordering by keyboard would be
-impossible.
+The earlier automated reading is withdrawn, because that test never ran. An
+event probe installed on the button captured zero events while Enter was sent
+through the browser extension — not even a keydown — while a control run that
+dispatched keydown and click from page JavaScript was captured normally, so
+the probe itself worked. The keypress never reached the page, and "the page
+did not react" described the tooling, not the site. Both automation toolsets
+share this limitation, so keyboard-activation checks are settled by a person
+or recorded as not run.
 
 Six text links are shorter than the 24 pixels that the accessibility guidance
 asks for: the two language links, "Back", "More info", "change", and the cookie

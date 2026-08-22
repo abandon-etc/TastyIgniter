@@ -265,6 +265,28 @@ shown", is properly satisfied by observation. Everything else is not.
 Label every acceptance row with its evidence type. A row marked passed on
 *rendered* alone, where the wording promises behaviour, is not passed.
 
+### A check that never ran proves nothing in either direction
+
+"Never claim a check that did not run" (section 6) was written to stop
+unearned passes. D3C produced its first application to a negative result: a
+failure from a test that never actually executed is equally not a failure, and
+no defect may be recorded from it.
+
+The case: Enter sent to a focused add button through the test tooling produced
+no server request, which read as "a keyboard-only customer cannot order". An
+event probe installed on the button then captured zero events during the
+tooling's keypress — not even a keydown — while keydown and click dispatched
+from page JavaScript were captured normally, proving the probe worked. The
+keypress had never reached the page; the test had never run. A person at a
+real keyboard settled it in a minute: it works.
+
+Before recording a negative result, confirm the stimulus actually arrived —
+an event probe, a log line, a network trace. "The page did not react" is
+evidence only once it is established that the page was given something to
+react to. Both browser-automation toolsets available here share the keypress
+limitation, so keyboard-activation checks are settled by a person or recorded
+as not run.
+
 ### A test that truly reproduces a defect also exercises the fix
 
 Writing the weekday correction produced a case worth keeping. The first draft of
