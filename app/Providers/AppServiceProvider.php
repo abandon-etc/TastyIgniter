@@ -11,9 +11,11 @@ use App\Delivery\DeliveryCheckoutGuard;
 use App\Delivery\DeliveryOrderTypeListener;
 use App\Delivery\GeocoderChainOverride;
 use App\Delivery\LocationDeliveryAction;
+use App\Delivery\WeekdayScheduleCorrection;
 use App\Livewire\BirthdayReservation;
 use App\Livewire\DeliveryLocalSearch;
 use Igniter\Flame\Pagic\Router;
+use Igniter\Local\Events\WorkingScheduleCreatedEvent;
 use Igniter\Local\Models\Location as LocationModel;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
@@ -60,6 +62,10 @@ class AppServiceProvider extends ServiceProvider
         });
 
         LocationModel::implement(LocationDeliveryAction::class);
+
+        // Rebuilds working-schedule periods with the stored Monday-first weekday
+        // convention. See App\Delivery\WeekdayScheduleCorrection.
+        Event::listen(WorkingScheduleCreatedEvent::class, app(WeekdayScheduleCorrection::class)->handle(...));
 
         Event::listen('location.orderType.updated', app(DeliveryOrderTypeListener::class)->handle(...));
         Event::listen('igniter.checkout.beforeSaveOrder', app(DeliveryCheckoutGuard::class)->handle(...));
