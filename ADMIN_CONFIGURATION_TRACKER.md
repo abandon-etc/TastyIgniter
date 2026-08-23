@@ -2393,3 +2393,21 @@ two orders; orders #2 to #5 were explicitly out of scope and were not touched.
 No change to any revision, traffic, environment variable, secret, schema, or
 stored setting. Two synthetic orders and their child rows were removed from
 the shared database.
+
+## 2026-08-23 - Cleanup job deleted; order-notification setting read and kept
+
+Environment: Cloud Run Jobs in `northamerica-northeast1`; the admin, read by
+the user. Status: recorded.
+
+- Deleted disposable job `qa-cleanup-orders-6-7` on the user's explicit
+  confirmation naming it; described before (created 18:23:12Z), read back
+  absent after; the region now holds no jobs. Its two execution logs remain
+  under platform retention and hold only the synthetic test identity.
+- The user read the order-notification setting in the admin: customer and
+  admin ticked, location unticked; site e-mail and location e-mail are the
+  same owner address. Kept as is: with one location and identical addresses,
+  the unticked location avoids a duplicate alert. Note for the future: a
+  separate location mailbox needs "To location" ticked. No setting changed.
+
+No change to any revision, traffic, environment variable, secret, schema, or
+stored setting. One disposable job resource removed.
