@@ -297,6 +297,13 @@ The upstream Orange scheduled Pickup time select uses `wire:ignore` and does
 not reliably synchronize a changed same-day value to Livewire. Future orders
 remain disabled. Resolve this before depending on scheduled Pickup.
 
+**Status 2026-08-22: masked, not fixed.** The user changed the stored
+ASAP/later restriction to ASAP-only for Pickup and Delivery on 2026-08-22, so
+the scheduled time select is no longer rendered and the binding defect cannot
+be reached from the storefront. Nothing in the theme changed. It returns the
+moment a later-slot choice or future orders are re-enabled, and must not be
+closed on the strength of its absence.
+
 ### Fresh-install migration ordering
 
 The root Birthday reservation migration can run before the Reservation

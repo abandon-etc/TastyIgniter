@@ -3,7 +3,7 @@
 Snapshot of where Delivery D3C acceptance stands. Overwritten as work moves;
 it is not a history. `CHANGELOG_AI.md` keeps the history.
 
-Last updated: 2026-08-22, Saturday evening.
+Last updated: 2026-08-22, Saturday night.
 
 Delivery is being switched on for testing only, on copies of the staging site
 that receive no visitors. The live site is untouched throughout, and has been
@@ -11,7 +11,13 @@ verified unchanged before and after every deployment.
 
 ## The weekday defect: fixed, awaiting one runtime confirmation
 
-Delivery reported itself closed on Friday, inside its own opening hours.
+Delivery reported itself closed on Friday 2026-08-21, inside its own opening
+hours, and refused an as-soon-as-possible order. That observation is now a
+**historical reading**: it was taken while the ASAP/later setting was "None",
+and the user changed that setting to ASAP-only on 2026-08-22 (see the setting
+change below). It is kept as the record of what was seen on Friday and is no
+longer cited as evidence of current state. The cause below does not rest on
+it: it was found in source and is proven by unit tests.
 
 **Cause:** the site runs in Canadian French, and under that setting the date
 library treats the week as starting on Sunday, while the opening-hours screen
@@ -72,9 +78,26 @@ disagree: the unfixed copy accepts the item, the fixed copy refuses.
 
 There is no way to take this reading sooner. The hours display is built from the
 saved settings rather than from the corrected schedule, so it does not move. The
-only place the corrected schedule is consulted is the order-time check, and
-while the shop is closed that check returns early, before the schedule is
-reached, identically on both copies.
+only storefront path that consults the corrected schedule is the order-time
+check, `Location::checkOrderTime()`, and it consults it twice: first an early
+return when future orders are off and the delivery schedule says closed *now*,
+then `isOpenAt()` for the order time. On Saturday the delivery schedule is
+closed on both versions, so the early return fires identically on both and
+nothing can be learnt. On Sunday that same early return is where the two part:
+the unfixed schedule says open, the fixed schedule says closed.
+
+**The ASAP-only setting does not touch this reading.** Verified independently
+in source on 2026-08-22, after the user changed the setting, rather than taken
+on trust. `time_restriction` is read in exactly three places: whether the
+"later" choice is offered (`hasLaterSchedule()`), whether a later choice is
+accepted by the dialog (`checkScheduleRestriction()`), and whether ASAP is
+available at all (`hasAsapSchedule()`, which only a later-only value disables).
+None of them is on the path that decides open or closed. Under ASAP-only the
+order time is "now" whenever the schedule is open now, and the first available
+slot otherwise, and both gates of the order-time check read the working
+schedule that the fix corrects. Sunday, unfixed: schedule open, order time now,
+add accepted. Sunday, fixed: schedule closed, early return, add refused. The
+procedure above is unchanged.
 
 ## Acceptance checks
 
@@ -91,13 +114,14 @@ preserved, or reachable is not passed on *rendered* alone.
 | Address provider unavailable: pickup still offered **and reachable** | Passed | Executed: followed through from the basket to a working pickup checkout |
 | Address provider unavailable: basket kept | Passed | Executed: the item survived a failed address lookup, with no delivery fee added |
 | Delivery closed before 12:00 and after 21:00, every day | Partly passed | Executed for Saturday, closed all day: a delivery order was attempted on both copies on 2026-08-22 in the afternoon and refused at the moment of adding, basket kept empty. The before-12:00 and after-21:00 legs on open days still need their windows |
-| Delivery open during its hours | **Failed** | Executed. See above |
+| Delivery open during its hours | **Failed**, historical reading | Executed on Friday 2026-08-21 under the ASAP/later setting "None", since changed to ASAP-only. Kept as history, not cited as current state. The cause is fixed in code and awaits the Sunday confirmation |
 | Address lookup works with one provider pinned | Passed | Executed: the home-page widget geocodes the typed address server-side and it works on both copies |
 | Address autocomplete on the Google-pinned copies | **Failed** | Executed: the suggestion call is refused by the provider, and the raw technical error is shown to the customer. See below |
 | An in-area address is accepted | Passed | Executed, one address |
 | Delivery area: outside, and exactly on the boundary | Blocked | Needs delivery to be orderable |
 | Delivery fee of CA$5.00 below the free threshold | Partly seen | Rendered as a running total; not confirmed against a real basket |
-| Free delivery at CA$80.00, minimum CA$20.00, at the edges | Blocked | Needs delivery to be orderable |
+| Free delivery at CA$80.00, minimum CA$20.00, at the edges | Blocked | Needs delivery to be orderable. Code predicts the enforced minimum is CA$80.00, not CA$20.00; see the next row |
+| Delivery minimum shown and enforced as CA$20.00 | **Failed** | Confirmed defect: the storefront shows CA$80.00. The stored minimum was read back as CA$20.00 by the user on 2026-08-22. Source traces the CA$80.00 into the checkout gate as well as the label, so a basket between CA$20.00 and CA$80.00 is predicted to be blocked; the executed Monday basket decides between deterrent and blocking. See below |
 | Money reads and compares correctly in Canadian French | Not started | Decimal separator differs; the three amounts above are compared numerically |
 | Unrecognised, incomplete, out-of-area addresses; changing an address | Not started | |
 | Switching between pickup and delivery, both ways | Not started | |
@@ -175,9 +199,13 @@ Taken on 2026-08-22 in the afternoon, on `d3c-fix-be6835a9` and
 **Delivery refuses orders while closed, on both copies.** With delivery
 selected and an in-area address set, adding an item on a Saturday is refused
 at the moment of adding with "Your selected order time is outside our Delivery
-hours", and the basket stays empty. With delivery selected, no order dates or
-times are offered at all on either copy. The order-type dialog and the menu
-header both show CLOSED, and the checkout button is replaced by CLOSED.
+hours", and the basket stays empty. The order-type dialog and the menu header
+both show CLOSED, and the checkout button is replaced by CLOSED. These readings
+were taken under the current ASAP-only setting: the dialog already offered no
+"later" choice at 15:1x. The earlier remark that no order dates or times were
+offered is withdrawn as evidence; under ASAP-only with future orders off the
+date list is empty on a closed day whatever the schedule, so it carries no
+weight.
 
 The refusal message is English on a French site, like the pickup one: it
 merges into Q-001, with "Delivery" in place of "Cueillette".
@@ -202,16 +230,73 @@ Ordering is still possible without suggestions: the home-page widget accepts a
 fully typed address and checks it server-side, which works on both copies.
 That server-side path is the one the earlier "address lookup" pass exercised.
 
-**The basket shows "Min. Order Amount: $80.00" for delivery.** The configured
-minimum is CA$20.00; CA$80.00 is the free-delivery threshold. Either the label
-shows the wrong parameter or the minimum is misconfigured. Rendered only, and
-it cannot be told apart until delivery is orderable: check on Monday whether a
-basket between CA$20.00 and CA$80.00 is accepted. Also English on a French
-site.
+**The basket shows "Min. Order Amount: $80.00" for delivery: confirmed
+defect.** Settled on 2026-08-22 by the user's read-back of the stored value,
+`min_order_amount = 20.00`, which agrees with the decision. The storefront is
+not misconfigured; it computes the CA$80.00. Traced in source:
+
+- The label prints `Location::minimumOrderTotal()`, which for delivery is the
+  larger of the stored minimum and the delivery area's own minimum.
+- The area's minimum is derived from its fee rules. The rules were saved as
+  "free at or above CA$80.00" then "CA$5.00 below CA$80.00". For any basket
+  under CA$80.00 the matched rule is the *below* rule, and the vendor treats a
+  matched below-rule's threshold as the minimum order total. So the area
+  minimum is CA$80.00, and the larger of 80 and 20 is 80.
+- The same value feeds the checkout gate. `CartBox::hasMinimumOrder()` asks
+  whether the subtotal is below `minimumOrderTotal()`, and the checkout button
+  is disabled while it is. Nothing of the stored CA$20.00 reaches the customer.
+
+So this is neither a wrong stored value nor purely a label: it is the vendor's
+reading of a "below" fee rule, triggered by the shape the rules were saved in.
+**Severity is not yet settled.** The user's reading is deterrent, a customer
+sees a threshold four times the real one and gives up, a real conversion loss,
+on the premise that the system does not actually refuse at CA$80.00. Source
+predicts it does refuse: a basket between CA$20.00 and CA$80.00 should find
+the checkout button disabled. Recorded as predicted blocking, pending the
+executed Monday basket, which settles it either way. Two remedies exist, both
+outside this phase: reshape the rules so no "below" rule is matched (for
+example "free at or above CA$80.00" followed by "CA$5.00 on all orders"),
+which is a shared-setting change and stops for approval; or a project-side
+override of the minimum, which is code. Also English on a French site.
 
 One menu observation in passing: Puff-Puff carries a stored minimum quantity
 of 3, so its dialog opens at three pieces. That is stored menu data, possibly
 intentional; noted for the owner rather than as a defect.
+
+### Setting change on 2026-08-22: as-soon-as-possible only
+
+The user changed the stored ASAP/later restriction to ASAP-only for both
+delivery and pickup on 2026-08-22, intentionally, and said so. This is a
+change to the decision recorded on 2026-08-20, not a new fact about the same
+decision, and the decision table in `DELIVERY_D3_BUSINESS_PARAMETER_PLAN.md`
+now carries the original value, the new value, and the date.
+
+Stored values as read back by the user: delivery `time_restriction = 1`,
+pickup `time_restriction = 1`, pickup minimum CA$0.00, lead time 25 minutes,
+interval 15 minutes, future orders off for both. Storefront read-back by the
+agent at 20:1x the same day, both order types: the dialog offers only "Dès
+que possible" and no later choice, which is exactly what ASAP-only renders.
+One cosmetic quirk: with delivery closed, the dialog still shows an empty
+date/time picker, because the "as soon as possible" state is computed from
+the schedule being open. Theme-level; noted, not pursued.
+
+Consequences, each assessed rather than assumed:
+
+1. **The Friday reading is historical.** See the top of this document.
+2. **No acceptance row depends on a delivery time picker.** Checked row by
+   row. The checks that would have exercised a chosen later slot, the last
+   accepted slot before 21:00 and the "add lead time to start" first-slot
+   behaviour, are now exercised through an as-soon-as-possible attempt at
+   the boundary instead, and read the same.
+3. **Q-010 is masked, not fixed.** The scheduled pickup time select is no
+   longer rendered, so its binding defect cannot be reached. It is unchanged
+   in the theme and returns the moment a later choice or future orders are
+   re-enabled. Recorded against Q-010 in `CLAUDE_HANDOFF.md` section 10.
+4. **The Sunday reading is unaffected.** Verified in source, above.
+
+The user edits shared settings directly and will say so; the agent still
+reads them back before and after every key reading rather than assuming they
+match the last record. Written into `AGENT_WORKFLOW.md` section 8b.
 
 ### The owner's delivery on/off switch
 

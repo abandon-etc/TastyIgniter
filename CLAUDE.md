@@ -73,6 +73,11 @@ Always run `git diff --check`, review staged scope, and scan the diff for
 secrets, credentials, complete addresses, provider URLs, geometry, SQL,
 internal IDs, and PII before opening a PR.
 
+Shared settings (Location settings, hours, fee rules) are edited by the owner
+directly and can change between sessions. Read them back before and after any
+key reading instead of assuming the last recorded value; a reading whose
+premise has changed is historical. See `AGENT_WORKFLOW.md` section 8b.
+
 ## Destructive operations
 
 Every deletion or difficult-to-recover action requires explicit confirmation,
