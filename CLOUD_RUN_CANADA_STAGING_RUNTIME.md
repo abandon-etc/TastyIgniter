@@ -111,6 +111,9 @@ Existing staging secrets:
 | `tastyigniter-db-database` | `DB_DATABASE` | Staging database name |
 | `tastyigniter-db-connection-name` | `DB_INSTANCE_CONNECTION_NAME` | Cloud SQL connector instance name |
 | `tastyigniter-media-bucket` | `MEDIA_BUCKET` | Staging media bucket name |
+| `tastyigniter-mail-host` | `MAIL_HOST` | Created empty on 2026-08-23, automatic replication, no version until the user adds one in the console. Mail test revisions only |
+| `tastyigniter-mail-username` | `MAIL_USERNAME` | Created empty on 2026-08-23, as above |
+| `tastyigniter-mail-password` | `MAIL_PASSWORD` | Created empty on 2026-08-23, as above |
 
 Recommended additional staging secrets or non-secret Cloud Run variables before
 service creation:
@@ -119,9 +122,6 @@ service creation:
 | --- | --- | --- |
 | `tastyigniter-app-url` | `APP_URL` | Cloud Run staging URL after service creation |
 | `tastyigniter-asset-url` | `ASSET_URL` | Usually the same as `APP_URL` for staging |
-| `tastyigniter-mail-host` | `MAIL_HOST` | Placeholder only if mail testing is enabled later |
-| `tastyigniter-mail-username` | `MAIL_USERNAME` | Placeholder only if mail testing is enabled later |
-| `tastyigniter-mail-password` | `MAIL_PASSWORD` | Placeholder only if mail testing is enabled later |
 | (plain variable, not a secret) | `MAIL_TEST_REDIRECT_TO` | Test revisions only: every message the revision sends goes to this one inbox. Never set on a revision that serves traffic. See `CLAUDE_HANDOFF.md` section 10 |
 
 No real mail credentials should be configured for this staging experiment unless
