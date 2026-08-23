@@ -4086,3 +4086,36 @@ auto-merge under the standing authorization.
 
 Documentation only in this PR; the runtime action is the secret creation
 described above, and nothing else changed.
+
+## 2026-08-23 - The Sunday A/B reading: the weekday fix is confirmed in the deployed environment
+
+Environment: Canada staging, the two 0%-traffic copies through their pinned
+tagged URLs, hostnames verified. Status: PR open; eligible for auto-merge
+under the standing Level 0 docs-only authorization.
+
+- Took the one-shot reading at 12:26-12:28 Montreal, inside the 12:00-22:00
+  window, before any other work of the day. Read the ASAP-only setting back
+  on each copy first: the order-type dialog offered only the as-soon-as-possible
+  choice on both.
+- Unfixed copy `d3c-g2-1f8f0c75`: "We are open", "Delivery · dans 25 min"; an
+  item was added with delivery selected and **accepted** into the basket
+  (3 × Puff-Puff CA$14.97, delivery fee CA$5.00, total CA$19.97), no refusal.
+  Fixed copy `d3c-fix-be6835a9`, two minutes later: CLOSED, checkout button
+  CLOSED; the same add was **refused** with "Your selected order time is
+  outside our Delivery hours", basket empty. On Sunday the stored hours say
+  closed; only the shifted schedule opens. The copies agreed on Saturday and
+  disagree on Sunday, as the discrimination table predicted.
+- The weekday correction now stands on unit tests and on runtime
+  confirmation. The hours change is eligible and is not executed: it is a
+  write to a shared setting and stops for approval.
+- Noted, and did not claim: the unfixed copy's basket showed "Min. Order
+  Amount: $80.00" with the checkout button disabled at CA$19.97. That basket
+  is also below the correct CA$20.00 minimum, so it is consistent with the
+  minimum defect but does not discriminate; Monday's CA$20.00 to CA$80.00
+  basket remains the evidence.
+- The submit in the item dialog was driven through the page's own form
+  submit, as recorded on 2026-08-22 for this tooling; the evidence is the
+  server's answer, which is what this reading is about.
+
+Documentation only. Every changed path is `.md`. No stored value was changed.
+The baskets are session state on the copies; nothing was ordered.

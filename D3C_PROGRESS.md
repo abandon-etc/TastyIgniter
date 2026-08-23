@@ -3,7 +3,7 @@
 Snapshot of where Delivery D3C acceptance stands. Overwritten as work moves;
 it is not a history. `CHANGELOG_AI.md` keeps the history.
 
-Last updated: 2026-08-22, Saturday night.
+Last updated: 2026-08-23, Sunday afternoon.
 
 Delivery is being switched on for testing only, on copies of the staging site
 that receive no visitors. The live site is untouched throughout, and has been
@@ -28,7 +28,19 @@ applied as Sunday to Thursday, so Friday and Saturday closed.
 `d3c-fix-be6835a9` at 0% of visitors. Proven by unit tests that first assert the
 faulty condition is present, then assert the correction repairs it.
 
-**Not yet confirmed in the deployed environment.** See the window below.
+**Confirmed in the deployed environment on Sunday 2026-08-23.** The A/B
+reading was taken at 12:26-12:28 Montreal, inside the window, on both pinned
+copies with hostnames verified and the ASAP-only setting read back on each:
+the unfixed copy `d3c-g2-1f8f0c75` showed "We are open, Delivery" and
+**accepted** an item into a delivery basket (3 × Puff-Puff, CA$14.97, fee
+CA$5.00, total CA$19.97); the fixed copy `d3c-fix-be6835a9` showed CLOSED and
+**refused** the same add with "Your selected order time is outside our
+Delivery hours", basket empty. On a Sunday the stored hours say closed; only
+the shifted schedule opens. The two copies agreed on Saturday and disagree on
+Sunday, exactly as the table below predicts. The fix stands on the unit tests
+and on this runtime confirmation. Nothing below this line about the window
+being open is still pending; it is kept as the record of how the reading was
+designed.
 
 Pickup never showed the problem because pickup is open every day, so a one-day
 shift still lands on an open day. The same is true of the general opening hours,
@@ -38,7 +50,10 @@ disabled day outside delivery.
 
 ## The Sunday window is one-shot, and it is the last chance
 
-**Priority: high. Sunday only.**
+**Taken and passed on 2026-08-23; see the section above.** What follows is
+the design of the reading, kept for the record.
+
+**Priority at the time: high. Sunday only.**
 
 Of the seven days, only two tell the fixed and unfixed versions apart:
 
@@ -131,7 +146,7 @@ preserved, or reachable is not passed on *rendered* alone.
 | Address provider unavailable: pickup still offered **and reachable** | Passed | Executed: followed through from the basket to a working pickup checkout |
 | Address provider unavailable: basket kept | Passed | Executed: the item survived a failed address lookup, with no delivery fee added |
 | Delivery closed before 12:00 and after 21:00, every day | Partly passed | Executed for Saturday, closed all day: a delivery order was attempted on both copies on 2026-08-22 in the afternoon and refused at the moment of adding, basket kept empty. The before-12:00 and after-21:00 legs on open days still need their windows |
-| Delivery open during its hours | **Failed**, historical reading | Executed on Friday 2026-08-21 under the ASAP/later setting "None", since changed to ASAP-only. Kept as history, not cited as current state. The cause is fixed in code and awaits the Sunday confirmation |
+| Delivery open during its hours | **Failed** on the unfixed code, historical reading; **fix confirmed in place** on 2026-08-23 | Friday 2026-08-21 reading kept as history (taken under the setting "None"). Sunday 2026-08-23, executed on both copies: unfixed accepts a delivery add on a closed day, fixed refuses it. The weekday correction is confirmed in the deployed environment. A weekday add on the fixed copy during 12:00-21:00 is the remaining positive leg and falls out of Monday's basket |
 | Address lookup works with one provider pinned | Passed | Executed: the home-page widget geocodes the typed address server-side and it works on both copies |
 | Address autocomplete on the Google-pinned copies | **Failed** | Executed: the suggestion call is refused by the provider, and the raw technical error is shown to the customer. See below |
 | An in-area address is accepted | Passed | Executed, one address |
@@ -438,7 +453,7 @@ test. Each check waits for its real window.
 
 | Check | Window |
 | --- | --- |
-| Delivery appears open on Sunday, confirming the cause | Sunday only |
+| Delivery appears open on Sunday, confirming the cause | Done 2026-08-23 12:26-12:28, executed on both copies: unfixed accepted, fixed refused |
 | Delivery refused on a closed day | Done 2026-08-22 afternoon, executed on both copies: an order was attempted and refused |
 | Delivery minimum: a CA$20.00 to CA$80.00 basket finds the checkout button disabled | Monday, once delivery is orderable on the fixed copy, **before** the fix is deployed; confirms the deployed state and records the blocked state for contrast |
 | Delivery minimum fix: the same basket checks out at the stored CA$20.00 minimum and the label reads CA$20.00 | Monday, after the basket above, on a 0% copy carrying the fix |
@@ -481,7 +496,7 @@ Cleaning any of these up needs explicit confirmation and is not done yet.
 | Decide whether to enable the Places API | User | Before launch |
 | Propose a fix for the week-start problem, with its blast radius assessed first | Agent | Done. The targeted correction, `App\Delivery\WeekdayScheduleCorrection`, is merged (PR #90) and deployed to `d3c-fix-be6835a9`; its blast radius is the delivery, pickup, and opening schedules only. Sunday confirms it in place. This Done does not release the hours change two rows below, which stays blocked until that confirmation is in hand |
 | Assess a global change of the week start, so that `WorkingHour::getDay()` stops being locale-shifted for any future caller. A different thing from the merged targeted correction above, which rebuilds schedules and leaves `getDay()` as it is; a global change moves every week boundary in the framework and needs its blast radius assessed first | Agent | Deferred; not needed for D3C |
-| Apply the new delivery hours, every day 12:00-21:00 | Agent | **Not before the Sunday 2026-08-23 A/B reading has been taken and judged passed.** The precondition is that runtime confirmation, not the merged code fix in the row above. If the reading does not pass, the hours are not changed and the cause is re-investigated. Changing the hours permanently destroys the discriminating condition, because both copies become open every day and can never again be told apart; so until the reading's result is in hand this item is not executed under any circumstances |
+| Apply the new delivery hours, every day 12:00-21:00 | Agent, on the user's approval | **The precondition is met: the Sunday 2026-08-23 A/B reading was taken and passed.** The change is a write to a shared setting that the live site also reads, so it is Level 2 and stops for explicit approval with the exact prior value (Monday to Friday 12:00-21:00, stored rows weekday 0-4 status 1, 5-6 status 0) and the way back recorded. Not executed yet |
 | Static check that stops an exception being written into a log context | Agent | Deferred |
 
 ### Address autocomplete does not work today
@@ -512,7 +527,8 @@ improvement, not part of this phase.
 
 ## Next action
 
-Take the Sunday reading between 12:00 and 22:00 Montreal, comparing
-`d3c-fix-be6835a9` against `d3c-g2-1f8f0c75`. Until then, do not change the
-delivery hours. Meanwhile the checks that do not need delivery to be orderable
-can continue on `d3c-pu2-1f8f0c75` during opening hours.
+The Sunday reading is taken and passed. Monday, once delivery is orderable on
+the fixed copy: the CA$20.00 to CA$80.00 basket on the deployed copy first,
+then the minimum fix goes to a 0% copy and the basket is repeated. The hours
+change waits for the user's approval. In parallel, the mail test revision and
+its verification proceed under the rules in `CLAUDE_HANDOFF.md` section 10.
