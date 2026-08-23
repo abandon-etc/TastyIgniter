@@ -3948,3 +3948,36 @@ for user merge confirmation. Not deployed.
 
 No runtime, traffic, revision, image, environment variable, schema, secret,
 business data, or production change. No stored value was changed.
+
+## 2026-08-22 - Consumers of the Delivery minimum enumerated; before-and-after comparison entered into methodology
+
+Environment: repository, source inspection of `vendor/tastyigniter`, the
+project extension and theme, and `app/`. Status: recorded in the same pull
+request as the override, PR #101, merged on the user's approval after this
+check.
+
+- The user approved the override on condition that its consumers be
+  enumerated, since the binding proves who constructs the order type and not
+  who reads the minimum. Enumerated every reader of `getMinimumOrderTotal()`,
+  `Location::minimumOrderTotal()`, `checkMinimumOrderTotal()`, the deprecated
+  wrappers, `CoveredArea::minimumOrderTotal()`, and every direct reader of
+  area rules, across core, every installed extension, the Orange theme, the
+  API, mail templates, admin views, the project extension and theme, and
+  JavaScript. Every consumer reaches the overridden method: basket label,
+  checkout button, the theme's server-side checkout security check, and the
+  deprecated wrappers. `CoveredArea::minimumOrderTotal()` had one caller, the
+  vendor Delivery class now replaced. The API reads no minimum; mail, admin
+  order detail, and the Order model derive none. The information panel's rule
+  labels are not a minimum and are unchanged. Two look-alikes are different
+  concepts and untouched: a payment method's own order-total threshold and a
+  coupon's minimum total. Conclusion: no path bypasses the override; no known
+  divergence. Recorded against the override in `CLAUDE_HANDOFF.md`
+  section 10.
+- Entered two rules into `AGENT_WORKFLOW.md` section 8b for project-side
+  overrides of vendor behaviour: enumerate the consumers before merging, and
+  prove "nothing newly broken" with a same-container before-and-after run
+  (`git stash push -u`, run, `git stash pop`, compare counts and the names of
+  erroring tests) rather than a single green run.
+
+Documentation only in this entry. The override itself is recorded in the
+preceding entry.

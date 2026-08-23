@@ -453,6 +453,27 @@ all-orders rule and made free delivery depend on the row order in the admin,
 where a drag silently charges CA$5.00 on a CA$100.00 basket. The evaluation
 is in `D3C_PROGRESS.md` and `CHANGELOG_AI.md` for 2026-08-22.
 
+**Consumers enumerated before merging, 2026-08-22.** Who constructs the order
+type was settled by the binding; who reads the minimum was enumerated
+separately across `vendor/tastyigniter` (core and every installed
+extension, the Orange theme, the API), the project extension and theme, and
+`app/`. Every consumer reaches the overridden method: the basket label
+(`cart-box.blade.php` → `Location::minimumOrderTotal()`), the checkout
+button (`CartBox::hasMinimumOrder()` → `CartManager::
+cartTotalIsBelowMinimumOrder()` → `Location::checkMinimumOrderTotal()`), the
+server-side checkout security check in the theme's `Checkout` component
+(the same `cartTotalIsBelowMinimumOrder()` and the message's
+`minimumOrderTotal()`), and the deprecated `minimumOrder()` /
+`checkMinimumOrder()` wrappers. `CoveredArea::minimumOrderTotal()` had a
+single caller, the vendor Delivery class now replaced; nothing else derives
+a minimum from the rules. The API reads no minimum, covered area, or
+delivery amount; mail templates, the admin order detail, the Order model,
+and the theme's JavaScript read none. The information panel prints the raw
+rule labels, which is not a minimum and is unchanged. Two look-alikes are
+different concepts and untouched: a payment method's own `order_total`
+threshold (`alert_min_order_total` in payregister and `OrderManager`) and a
+coupon's `min_total`. No path bypasses the override; no known divergence.
+
 ### Locale-adjacent findings have three separate causes
 
 Three symptoms look like one problem and are not. Treating them as one would
