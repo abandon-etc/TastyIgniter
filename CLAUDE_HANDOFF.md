@@ -596,14 +596,44 @@ same revision went through to the success page as order #7 ("Received"), so
 the customer confirmation and the two alerts were handed to the provider
 inside the request without error, every one addressed to the test inbox by
 the redirect. The revision log for the window carried no e-mail address of
-any kind, no credential identifier, and no error. The inbox read-back, the
-admin status change with notify for the fourth message, and the deletion of
-both synthetic orders (the 12:38 order and #7) are with the user.
+any kind, no credential identifier, and no error. **Rehearsal result, read by the user.** Three messages reached the test
+inbox, all in the inbox rather than spam, sender name and address correct:
+the order confirmation and one order alert at 13:12, and "Your Order Update -
+7" at 13:42 after the user set order #7 to Preparation with notify from the
+admin. The owner's real inbox received nothing. The provider's transactional
+log, which is authoritative, shows exactly two messages at 13:12, so one of
+the two alerts was never handed over: in
+`ti-ext-cart/src/Extension.php:403-405` the confirmation and the two alerts
+are three independent `mailSend()` calls, each building its own recipients
+from `setting('order_email')` and the stored addresses
+(`Order::mailGetRecipients()`), and `SendsMailTemplate::mailSend()` sends
+nothing, silently and without a log line, when the list is empty. So the
+missing alert means either its recipient type (location or admin) is not
+ticked in the admin's order-notification setting, or that recipient's
+stored address is empty. Which one is an admin read: the order-notification
+toggles, the site e-mail, and the location's e-mail. None of them is exposed
+on the storefront, and none was changed.
+
+**Cleanup, 2026-08-23.** Both synthetic orders were removed on the user's
+explicit authorization through a disposable same-image Cloud Run Job
+(`qa-cleanup-orders-6-7`) built from the mail revision's spec with the
+secrets as references and `MAIL_MAILER=log`. A read-back execution first
+listed exactly orders #6 and #7 with their synthetic fields and child-row
+counts; the delete execution refused unless exactly two orders with the
+synthetic last name and test note were found, then removed, inside one
+transaction, 2 menu rows, 4 totals, 3 status-history rows, 0 payment logs,
+0 stock-history rows, and the 2 orders; read-back after: 0 remaining, total
+orders 6 to 4, so orders #2 to #5 were untouched. The revision's log for the
+hour carried no address and no credential identifier. The job's own log
+carries the synthetic test identity it printed, nothing real. The job
+resource awaits the user's confirmation before deletion.
 
 **Still open on mail.** Every shipped template is English with a single
 body per template and no per-recipient language; a French customer receives
-English mail. That is a production-gate item under the French-language
-requirements above, not a defect in this change.
+English mail. The rehearsal supplied the evidence: the three messages read
+by the user were English or mixed, "You just received a Cueillette order",
+"Sous-total", "Your Order Update". That is a production-gate item under the
+French-language requirements above, not a defect in this change.
 
 ### Nominatim production gate
 

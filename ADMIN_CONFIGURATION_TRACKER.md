@@ -2360,3 +2360,36 @@ user-instructed mail step 6; no deployment change.
 
 No change to any revision, traffic, environment variable, secret, schema, or
 stored setting. Two synthetic order rows exist in the shared database.
+
+## 2026-08-23 - Synthetic mail-test orders #6 and #7 deleted through a disposable Job
+
+Environment: Canada staging shared database, through a disposable Cloud Run
+Job `qa-cleanup-orders-6-7` in `northamerica-northeast1`. Status: recorded.
+Level 2 destructive action on the user's explicit authorization naming the
+two orders; orders #2 to #5 were explicitly out of scope and were not touched.
+
+- Job built from the mail revision's image and spec: the five database and
+  application secrets as references, Cloud SQL instance attached, Unix socket
+  exported in the job script, `MAIL_MAILER=log`, no URL or mail variables.
+  Command: `php artisan tinker --execute` of a PHP snippet passed through an
+  environment variable. No secret value was read or printed.
+- Execution 1, read-back only: orders #6 (created 12:37:24, status 1) and #7
+  (created 13:11:30, status 3), both first name QA, last name MailTest,
+  synthetic e-mail, notes marked as tests, guest (no customer row), payment
+  cod, collection; child rows: order_menus 2, order_menu_options 0,
+  order_totals 4, payment_logs 0, stock_history 0, status_history 3; total
+  orders 6.
+- Execution 2, delete: guarded to refuse unless exactly two orders with last
+  name MailTest and a test note were found; in one transaction deleted
+  order_menu_options 0, order_menus 2, order_totals 4, payment_logs 0,
+  stock_history 0, status_history 3, orders 2. Read-back after: remaining 0,
+  total orders 4.
+- No stock quantity was affected: stock_history held no rows for these
+  orders. No customer row existed to remove.
+- The job resource remains until the user confirms its deletion; its two
+  execution logs hold the synthetic identity printed by the read-back and
+  nothing real.
+
+No change to any revision, traffic, environment variable, secret, schema, or
+stored setting. Two synthetic orders and their child rows were removed from
+the shared database.
