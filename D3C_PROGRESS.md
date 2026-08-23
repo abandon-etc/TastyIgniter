@@ -479,9 +479,9 @@ Cleaning any of these up needs explicit confirmation and is not done yet.
 | Create the budget alert | User | Today |
 | Upgrade to a paid account, and in the same sitting set the Geocoding daily cap to 500, create the budget alert, and split the browser key from the server key | User | Mid-September 2026 |
 | Decide whether to enable the Places API | User | Before launch |
-| Propose a fix for the week-start problem, with its blast radius assessed first | Agent | Done. The targeted correction, `App\Delivery\WeekdayScheduleCorrection`, is merged (PR #90) and deployed to `d3c-fix-be6835a9`; its blast radius is the delivery, pickup, and opening schedules only. Sunday confirms it in place |
+| Propose a fix for the week-start problem, with its blast radius assessed first | Agent | Done. The targeted correction, `App\Delivery\WeekdayScheduleCorrection`, is merged (PR #90) and deployed to `d3c-fix-be6835a9`; its blast radius is the delivery, pickup, and opening schedules only. Sunday confirms it in place. This Done does not release the hours change two rows below, which stays blocked until that confirmation is in hand |
 | Assess a global change of the week start, so that `WorkingHour::getDay()` stops being locale-shifted for any future caller. A different thing from the merged targeted correction above, which rebuilds schedules and leaves `getDay()` as it is; a global change moves every week boundary in the framework and needs its blast radius assessed first | Agent | Deferred; not needed for D3C |
-| Apply the new delivery hours, every day 12:00-21:00 | Agent | Only after the week-start problem is settled |
+| Apply the new delivery hours, every day 12:00-21:00 | Agent | **Not before the Sunday 2026-08-23 A/B reading has been taken and judged passed.** The precondition is that runtime confirmation, not the merged code fix in the row above. If the reading does not pass, the hours are not changed and the cause is re-investigated. Changing the hours permanently destroys the discriminating condition, because both copies become open every day and can never again be told apart; so until the reading's result is in hand this item is not executed under any circumstances |
 | Static check that stops an exception being written into a log context | Agent | Deferred |
 
 ### Address autocomplete does not work today
