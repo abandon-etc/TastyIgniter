@@ -508,6 +508,63 @@ CA$5.00 fee, the CA$80.00 free threshold, and the CA$20.00 minimum are compared
 numerically somewhere, and that comparison is worth confirming regardless of how
 the amounts are displayed.
 
+### Mail: the config file governs, the admin Mail settings are inert, and test revisions redirect
+
+Read-only investigation of 2026-08-22, recorded because the facts decide how
+mail can be tested without touching the live site.
+
+**Which configuration sends mail.** `config/mail.php` reads the transport and
+credentials from `MAIL_*` environment variables. The only code that would
+write the admin's Mail settings from the database into that configuration is
+`Igniter\System\Classes\MailManager::applyMailerConfigValues()`, and it is
+called only when `Igniter::usingMailerConfigFile()` is false, while
+`Igniter\System\Providers\MailServiceProvider::boot()` calls
+`Igniter::useMailerConfigFile()` unconditionally and nothing ever clears the
+flag. So the database Mail settings are inert in the installed version; the
+admin page itself shows a banner saying changes there do not take effect.
+What the database still decides is *who receives*: the order, reservation,
+and registration recipient toggles, the site address, and each location's
+address, all shared by every revision.
+
+**Consequence.** Environment variables are per revision, so one 0%-traffic
+revision can carry `MAIL_MAILER=smtp` with real credentials while the
+revision serving traffic keeps `MAIL_MAILER=log`. Mail is queued on the
+`sync` connection, so a transport failure surfaces inside the request that
+sent it, which is one more reason to prove the transport on a copy first.
+
+**Test redirect.** `MAIL_TEST_REDIRECT_TO=<address>` on a revision makes
+every message that revision sends go to that one address: To replaced, Cc and
+Bcc dropped, through Laravel's global to-address that every resolved mailer
+applies as `Mailer::alwaysTo()`. `App\Mail\MailTestRedirect` applies it from
+`config('mail.test_redirect_to')` during provider registration; the value
+goes through config because the runtime caches configuration. An invalid
+value refuses to boot rather than send to real recipients. Covered by
+`tests/Feature/Mail/MailTestRedirectTest.php`. Without it, a test revision's
+alerts would reach the owner's real inbox, because the recipients come from
+the shared database.
+
+**Rules agreed on 2026-08-23.**
+
+- No revision carries `MAIL_MAILER=smtp` until the redirect is merged.
+- Credentials live in Secret Manager under the three names the runtime
+  document reserved, `tastyigniter-mail-host`, `tastyigniter-mail-username`,
+  `tastyigniter-mail-password`; the user pastes the values in the console;
+  no value appears in a command line, a log, or a conversation.
+- A mail test revision is deployed with `--no-traffic` and a tag, with
+  `APP_URL`, `ASSET_URL`, and `CLOUD_RUN_SERVICE_URL` pinned to the tag (the
+  order-view link in the mail is built from `APP_URL`), and FP-1 is taken on
+  the main-traffic revision before and after.
+- Verification: a synthetic pickup order on that revision, the four resulting
+  messages read in the test inbox, and the log checked for recipient leakage.
+  Waits for the user's Brevo domain verification and credential placement.
+- A boot-time assertion that production must use a real transport and no
+  redirect is deferred to launch, when `APP_ENV` for production is decided.
+
+**Still open on mail.** Every shipped template is English with a single
+body per template and no per-recipient language; a French customer receives
+English mail. That is a production-gate item under the French-language
+requirements above, not a defect in this change.
+
 ### Nominatim production gate
 
 Public Nominatim is not approved for production Delivery traffic for the

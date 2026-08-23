@@ -98,6 +98,23 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Test Redirect (project)
+    |--------------------------------------------------------------------------
+    |
+    | When set, every message this deployment sends is delivered to this one
+    | address instead of its real recipients: To is replaced, Cc and Bcc are
+    | dropped. Meant for 0%-traffic test revisions that use a real transport,
+    | so that order, reservation, and registration alerts cannot reach the
+    | owner's or a customer's inbox. Leave unset on any revision that serves
+    | traffic. Read through config, not env(), because the runtime caches
+    | configuration. See App\Mail\MailTestRedirect.
+    |
+    */
+
+    'test_redirect_to' => env('MAIL_TEST_REDIRECT_TO'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Markdown Mail Settings
     |--------------------------------------------------------------------------
     |
