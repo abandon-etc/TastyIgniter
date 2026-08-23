@@ -3733,3 +3733,58 @@ auto-merge under the standing Level 0 docs-only authorization.
 Documentation only in this PR; every changed path is `.md`. The runtime was
 read and exercised but not changed: no stored value was touched, and main
 traffic stayed on its revision.
+
+## 2026-08-22 - Two settlements entered: the CA$80.00 minimum and the ASAP-only change
+
+Environment: repository documentation, source inspection of the installed
+vendor packages, and a read-only storefront read-back on the 0%-traffic
+copies. Status: PR open; eligible for auto-merge under the standing Level 0
+docs-only authorization.
+
+- Upgraded the "Min. Order Amount: $80.00" observation to a confirmed defect
+  on the user's read-back of the stored value, `min_order_amount = 20.00`. Did
+  not stop at "display layer": traced the CA$80.00 in source to the "CA$5.00
+  below CA$80.00" fee rule. The vendor treats a matched below-rule's threshold
+  as the delivery area's minimum order total, and the delivery minimum is the
+  larger of that and the stored value, so 80 wins. Recorded that the same
+  computed value feeds `CartBox::hasMinimumOrder()` and therefore the checkout
+  button, so source predicts blocking for a basket between CA$20.00 and
+  CA$80.00, not only deterrence. Severity recorded as predicted blocking
+  pending the executed Monday basket, with the user's deterrent reading and
+  its premise stated beside it rather than overwritten. Two remedy shapes
+  recorded, neither executed.
+- Updated the decision table rather than appending: "ASAP: On" of 2026-08-20
+  meant restriction None; the user changed it to ASAP-only for both order
+  types on 2026-08-22, intentionally. Original value, new value, and date are
+  all kept. Recorded the stored values the user read back, and a storefront
+  read-back by the agent at 20:1x: the dialog offers no later choice for
+  either order type. The same dialog already offered no later choice at 15:1x,
+  so the Saturday refusal evidence was taken under the current setting.
+- Assessed the four consequences instead of assuming none. The Friday
+  2026-08-21 observation is marked a historical reading taken under restriction
+  None and is no longer cited as current state; the diagnosis stands on source
+  and unit tests. No acceptance row depends on a delivery time picker; the
+  last-slot and first-slot checks are restated as as-soon-as-possible attempts
+  at the boundary. Q-010 is marked masked, not fixed, in the handoff. The
+  Sunday reading was re-verified in source independently of the user's
+  judgement: `time_restriction` is read only where the "later" choice is
+  offered or accepted, and never on the open-or-closed path; both gates of
+  `Location::checkOrderTime()` read the working schedule the fix corrects.
+- Corrected, in passing, the earlier description of the order-time check's
+  early return as firing "before the schedule is reached". The early return
+  itself reads the delivery schedule; on Saturday it fires identically on both
+  copies, and on Sunday it is exactly where the two copies part.
+- Withdrew one sentence of Saturday evidence: "no order dates or times are
+  offered" carries no weight under ASAP-only with future orders off, since the
+  date list is empty on a closed day whatever the schedule.
+- Recorded the collaboration convention in `AGENT_WORKFLOW.md` section 8b
+  and, as a one-paragraph global constraint, in `CLAUDE.md`: the owner edits
+  shared settings directly and will say so; the agent reads them back before
+  and after every key reading regardless, and a reading whose premise has
+  changed is historical.
+- Noted one cosmetic theme quirk under ASAP-only: with delivery closed the
+  dialog shows an empty, unusable date/time picker. Not pursued.
+
+Documentation only. Every changed path is `.md`. No stored value was changed
+by this work; the stored restriction values were changed by the user, as
+recorded.

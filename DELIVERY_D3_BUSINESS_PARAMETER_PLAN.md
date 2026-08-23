@@ -439,7 +439,7 @@ later as a bill.
 | Lead time | Minutes | Current retained value 25 | Confirm operational value | 25 minutes, retained; confirmed 2026-08-20 |
 | Add lead time to start | Off / on | Changes generated first timeslot behavior | Test both only after business choice | Off, retained; confirmed 2026-08-20 |
 | Time interval | Minutes | Current retained value 15 | Confirm 15 minutes | 15 minutes, retained; confirmed 2026-08-20 |
-| ASAP | On / off | Restriction can be None, ASAP-only, or later-only | On for initial same-day flow | On; confirmed 2026-08-20 |
+| ASAP | On / off | Restriction can be None, ASAP-only, or later-only | On for initial same-day flow | Originally "On" meaning restriction None, as-soon-as-possible and a later same-day slot both allowed; confirmed 2026-08-20. **Changed by the user on 2026-08-22 to ASAP-only** (`time_restriction = 1`) for both Delivery and Pickup, intentionally: as-soon-as-possible only, no later-slot choice. Stored values read back by the user the same day. Q-010 is masked by this change, not fixed |
 | Future orders | On / off | Q-010 is separate and future orders are currently off | Off | Off, retained; confirmed 2026-08-20 |
 | Future min/max days | Integer days | Used only when future orders are on | Leave inactive at 0/5 | Inactive at 0/5, retained; confirmed 2026-08-20 |
 | Same-day cutoff | Closing time / explicit rule | No separate native cutoff-minutes field | Encode with earlier Delivery closing time | No earlier cutoff; ordering stays open to the 21:00 Delivery closing time; confirmed 2026-08-20 |

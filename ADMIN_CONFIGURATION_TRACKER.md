@@ -2245,3 +2245,37 @@ No Cloud Run service, revision, traffic, image, environment variable, Cloud SQL
 row or schema, Delivery Area, fee, minimum, schedule, Pickup, Birthday,
 Reservation, payment, secret, production, Render, or DigitalOcean state was
 changed. Delivery remains closed and D3C has not started.
+
+## 2026-08-22 - Owner-side setting change: ASAP-only for Delivery and Pickup; Delivery minimum read back
+
+Environment: Canada staging shared database, through the admin, changed by the
+user. Status: recorded. No agent performed or requested the change.
+
+- The user changed the ASAP/later restriction to ASAP-only for both order
+  types on 2026-08-22 and confirmed it was intentional, neither an accident nor
+  a by-product of the Friday investigation. Stored values as read back by the
+  user: Delivery `time_restriction = 1`, Collection `time_restriction = 1`,
+  Collection `min_order_amount = 0.00`, lead time 25, interval 15, and
+  `future_orders.is_enabled = 0` for both.
+- Prior value for Delivery: None, both ASAP and a later same-day slot allowed,
+  as recorded in the D3A audit and confirmed as decision "ASAP: On" on
+  2026-08-20. Prior value for Collection was not separately recorded in the
+  audits. The decision table carries the original value, the new value, and
+  the change date.
+- Storefront read-back by the agent at 20:1x the same day on the 0%-traffic
+  copies: the order-type dialog offers only "Dès que possible" for both order
+  types, which is what ASAP-only renders. The change was already in effect at
+  15:1x, when the same dialog offered no later choice.
+- The user read back the stored Delivery minimum as `min_order_amount = 20.00`,
+  agreeing with the decision. The storefront's "Min. Order Amount: $80.00" is
+  therefore computed, not stored: source traces it to the "CA$5.00 below
+  CA$80.00" fee rule, whose threshold the vendor treats as the area's minimum
+  order total. Recorded in `D3C_PROGRESS.md` with the checkout-gate
+  consequence and the two remedy shapes; no setting was changed for it.
+- Q-010 is masked by this change, not fixed; recorded in `CLAUDE_HANDOFF.md`
+  section 10.
+
+No Cloud Run service, revision, traffic, image, environment variable, schema,
+Delivery Area, fee rule, schedule, payment, secret, production, Render, or
+DigitalOcean state was changed by any agent. The two stored restriction values
+were changed by the user in the admin as described.

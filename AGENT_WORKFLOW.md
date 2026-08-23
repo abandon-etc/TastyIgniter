@@ -321,6 +321,28 @@ obtained without pinning looks correct and is not; discard it rather than
 reason about whether it was probably fine. Check the hostname, not the
 plausibility of the result.
 
+### Shared settings move between readings
+
+The owner edits Location settings, hours, and fee rules directly in the admin
+and has agreed to say so when they do. That notice is welcome and is not
+relied on. Before and after every key reading, read the shared settings back
+rather than assuming they still match the last record; a reading taken under
+a premise that has since changed is a historical reading, and may not be
+cited as evidence of current state.
+
+The case: delivery was observed refusing an as-soon-as-possible order on
+Friday 2026-08-21 under an ASAP/later restriction of "None". On 2026-08-22 the
+owner changed the restriction to ASAP-only. The Friday observation is kept as
+history; the defect's diagnosis stands because it rests on source and unit
+tests, not on that observation.
+
+Without admin access, read back from the storefront and say which signal was
+used. The order-type dialog renders a "later" choice only when the restriction
+allows one; the date list it offers reflects the future-orders setting; the
+basket panel prints the computed minimum. Record the setting state alongside
+every reading so that a later reader can tell a current reading from a
+historical one.
+
 ### Time-dependent checks wait for the time
 
 Opening hours, cut-offs, and weekday or weekend behaviour live in the shared
