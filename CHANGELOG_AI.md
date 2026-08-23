@@ -3788,3 +3788,43 @@ docs-only authorization.
 Documentation only. Every changed path is `.md`. No stored value was changed
 by this work; the stored restriction values were changed by the user, as
 recorded.
+
+## 2026-08-22 - The minimum is blocking, the rule shape is confirmed, and the remedy's risk is answered
+
+Environment: repository documentation, plus a read-only storefront read-back
+on the 0%-traffic fixed copy and the container test run recorded in
+PR #98. Status: PR open; eligible for auto-merge under the
+standing Level 0 docs-only authorization.
+
+- Recorded the user's withdrawal of "the system will not refuse at CA$80.00"
+  and the reason: the stored value was read and its effect inferred, which is
+  rendering-is-not-execution in the configuration layer. Entered it in
+  `AGENT_WORKFLOW.md` section 8b as its own rule: a setting proves what was
+  entered; only the consumption path proves what happens.
+- Raised the delivery minimum to the highest-priority open defect, severity
+  blocking, with the business impact the user supplied: CA$20.00 to CA$80.00
+  is the main band of delivery orders, and a disabled checkout there means
+  delivery is effectively unusable.
+- Confirmed the stored rule shape read-only, where the user could not. The
+  storefront's "More info" panel lists each area's rules sorted by priority:
+  "Free above $80.00" then "$5.00 below $80.00", matching the D3B record.
+  Recorded the panel as the read-back route for fee rules without admin or
+  database access.
+- Replaced "the code predicts" with "the vendor semantics are established",
+  citing the test: enforced minimum 80 under the recorded shape, a CA$50.00
+  basket fails the minimum check, 5 tests and 35 assertions on PHP 8.3.32 /
+  PHPUnit 11.5.56. Monday's basket now confirms only that the deployed copy
+  runs the same code.
+- Answered the user's question about remedy A before any rule is changed:
+  the vendor takes the first valid rule in ascending priority, so a CA$100.00
+  basket is free only if the free rule sits ahead of the all-orders rule;
+  reversed, it pays CA$5.00 and free delivery is lost. In the admin the rules
+  are a sortable list whose order is the priority; after any change the
+  storefront panel must show "Free above $80.00" first. Neither remedy was
+  executed.
+- Recorded a check that never ran: a container test run that appeared to pass
+  had been rewritten by Git Bash into a Windows working directory, and only
+  the trailing command exited 0. Caught by reading the output.
+
+Documentation only. Every changed path is `.md`. No stored value was changed
+by this work.

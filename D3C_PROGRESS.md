@@ -99,6 +99,23 @@ schedule that the fix corrects. Sunday, unfixed: schedule open, order time now,
 add accepted. Sunday, fixed: schedule closed, early return, add refused. The
 procedure above is unchanged.
 
+## The delivery minimum: the highest-priority open defect
+
+**Priority: highest among open defects.** The storefront enforces a CA$80.00
+minimum on delivery where the decision is CA$20.00. CA$20.00 to CA$80.00 is
+the main band of delivery orders, and in that band the checkout button is
+disabled, so delivery is effectively unusable rather than merely unattractive.
+
+Every link but one is now verified: the stored minimum is CA$20.00 (user
+read-back); the stored fee rules are "Free above $80.00" then "$5.00 below
+$80.00", in that order (read back from the storefront's own information
+panel); and the vendor's semantics under exactly that shape are established
+by `tests/Feature/Delivery/DeliveryAreaRuleMinimumTest.php` (PR #98):
+the enforced minimum is 80 and a CA$50.00 basket fails the minimum-order
+check. The one link left is that the deployed copy behaves as the installed
+vendor code does, which Monday's CA$20.00 to CA$80.00 basket confirms.
+Details and the remedy options are in the Saturday findings below.
+
 ## Acceptance checks
 
 This table is the acceptance record. **Evidence type matters**: *rendered* means
@@ -120,8 +137,8 @@ preserved, or reachable is not passed on *rendered* alone.
 | An in-area address is accepted | Passed | Executed, one address |
 | Delivery area: outside, and exactly on the boundary | Blocked | Needs delivery to be orderable |
 | Delivery fee of CA$5.00 below the free threshold | Partly seen | Rendered as a running total; not confirmed against a real basket |
-| Free delivery at CA$80.00, minimum CA$20.00, at the edges | Blocked | Needs delivery to be orderable. Code predicts the enforced minimum is CA$80.00, not CA$20.00; see the next row |
-| Delivery minimum shown and enforced as CA$20.00 | **Failed** | Confirmed defect: the storefront shows CA$80.00. The stored minimum was read back as CA$20.00 by the user on 2026-08-22. Source traces the CA$80.00 into the checkout gate as well as the label, so a basket between CA$20.00 and CA$80.00 is predicted to be blocked; the executed Monday basket decides between deterrent and blocking. See below |
+| Free delivery at CA$80.00, minimum CA$20.00, at the edges | Blocked | Needs delivery to be orderable. The enforced minimum is CA$80.00, not CA$20.00, established by test; see the next row |
+| Delivery minimum shown and enforced as CA$20.00 | **Failed**, blocking | Confirmed defect, highest priority. Stored minimum CA$20.00 (user read-back); stored rules "Free above $80.00" then "$5.00 below $80.00" (storefront read-back); vendor semantics under that shape established by test: enforced minimum 80, a CA$50.00 basket fails the check. Monday's basket confirms only that the deployed copy matches the installed code. See below |
 | Money reads and compares correctly in Canadian French | Not started | Decimal separator differs; the three amounts above are compared numerically |
 | Unrecognised, incomplete, out-of-area addresses; changing an address | Not started | |
 | Switching between pickup and delivery, both ways | Not started | |
@@ -248,16 +265,48 @@ not misconfigured; it computes the CA$80.00. Traced in source:
 
 So this is neither a wrong stored value nor purely a label: it is the vendor's
 reading of a "below" fee rule, triggered by the shape the rules were saved in.
-**Severity is not yet settled.** The user's reading is deterrent, a customer
-sees a threshold four times the real one and gives up, a real conversion loss,
-on the premise that the system does not actually refuse at CA$80.00. Source
-predicts it does refuse: a basket between CA$20.00 and CA$80.00 should find
-the checkout button disabled. Recorded as predicted blocking, pending the
-executed Monday basket, which settles it either way. Two remedies exist, both
-outside this phase: reshape the rules so no "below" rule is matched (for
-example "free at or above CA$80.00" followed by "CA$5.00 on all orders"),
-which is a shared-setting change and stops for approval; or a project-side
-override of the minimum, which is code. Also English on a French site.
+
+**Severity: blocking.** The user first read it as deterrent, on the premise
+that the system would not actually refuse at CA$80.00, and withdrew that
+reading on 2026-08-22 once the consumption path was traced: the stored value
+had been read, its effect inferred. The vendor's behaviour is now established
+rather than predicted, by `tests/Feature/Delivery/DeliveryAreaRuleMinimumTest.php`
+(PR #98), run in a container on PHP 8.3.32 / PHPUnit 11.5.56, 5
+tests and 35 assertions: under the recorded rule shape the area minimum is
+CA$80.00 at subtotals 19, 20, 50, 79, 80, 81 and 100, the enforced delivery
+minimum is 80, and a CA$50.00 basket fails the minimum-order check. Business
+impact: CA$20.00 to CA$80.00 is the main band of delivery orders; a disabled
+checkout there means delivery is effectively unusable. This is the
+highest-priority open defect.
+
+**The stored rule shape is confirmed, read-only.** The user could not read the
+stored rules on 2026-08-22: Cloud SQL Studio was blocked by a console dialog,
+and the admin keeps the rules inside an editor that had to be opened. The
+storefront prints them itself: the "More info" panel on the menu page lists
+each delivery area's rules as the vendor sorts them, by priority. On
+`d3c-fix-be6835a9` it reads "D3 Montreal Delivery Area: Free above $80.00 /
+$5.00 below $80.00", in that order, matching the D3B record. That panel is
+the read-back route for fee rules when neither admin nor database is at hand.
+
+**What Monday still settles:** only that the deployed copy behaves as the
+installed vendor code does. Add items to a delivery basket between CA$20.00
+and CA$80.00 and confirm the checkout button is disabled with the minimum
+message; that is the executed evidence.
+
+**Remedies, neither executed.** (A) Reshape the rules so no "below" rule is
+ever matched: "free at or above CA$80.00" followed by "CA$5.00 on all
+orders". This is a shared-setting change and stops for approval. The user
+asked, before anything is changed, how the vendor resolves a basket that
+matches both rules, since a CA$100.00 basket matches "at or above 80" and
+"all orders" alike. Answered by the same test: **the first valid rule in
+ascending priority wins**. Candidate A is therefore correct only with the
+free rule ahead of the all-orders rule; with the priorities reversed a
+CA$100.00 basket is charged CA$5.00 and free delivery is lost. In the admin
+the rules are a sortable list whose row order is the priority, so the free
+rule must be the top row, and the result must be read back from the
+storefront panel after saving: "Free above $80.00" listed first. (B) A
+project-side override of the minimum, which is code. Also English on a
+French site.
 
 One menu observation in passing: Puff-Puff carries a stored minimum quantity
 of 3, so its dialog opens at three pieces. That is stored menu data, possibly
@@ -323,6 +372,7 @@ test. Each check waits for its real window.
 | --- | --- |
 | Delivery appears open on Sunday, confirming the cause | Sunday only |
 | Delivery refused on a closed day | Done 2026-08-22 afternoon, executed on both copies: an order was attempted and refused |
+| Delivery minimum: a CA$20.00 to CA$80.00 basket finds the checkout button disabled | Monday, once delivery is orderable on the fixed copy; confirms the deployed state only, the semantics are established |
 | Delivery stops taking orders at 21:00 | Any evening, once delivery works |
 | Pickup still open after delivery has stopped | Any evening, once delivery works |
 | Pickup stops at 22:00 | Done 2026-08-21 22:31, executed: an order was attempted and refused |
