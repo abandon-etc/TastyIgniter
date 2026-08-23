@@ -589,11 +589,16 @@ findings from that one attempt:
   authentication failed before the envelope mattered; its tests cover it,
   the live proof waits for a successful send.
 
-Next: the user clears the provider's IP restriction (or chooses a fixed
-egress), then one more synthetic pickup order on the same revision produces
-the customer confirmation and the two alerts, all at the test inbox, and a
-status change with notify from the admin produces the fourth; both synthetic
-orders are then deleted.
+**Second run, 2026-08-23 13:12.** The user found the cause on the provider
+side: the SMTP key's authorized-IP restriction had been activated with an
+empty allow-list, and deactivated it. A second synthetic pickup order on the
+same revision went through to the success page as order #7 ("Received"), so
+the customer confirmation and the two alerts were handed to the provider
+inside the request without error, every one addressed to the test inbox by
+the redirect. The revision log for the window carried no e-mail address of
+any kind, no credential identifier, and no error. The inbox read-back, the
+admin status change with notify for the fourth message, and the deletion of
+both synthetic orders (the 12:38 order and #7) are with the user.
 
 **Still open on mail.** Every shipped template is English with a single
 body per template and no per-recipient language; a French customer receives
