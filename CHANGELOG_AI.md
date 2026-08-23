@@ -4150,3 +4150,25 @@ auto-merge under the standing authorization.
 
 Documentation only in this PR. The runtime actions are recorded in the
 tracker entry of the same date.
+
+## 2026-08-23 - Mail step 6 retried: the second synthetic order's mail went through; log clean
+
+Environment: the mail test revision's storefront and Cloud Logging, read
+only. Status: Level 2 continuation on the user's instruction, recorded in
+`ADMIN_CONFIGURATION_TRACKER.md`; this docs PR is Level 0, eligible for
+auto-merge.
+
+- The user removed the provider's authorized-IP restriction (it had been
+  active with an empty allow-list). A second synthetic pickup order reached
+  the success page as order #7; no transport error, so the customer
+  confirmation and both alerts were handed to the provider, all addressed to
+  the test inbox by the redirect.
+- The revision log carried no e-mail address, no credential identifier, and
+  no error. Recorded with the first run in `CLAUDE_HANDOFF.md` section 10.
+- Left with the user: reading the three messages in the test inbox,
+  changing order #7's status with notify for the fourth, and deleting both
+  synthetic orders. The two findings from the first run stand: mail on the
+  sync queue inside the customer request, and raw transport text on the
+  checkout page.
+
+Documentation only in this PR.

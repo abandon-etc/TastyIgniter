@@ -2337,3 +2337,26 @@ user's instruction (mail step 5 and the start of step 6).
 No change to the main-traffic revision, its environment, the database schema,
 any stored setting, or any secret value. One synthetic order row was created
 and is listed for cleanup in `D3C_PROGRESS.md`.
+
+## 2026-08-23 - Mail test: second synthetic order sent through the provider
+
+Environment: revision `le-chateau-canada-staging-mail-3a603e53` on its tag,
+Cloud Logging read-only. Status: recorded. Level 2 continuation of the
+user-instructed mail step 6; no deployment change.
+
+- Provider side, by the user: the SMTP key's authorized-IP restriction was
+  active with an empty allow-list; deactivated, page read back as
+  deactivated. Sender `info@` kept as an intentional change.
+- Second synthetic pickup order placed at 13:12:43 on the tag, same
+  synthetic identity and a note marked as test 2; success page reached,
+  order #7, status Received. No transport error, so the three messages were
+  handed to the provider on the sync queue: customer confirmation and the two
+  order alerts, all redirected to the test inbox by `MAIL_TEST_REDIRECT_TO`.
+- Revision log for the window: 102 lines, no e-mail address of any kind, no
+  credential identifier, no error or exception; the only "mail" matches are
+  the revision's own hostname in request lines.
+- Two synthetic orders now exist for cleanup, listed in `D3C_PROGRESS.md`.
+  Inbox read-back and the status-change message are with the user.
+
+No change to any revision, traffic, environment variable, secret, schema, or
+stored setting. Two synthetic order rows exist in the shared database.
