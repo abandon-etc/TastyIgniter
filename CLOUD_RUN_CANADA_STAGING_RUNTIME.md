@@ -122,9 +122,14 @@ service creation:
 | `tastyigniter-mail-host` | `MAIL_HOST` | Placeholder only if mail testing is enabled later |
 | `tastyigniter-mail-username` | `MAIL_USERNAME` | Placeholder only if mail testing is enabled later |
 | `tastyigniter-mail-password` | `MAIL_PASSWORD` | Placeholder only if mail testing is enabled later |
+| (plain variable, not a secret) | `MAIL_TEST_REDIRECT_TO` | Test revisions only: every message the revision sends goes to this one inbox. Never set on a revision that serves traffic. See `CLAUDE_HANDOFF.md` section 10 |
 
 No real mail credentials should be configured for this staging experiment unless
-mail testing is explicitly approved later.
+mail testing is explicitly approved later. Mail testing was approved on
+2026-08-23 under the rules in `CLAUDE_HANDOFF.md` section 10: `MAIL_MAILER=smtp`
+only on a 0%-traffic tagged revision that also sets `MAIL_TEST_REDIRECT_TO`, and
+only after the redirect is merged; the revision serving traffic keeps
+`MAIL_MAILER=log`.
 
 ## Media Storage Strategy
 

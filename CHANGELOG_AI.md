@@ -4016,3 +4016,52 @@ an entry.
   being merged.
 
 Documentation only. Every changed path is `.md`. No stored value was changed.
+
+## 2026-08-23 - Mail test redirect: MAIL_TEST_REDIRECT_TO sends every message of a revision to one inbox
+
+Environment: repository, container-run tests. Status: PR open. Level 1, stops
+for user merge confirmation. Not deployed; no revision changed.
+
+- Recorded the read-only mail investigation of 2026-08-22 in
+  `CLAUDE_HANDOFF.md` section 10: the config file governs mail, the admin Mail
+  settings are inert in the installed core (`MailServiceProvider::boot()`
+  calls `Igniter::useMailerConfigFile()` unconditionally, so
+  `MailManager::applyMailerConfigValues()` never runs), recipients still come
+  from the shared database, environment is per revision, and mail is queued
+  on the sync connection. The enumeration of every mail the system sends and
+  the English-only template state are in the conversation record and
+  summarised there.
+- Added `App\Mail\MailTestRedirect`, applied from `AppServiceProvider::register()`.
+  When `config('mail.test_redirect_to')`, fed by `MAIL_TEST_REDIRECT_TO` in
+  `config/mail.php`, is set, it sets Laravel's global to-address, which every
+  mailer the manager resolves applies as `Mailer::alwaysTo()`: To replaced,
+  Cc and Bcc dropped, for template mailables, notifications, and direct Mail
+  calls alike. The user named `Mail::alwaysTo()`; in Laravel 12 that method
+  lives on each Mailer, and the facade call would reach only the default
+  mailer and force it to resolve at boot, so the global address was used,
+  which is the same `alwaysTo()` applied to every mailer and resolves nothing
+  at boot. The value is read through config because the runtime caches
+  configuration and `env()` would be empty there.
+- Fails closed: a value that is not an email address throws at boot, so a
+  misconfigured test revision fails its health check instead of sending to
+  real recipients.
+- Tests in `tests/Feature/Mail/MailTestRedirectTest.php`, each booting the
+  application with the variable set or unset and sending through the real
+  Mailer on the array transport: set, every message goes to the redirect
+  address only, Cc and Bcc dropped, envelope recipients the single address;
+  unset, To, Cc, Bcc, and envelope are exactly as addressed; invalid, the
+  application refuses to boot. 3 tests, 14 assertions, PHP 8.3.32 / PHPUnit
+  11.5.56. A sanity run of the logging, delivery-minimum, and unit tests:
+  70 tests, 207 assertions, all passing. Pint and `php -l` clean.
+- Documented the variable in `.env.example`, `.env.docker.example`, and the
+  runtime document's variable table, marked test revisions only.
+- Rules the user set for the steps that follow, recorded in the handoff: no
+  `MAIL_MAILER=smtp` on any revision before this merges; credentials under
+  the three reserved Secret Manager names, values pasted by the user, never
+  in a command line, log, or conversation; the mail test revision deployed
+  `--no-traffic` with a tag and pinned URLs, FP-1 before and after; the
+  verification of a synthetic pickup order waits for the user's Brevo domain
+  verification; the production boot-time assertion is deferred to launch.
+
+No runtime, traffic, revision, image, environment variable, schema, secret,
+business data, or production change.

@@ -15,6 +15,7 @@ use App\Delivery\LocationDeliveryAction;
 use App\Delivery\WeekdayScheduleCorrection;
 use App\Livewire\BirthdayReservation;
 use App\Livewire\DeliveryLocalSearch;
+use App\Mail\MailTestRedirect;
 use Igniter\Cart\OrderTypes\Delivery as VendorDeliveryOrderType;
 use Igniter\Flame\Pagic\Router;
 use Igniter\Local\Events\WorkingScheduleCreatedEvent;
@@ -33,6 +34,12 @@ class AppServiceProvider extends ServiceProvider
     public function register()
     {
         $this->app->singleton(DeliveryAvailabilityGate::class);
+
+        // Test revisions only: when MAIL_TEST_REDIRECT_TO is set, every mailer
+        // this deployment resolves gets Mailer::alwaysTo() that address, so no
+        // message can reach a real recipient. Applied during registration so
+        // it precedes any mailer being built. See App\Mail\MailTestRedirect.
+        MailTestRedirect::apply($this->app['config']);
 
         // The vendor builds every order type through the container
         // (OrderTypes::makeOrderTypes resolves each class), so binding the
