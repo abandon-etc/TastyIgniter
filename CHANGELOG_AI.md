@@ -3981,3 +3981,38 @@ check.
 
 Documentation only in this entry. The override itself is recorded in the
 preceding entry.
+
+## 2026-08-22 - Three statuses corrected in D3C_PROGRESS (#102), and the hours-change condition made unmisreadable
+
+Environment: repository documentation. Status: PR open; eligible for
+auto-merge under the standing Level 0 docs-only authorization. This entry also
+covers PR #102, merged at `a3ddec22` without a changelog entry; the
+instruction "change nothing else" had been read as excluding the record,
+which it did not mean. The convention stands: every merged pull request gets
+an entry.
+
+- PR #102, at the user's direction: in the Outstanding table, the admin hours
+  report is marked done on 2026-08-22 with its evidence, a raw read of the
+  stored `ti_working_hours` rows (delivery rows weekday 0-4 status 1, 5-6
+  status 0, Monday to Friday as stored); the week-start fix is marked done as
+  the merged targeted correction `App\Delivery\WeekdayScheduleCorrection`,
+  with a separate deferred row for assessing a global week-start change and
+  a statement that the two are different things; and the Q-010 consequence
+  carries the clause that it must not be closed on the strength of being
+  unreachable from the storefront, matching `CLAUDE_HANDOFF.md` section 10.
+- This PR: the user caught an ambiguity those edits created. With the
+  week-start row reading Done, the next row's condition, "only after the
+  week-start problem is settled", could be read as releasing the change of
+  delivery hours to every day. That would be an irreversible mistake: the
+  change destroys the Sunday discriminating condition permanently. The row
+  now states that the precondition is the Sunday 2026-08-23 A/B reading
+  being taken and judged passed, not the merged fix; that a failed reading
+  means no hours change and a re-investigation; and that until the result is
+  in hand the item is not executed under any circumstances. The Done row
+  itself now says it does not release the hours change. The rest of the
+  document was checked for the same misreading: the Sunday-window section
+  and the Next action section already say the hours must not change before
+  the reading, and no other row or sentence ties the hours change to the fix
+  being merged.
+
+Documentation only. Every changed path is `.md`. No stored value was changed.
