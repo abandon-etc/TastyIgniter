@@ -287,6 +287,14 @@ react to. Both browser-automation toolsets available here share the keypress
 limitation, so keyboard-activation checks are settled by a person or recorded
 as not run.
 
+The same rule caught a second case the same day, in the shell rather than the
+browser. A container test run looked like a pass: Git Bash had rewritten the
+container's working directory, `-w /app`, into a Windows path, the container
+failed at once, and the command still exited 0 because the last stage of the
+pipeline was `tail`. An exit code belongs to the last command in a pipeline,
+not to the check; read the check's own output, or take `${PIPESTATUS[0]}`,
+before calling it run. Pass `MSYS_NO_PATHCONV=1` to `docker` under Git Bash.
+
 ### A test that truly reproduces a defect also exercises the fix
 
 Writing the weekday correction produced a case worth keeping. The first draft of
