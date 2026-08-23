@@ -560,6 +560,41 @@ the shared database.
 - A boot-time assertion that production must use a real transport and no
   redirect is deferred to launch, when `APP_ENV` for production is decided.
 
+**First run, 2026-08-23.** Revision `le-chateau-canada-staging-mail-3a603e53`
+was deployed at 0% traffic under tag `mail-3a603e53`, image built from
+`4.x` at `3a603e53` (the redirect merged), URLs pinned to the tag,
+`MAIL_MAILER=smtp` with the three secrets by reference, the redirect set,
+`DELIVERY_ENABLED=false`. FP-1 on the main revision was identical before and
+after. A synthetic pickup order was placed on it. The send failed at SMTP
+authentication: the provider answered `525 5.7.1 Unauthorized IP address`
+to every authenticator, which is the provider refusing Cloud Run's egress
+address under its authorized-IP restriction; no credential fixes that, and
+Cloud Run has no fixed egress address without a VPC connector and Cloud NAT.
+Nothing was delivered anywhere, so nothing reached a real inbox. Three
+findings from that one attempt:
+
+- The order row is written, and marked processed, before the mail event
+  fires, and mail goes out on the sync queue. A transport failure therefore
+  lands on the customer after the order exists: the checkout page shows an
+  error instead of the success page while the order is already in the
+  admin. A retry in the same session redirects to that order rather than
+  duplicating it.
+- The theme shows the raw transport exception on the checkout page. That
+  text included the SMTP username. It did not reach the log, which carried
+  no recipient and no credential identifier, but the customer-facing page
+  is a worse place. Production needs either a queue with a worker, so that
+  transport failures never run inside a customer request, or a project-side
+  catch in the mail path, and in any case no raw transport text on a page.
+- The `MAIL_TEST_REDIRECT_TO` mechanism was not exercised end to end, because
+  authentication failed before the envelope mattered; its tests cover it,
+  the live proof waits for a successful send.
+
+Next: the user clears the provider's IP restriction (or chooses a fixed
+egress), then one more synthetic pickup order on the same revision produces
+the customer confirmation and the two alerts, all at the test inbox, and a
+status change with notify from the admin produces the fourth; both synthetic
+orders are then deleted.
+
 **Still open on mail.** Every shipped template is English with a single
 body per template and no per-recipient language; a French customer receives
 English mail. That is a production-gate item under the French-language

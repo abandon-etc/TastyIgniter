@@ -4119,3 +4119,34 @@ under the standing Level 0 docs-only authorization.
 
 Documentation only. Every changed path is `.md`. No stored value was changed.
 The baskets are session state on the copies; nothing was ordered.
+
+## 2026-08-23 - Mail steps 5 and 6: revision deployed, first send refused by the provider's IP restriction
+
+Environment: Cloud Build and Cloud Run in the staging project, the storefront
+of the new tagged revision, Cloud Logging read-only. Status: the runtime
+actions are Level 2 on the user's instruction, recorded in
+`ADMIN_CONFIGURATION_TRACKER.md`; this docs PR is Level 0, eligible for
+auto-merge under the standing authorization.
+
+- Step 5 done as specified: image from `4.x` at `3a603e53`, revision
+  `mail-3a603e53` at 0% with the tag, URLs pinned, `MAIL_MAILER=smtp` only
+  together with `MAIL_TEST_REDIRECT_TO`, secrets by reference, pickup-only.
+  FP-1 on the main revision identical before and after.
+- Step 6 started: a synthetic pickup order on the tag. The send failed at SMTP
+  authentication, `525 5.7.1 Unauthorized IP address` from the provider for
+  every authenticator, which is the provider's authorized-IP restriction
+  refusing Cloud Run's egress address. Nothing was delivered; nothing
+  reached a real inbox; the redirect was not exercised end to end.
+- Findings recorded in the handoff: the order is saved and marked processed
+  before the mail event, and mail runs on the sync queue, so a transport
+  failure shows the customer an error after the order exists; the theme
+  prints the raw transport exception on the checkout page, and that text
+  included the SMTP username; the revision log carried neither recipient
+  nor credential identifier.
+- One synthetic order exists and is listed for cleanup.
+- Next, for the user: clear the provider's IP restriction or choose a fixed
+  egress; then one more synthetic order and one admin status change with
+  notify produce the four messages at the test inbox.
+
+Documentation only in this PR. The runtime actions are recorded in the
+tracker entry of the same date.
