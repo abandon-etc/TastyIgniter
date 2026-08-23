@@ -406,7 +406,9 @@ Consequences, each assessed rather than assumed:
 3. **Q-010 is masked, not fixed.** The scheduled pickup time select is no
    longer rendered, so its binding defect cannot be reached. It is unchanged
    in the theme and returns the moment a later choice or future orders are
-   re-enabled. Recorded against Q-010 in `CLAUDE_HANDOFF.md` section 10.
+   re-enabled. It must not be closed on the strength of being unreachable
+   from the storefront. Recorded against Q-010 in `CLAUDE_HANDOFF.md`
+   section 10, which this statement matches.
 4. **The Sunday reading is unaffected.** Verified in source, above.
 
 The user edits shared settings directly and will say so; the agent still
@@ -473,11 +475,12 @@ Cleaning any of these up needs explicit confirmation and is not done yet.
 
 | Item | Owner | When |
 | --- | --- | --- |
-| Report what the admin shows for delivery hours, and where the delivery on/off switch is | User | Next |
+| Report what the admin shows for delivery hours, and where the delivery on/off switch is | User | Done 2026-08-22. Evidence: a raw read of the stored `ti_working_hours` rows, not the admin screen: the delivery rows carry weekday 0-4 with status 1 and weekday 5-6 with status 0, i.e. Monday to Friday as stored |
 | Create the budget alert | User | Today |
 | Upgrade to a paid account, and in the same sitting set the Geocoding daily cap to 500, create the budget alert, and split the browser key from the server key | User | Mid-September 2026 |
 | Decide whether to enable the Places API | User | Before launch |
-| Propose a fix for the week-start problem, with its blast radius assessed first | Agent | After the admin report |
+| Propose a fix for the week-start problem, with its blast radius assessed first | Agent | Done. The targeted correction, `App\Delivery\WeekdayScheduleCorrection`, is merged (PR #90) and deployed to `d3c-fix-be6835a9`; its blast radius is the delivery, pickup, and opening schedules only. Sunday confirms it in place |
+| Assess a global change of the week start, so that `WorkingHour::getDay()` stops being locale-shifted for any future caller. A different thing from the merged targeted correction above, which rebuilds schedules and leaves `getDay()` as it is; a global change moves every week boundary in the framework and needs its blast radius assessed first | Agent | Deferred; not needed for D3C |
 | Apply the new delivery hours, every day 12:00-21:00 | Agent | Only after the week-start problem is settled |
 | Static check that stops an exception being written into a log context | Agent | Deferred |
 
