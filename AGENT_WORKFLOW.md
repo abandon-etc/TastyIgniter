@@ -321,6 +321,26 @@ obtained without pinning looks correct and is not; discard it rather than
 reason about whether it was probably fine. Check the hostname, not the
 plausibility of the result.
 
+### A stored value says what is stored, not what the system does with it
+
+The delivery minimum was stored as CA$20.00 and read back as CA$20.00, and
+the conclusion "the system will not refuse at CA$80.00" was drawn from that.
+It was wrong: the storefront computes the minimum as the larger of the stored
+value and a value derived from the fee rules, and the same computed value
+feeds the checkout gate. The stored value never reached the customer.
+
+This is "rendering is not execution" in the configuration layer: a value was
+read and its effect inferred. Before asserting behaviour from a setting,
+follow the value to where it is consumed, and note every other input that
+joins it there. A setting proves what was entered; only the consumption path
+proves what happens.
+
+Where the consumption path is vendor code, it can be pinned without a runtime:
+build the recorded configuration shape in a test, drive the vendor classes
+directly, and assert the outputs at the boundaries. That turns "the code
+predicts" into "the semantics are established", and leaves the deployed
+environment only one thing to confirm, that it runs the same code.
+
 ### Shared settings move between readings
 
 The owner edits Location settings, hours, and fee rules directly in the admin
@@ -339,9 +359,10 @@ tests, not on that observation.
 Without admin access, read back from the storefront and say which signal was
 used. The order-type dialog renders a "later" choice only when the restriction
 allows one; the date list it offers reflects the future-orders setting; the
-basket panel prints the computed minimum. Record the setting state alongside
-every reading so that a later reader can tell a current reading from a
-historical one.
+basket panel prints the computed minimum; and the "More info" panel on the
+menu page lists each delivery area's fee rules in priority order, which is
+the stored rule shape. Record the setting state alongside every reading so
+that a later reader can tell a current reading from a historical one.
 
 ### Time-dependent checks wait for the time
 
