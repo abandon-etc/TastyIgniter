@@ -607,12 +607,16 @@ the two alerts was never handed over: in
 are three independent `mailSend()` calls, each building its own recipients
 from `setting('order_email')` and the stored addresses
 (`Order::mailGetRecipients()`), and `SendsMailTemplate::mailSend()` sends
-nothing, silently and without a log line, when the list is empty. So the
-missing alert means either its recipient type (location or admin) is not
-ticked in the admin's order-notification setting, or that recipient's
-stored address is empty. Which one is an admin read: the order-notification
-toggles, the site e-mail, and the location's e-mail. None of them is exposed
-on the storefront, and none was changed.
+nothing, silently and without a log line, when the list is empty. The user
+read the admin directly: the order-notification setting has customer and
+admin ticked and **location unticked**, and the site e-mail and the
+location's e-mail are the same address, the owner's. So the missing alert
+is the location copy, by configuration, and it is **not a defect**: with one
+location and both addresses identical, leaving location unticked is what
+prevents the owner receiving every alert twice. Nothing was changed. **If
+the location is ever given its own mailbox, come back and tick "To
+location"** in the order-notification setting, or its alerts will not be
+sent.
 
 **Cleanup, 2026-08-23.** Both synthetic orders were removed on the user's
 explicit authorization through a disposable same-image Cloud Run Job
@@ -626,7 +630,12 @@ transaction, 2 menu rows, 4 totals, 3 status-history rows, 0 payment logs,
 orders 6 to 4, so orders #2 to #5 were untouched. The revision's log for the
 hour carried no address and no credential identifier. The job's own log
 carries the synthetic test identity it printed, nothing real. The job
-resource awaits the user's confirmation before deletion.
+resource was deleted on the user's confirmation and read back absent; its
+two execution logs remain under the platform's retention.
+
+**Rehearsal closed, 2026-08-23.** Three of the four message types delivered
+and read; the fourth traced to a deliberate, correct configuration; the
+redirect proven end to end; the synthetic orders removed; the logs clean.
 
 **Still open on mail.** Every shipped template is English with a single
 body per template and no per-recipient language; a French customer receives

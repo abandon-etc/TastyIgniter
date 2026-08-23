@@ -4200,3 +4200,25 @@ eligible for auto-merge.
   messages were English or mixed.
 
 Documentation only in this PR.
+
+## 2026-08-23 - Mail rehearsal fully closed: the missing alert is configuration, the job is gone
+
+Environment: repository documentation; Cloud Run Jobs for one deletion on
+the user's confirmation. Status: docs PR Level 0, eligible for auto-merge.
+
+- The user read the admin directly: order notifications go to customer and
+  admin, not to location, and the site and location e-mails are the same
+  owner address. The missing second alert is therefore the location copy by
+  configuration, not a defect, and the configuration is right for one
+  location with one mailbox. Recorded with the note that a separate location
+  mailbox will need "To location" ticked. Nothing changed.
+- Deleted the disposable cleanup job on the user's confirmation and read it
+  back absent.
+- The rehearsal is closed: three message types delivered and read, the
+  fourth explained, the redirect proven end to end, synthetic orders removed,
+  logs clean. What remains on mail is the production work already recorded:
+  queue worker or project-side catch so transport failures never reach a
+  customer request, no raw transport text on pages, and the language of the
+  templates.
+
+Documentation only in this PR.
