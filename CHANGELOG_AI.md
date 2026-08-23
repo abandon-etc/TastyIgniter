@@ -3828,3 +3828,43 @@ standing Level 0 docs-only authorization.
 
 Documentation only. Every changed path is `.md`. No stored value was changed
 by this work.
+
+## 2026-08-22 - Pin the vendor's delivery-minimum semantics in a test
+
+Environment: repository, container-run tests. Status: PR open. Level 1, stops
+for user merge confirmation.
+
+- Added `tests/Feature/Delivery/DeliveryAreaRuleMinimumTest.php`. It is a
+  characterisation test of vendor behaviour, not of project code: it pins how
+  `CoveredArea` derives the area minimum from fee rules and how the Delivery
+  order type composes it with the stored minimum, so that the acceptance
+  record can say "vendor semantics established" instead of "code predicts".
+- Under the rule shape recorded for D3B, "free at or above CA$80.00" then
+  "CA$5.00 below CA$80.00", the area minimum is CA$80.00 at every subtotal
+  tried, 19, 20, 50, 79, 80, 81 and 100, because the vendor returns a matched
+  below-rule's threshold as the minimum and a matched above-rule's threshold
+  likewise. The fee split is correct, CA$5.00 under 80 and free from 80. With
+  a stored minimum of CA$20.00 the enforced Delivery minimum is 80, and a
+  CA$50.00 basket fails the minimum-order check.
+- Under candidate remedy A, "free at or above CA$80.00" then "CA$5.00 on all
+  orders", the area minimum is zero under 80, so the stored CA$20.00 governs;
+  a CA$50.00 basket passes and a CA$19.00 basket fails. Fees unchanged.
+- Pinned the multi-rule resolution the user asked about before any rule is
+  changed: the first valid rule in ascending priority wins. Candidate A with
+  the priorities reversed charges a CA$100.00 basket CA$5.00, so free delivery
+  is lost. Candidate A is safe only with the free rule ahead of the all-orders
+  rule.
+- The Cart facade is swapped for a mock rather than resolved, because booting
+  the cart extension reads a settings table and the test environment has no
+  database. The project's Delivery gate is opened with
+  `config('delivery.enabled')` so the Delivery order type is visible to the
+  test.
+- Ran in a container: PHP 8.3.32, PHPUnit 11.5.56, 5 tests, 35 assertions, all
+  passing. Pint clean, `php -l` clean. One earlier run that appeared to pass
+  had not run at all: Git Bash rewrote the container's working directory into
+  a Windows path and only the trailing `tail` exited 0. Caught by reading the
+  output, not the exit code; recorded here as one more instance of a check
+  that never ran.
+
+No runtime, traffic, revision, image, environment variable, schema, secret,
+business data, or production change.
