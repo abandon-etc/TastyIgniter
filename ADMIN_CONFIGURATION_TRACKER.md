@@ -2279,3 +2279,24 @@ No Cloud Run service, revision, traffic, image, environment variable, schema,
 Delivery Area, fee rule, schedule, payment, secret, production, Render, or
 DigitalOcean state was changed by any agent. The two stored restriction values
 were changed by the user in the admin as described.
+
+## 2026-08-23 - Three empty mail secrets created in Secret Manager
+
+Environment: Google Cloud project `le-chateau-canada-staging`, Secret Manager.
+Status: recorded. Level 2, performed on the user's explicit instruction after
+PR #104 merged.
+
+- Created, empty, with automatic replication like the existing secrets:
+  `tastyigniter-mail-host`, `tastyigniter-mail-username`,
+  `tastyigniter-mail-password`. Read back: each exists with zero versions.
+  Before the action none of the three existed (listed and checked by name;
+  the creation loop refuses to touch an existing name).
+- No value was entered, seen, or passed through a command line, log, or
+  conversation. The user adds the values in the console as new versions.
+- No IAM change: the runtime service account already holds
+  `roles/secretmanager.secretAccessor` at project level, and the existing
+  secrets carry no per-secret bindings, so the new secrets need none.
+- No Cloud Run revision, traffic, environment variable, image, database,
+  schedule, or business value was changed. `MAIL_MAILER=log` stays on every
+  revision; binding these secrets to a revision is a later, separate step,
+  and that revision must also carry `MAIL_TEST_REDIRECT_TO`.

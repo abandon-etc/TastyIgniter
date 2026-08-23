@@ -4065,3 +4065,24 @@ for user merge confirmation. Not deployed; no revision changed.
 
 No runtime, traffic, revision, image, environment variable, schema, secret,
 business data, or production change.
+
+## 2026-08-23 - Mail step 4: PR #104 merged on approval; three empty secrets created
+
+Environment: repository, plus Secret Manager in the staging project. Status:
+PR #104 merged at `f02f5e30` on the user's approval; the secret creation is a
+Level 2 action the user instructed, recorded in
+`ADMIN_CONFIGURATION_TRACKER.md`; this docs PR is Level 0, eligible for
+auto-merge under the standing authorization.
+
+- Merged PR #104, the mail test redirect, on the user's "confirmed, merge".
+- Created the three Secret Manager entries under the names the runtime
+  document reserved, empty, automatic replication, zero versions, after
+  checking none existed. No value was entered or seen; the user pastes the
+  values in the console. Recorded where, in the reply and in the runtime
+  document's secrets table, which now lists the three as existing.
+- The standing rules restated where they are read: no revision gets
+  `MAIL_MAILER=smtp` without `MAIL_TEST_REDIRECT_TO` set on the same
+  revision, and the revision serving traffic sets neither.
+
+Documentation only in this PR; the runtime action is the secret creation
+described above, and nothing else changed.
