@@ -3868,3 +3868,39 @@ for user merge confirmation.
 
 No runtime, traffic, revision, image, environment variable, schema, secret,
 business data, or production change.
+
+## 2026-08-22 - Remedy evaluation for the delivery minimum, live visibility verified, operating note
+
+Environment: repository documentation, source inspection, and a read-only
+read of the main-traffic storefront. Status: PR open; eligible for auto-merge
+under the standing Level 0 docs-only authorization. PR #98, the vendor
+semantics test, was approved and merged at `f4ce8f93`.
+
+- Evaluated the three remedy shapes the user set out, without presetting the
+  answer, and recommended B, a project-side override of the Delivery
+  minimum. Reasoning recorded in `D3C_PROGRESS.md`: the rules as stored are
+  order-robust because their ranges are disjoint; A makes them order-fragile
+  by adding an all-orders rule, and the resulting failure is silent and
+  customer-facing; a guard for A has to be a scheduled runtime probe with an
+  alert someone reads, which the project does not have, so "A plus a guard" is
+  A with a promise; B keeps the configuration robust and moves the risk into
+  code, where failure is loud and tested, following the project's existing
+  pattern for vendor behaviour it cannot accept. Confirmed feasibility in
+  source: `OrderTypes::makeOrderTypes()` resolves each order type through
+  the container, so a binding to a project subclass suffices. The decision is
+  the user's; nothing was built.
+- Verified rather than restated the claim that a rule change is invisible to
+  live customers. On the main hostname the order-type dialog offers only
+  Cueillette, the information panel has no Delivery Areas section, and there
+  is no address widget; in code both hang on
+  `DeliveryAvailabilityGate::isEnabledForLocation()`, which needs
+  `DELIVERY_ENABLED=true`, recorded false on the main-traffic revision.
+- Added an operating note for the owner to `ADMIN_CONFIGURATION_GUIDE.md`, in
+  the owner's language: rule order is application order, the free-from-80
+  rule must stay first, dragging changes charges silently, check the
+  storefront panel after any change. Mirrored in English in `D3C_PROGRESS.md`.
+- Entered the pipeline exit-code lesson into `AGENT_WORKFLOW.md` section 8b
+  under the check-that-never-ran rule: an exit code belongs to the last
+  command in a pipeline; read the check's own output.
+
+Documentation only. Every changed path is `.md`. No stored value was changed.

@@ -261,7 +261,7 @@ not misconfigured; it computes the CA$80.00. Traced in source:
   minimum is CA$80.00, and the larger of 80 and 20 is 80.
 - The same value feeds the checkout gate. `CartBox::hasMinimumOrder()` asks
   whether the subtotal is below `minimumOrderTotal()`, and the checkout button
-  is disabled while it is. Nothing of the stored CA$20.00 reaches the customer.
+  is disabled while it is. Nothing of the stored CA$20.00 reaches the customer. The label is also English on a French site, like the other Q-001 strings.
 
 So this is neither a wrong stored value nor purely a label: it is the vendor's
 reading of a "below" fee rule, triggered by the shape the rules were saved in.
@@ -293,20 +293,72 @@ installed vendor code does. Add items to a delivery basket between CA$20.00
 and CA$80.00 and confirm the checkout button is disabled with the minimum
 message; that is the executed evidence.
 
-**Remedies, neither executed.** (A) Reshape the rules so no "below" rule is
-ever matched: "free at or above CA$80.00" followed by "CA$5.00 on all
-orders". This is a shared-setting change and stops for approval. The user
-asked, before anything is changed, how the vendor resolves a basket that
-matches both rules, since a CA$100.00 basket matches "at or above 80" and
-"all orders" alike. Answered by the same test: **the first valid rule in
-ascending priority wins**. Candidate A is therefore correct only with the
-free rule ahead of the all-orders rule; with the priorities reversed a
-CA$100.00 basket is charged CA$5.00 and free delivery is lost. In the admin
-the rules are a sortable list whose row order is the priority, so the free
-rule must be the top row, and the result must be read back from the
-storefront panel after saving: "Free above $80.00" listed first. (B) A
-project-side override of the minimum, which is code. Also English on a
-French site.
+**Remedies: evaluated, none executed, decision with the user.** The vendor
+takes the first valid rule in ascending priority, and in the admin the rules
+are a sortable list whose row order is that priority. Two facts frame the
+choice. First, the rules as stored today, "free at or above CA$80.00" and
+"CA$5.00 below CA$80.00", cover disjoint ranges, so their order does not
+matter; the pair is order-robust. Second, the owner edits settings directly
+and has reordered or changed them before.
+
+- **A: reshape the rules only.** "Free at or above CA$80.00" followed by
+  "CA$5.00 on all orders". No code; a shared-setting write that stops for
+  approval. It fixes the minimum, and it introduces an order dependency the
+  current shape does not have: the all-orders rule matches every basket, so
+  if it is ever dragged above the free rule, a CA$100.00 basket pays CA$5.00
+  with no error anywhere. The test established this. The failure is silent,
+  customer-facing, and caused by exactly the kind of owner action that has
+  already happened once.
+- **A plus a guard.** The guard would have to watch the *stored* rule order,
+  so it cannot be a test, which sees fixtures; it has to be a runtime probe,
+  for example reading the storefront's "More info" panel and asserting "Free
+  above $80.00" is listed first. For that probe to mean anything it needs a
+  trigger and a reader: a schedule that runs it, and an alert someone
+  receives. The project has neither today: CI has never run, FP-1 is run by
+  hand, and the only standing check is the agent's read-back at the start of
+  a session, which finds a reorder only when a session happens. Until that
+  infrastructure exists, "A plus a guard" is A with a promise.
+- **B: a project-side override of the Delivery minimum.** The order type is
+  built through the container (`OrderTypes::makeOrderTypes()` resolves each
+  class), so a binding of the vendor's Delivery class to a project subclass
+  that overrides `getMinimumOrderTotal()` is enough: the minimum becomes the
+  stored value, with an area minimum counted only when the matched rule
+  says delivery is unavailable, which is the vendor's own way of expressing a
+  per-area minimum. The label and the checkout gate both read that one
+  method, so both are corrected together. The rules keep their current,
+  order-robust shape and the owner's understanding of them. It is code:
+  Level 1, then a 0% deployment and acceptance, then maintenance across
+  vendor upgrades, where a changed contract fails loudly, as a fatal or a
+  failing test, rather than silently. This is the pattern the project already
+  uses for vendor behaviour it cannot accept: `LocationDeliveryAction`,
+  `GeocoderChainOverride`, `WeekdayScheduleCorrection`.
+
+**Recommendation: B.** A trades an order-robust configuration for an
+order-fragile one whose breakage is silent and lands on customers; the only
+guard that would catch it is infrastructure the project does not have; B
+keeps the configuration robust and moves the risk into code, where failure
+is loud and covered by tests. If the user prefers no further code, A is
+acceptable only together with the operating note below, the read-back at the
+start of every session, and an explicit acceptance that a reorder stays
+unnoticed until someone looks. Either way the operating note applies.
+
+**Visibility to live customers, verified.** On 2026-08-22 the main hostname
+was read directly: the order-type dialog offers only Cueillette, the "More
+info" panel has no Delivery Areas section, and there is no delivery address
+widget. In code, both the Delivery order type and the panel's rule section
+hang on `DeliveryAvailabilityGate::isEnabledForLocation()`, which requires
+`DELIVERY_ENABLED=true`; the main-traffic revision carries `false`. A rule
+change is therefore invisible to live customers and visible only on the 0%
+copies. This is a statement about the storefront; the rules themselves live
+in the shared database either way.
+
+**Operating note for the owner** (also in `ADMIN_CONFIGURATION_GUIDE.md`,
+in the owner's language): the order of the delivery fee rules in the admin
+is the order in which the system applies them, and it uses only the first
+rule that matches a basket. "Free delivery from CA$80.00" must stay as the
+first row. Dragging the rows changes what customers are charged, silently,
+with no warning. After any change, open the storefront menu page's "More
+info" panel and check that "Free above $80.00" is listed first.
 
 One menu observation in passing: Puff-Puff carries a stored minimum quantity
 of 3, so its dialog opens at three pieces. That is stored menu data, possibly

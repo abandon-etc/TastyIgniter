@@ -203,6 +203,21 @@ http://127.0.0.1:8000/admin/login
 - French: `La première version est offerte pour cueillette seulement. La livraison pourrait être ajoutée plus tard.`
 - English: `Pickup only for the first version. Delivery may be added later.`
 
+### 配送运费规则的排序（重要）
+
+启用配送后，后台“配送区域”里的运费规则是一个可以拖动排序的列表。请记住
+三件事：
+
+1. **行序就是生效顺序。** 系统从第一行开始找，找到第一条符合这笔订单金额的
+   规则就只用那一条，后面的规则不再看。
+2. **“满 80 元免运费”必须保持在第一行。** 如果它被拖到“所有订单收 5 元”
+   下面，满 80 元的订单也会被收 5 元运费。系统不会报错，也不会提示，只是
+   收费悄悄变了，通常要到顾客投诉才会发现。
+3. **改动之后请自己核对一次。** 打开前台菜单页，点“More info”，在“Delivery
+   Areas”里确认第一行显示的是“Free above $80.00”。
+
+如果不确定，请不要拖动这些行；先记录为“待确认问题”。
+
 ## 菜单分类配置
 
 目标：建立清晰、双语、适合冰淇淋店的菜单分类。
