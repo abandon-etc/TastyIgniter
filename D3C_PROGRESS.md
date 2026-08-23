@@ -166,7 +166,7 @@ preserved, or reachable is not passed on *rendered* alone.
 | Nothing else broken: pickup, birthday, reservations, media, health | Passed | Executed: ten pages, all served |
 | Nothing else broken: admin | Not started | No admin access |
 | No real orders, customers, reservations, payments, or emails created | Holding | Nothing real created so far |
-| Test data cleaned up afterwards | Not started | |
+| Test data cleaned up afterwards | Not started | One synthetic pickup order exists from the mail test of 2026-08-23 (customer "QA MailTest", Cash On Delivery, 3 × Puff-Puff CA$14.97, note marked as a test); delete it with the rest |
 
 ### A basket cannot be filled while the shop is closed
 
@@ -483,6 +483,7 @@ All receive 0% of visitors.
 | `d3c-25f9813b` | Earlier check of log redaction | No |
 | `d3c-a2ee559c` | First D3C copy | No |
 | `d3c-e9a4f7ca` | Failed to start. Delete first when cleaning up | No |
+| `mail-3a603e53` | Mail test: pickup-only, real SMTP transport, every message redirected to the test inbox. Not a D3C copy; listed so that cleanup sees it | Yes |
 
 Cleaning any of these up needs explicit confirmation and is not done yet.
 

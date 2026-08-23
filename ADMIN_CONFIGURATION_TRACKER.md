@@ -2300,3 +2300,40 @@ PR #104 merged.
   schedule, or business value was changed. `MAIL_MAILER=log` stays on every
   revision; binding these secrets to a revision is a later, separate step,
   and that revision must also carry `MAIL_TEST_REDIRECT_TO`.
+
+## 2026-08-23 - Mail test revision deployed at 0% traffic; first send refused by the provider
+
+Environment: Canada staging Cloud Run service `le-chateau-canada-staging`,
+region `northamerica-northeast1`. Status: recorded. Level 2, performed on the
+user's instruction (mail step 5 and the start of step 6).
+
+- Cloud Build `bdfed3ff-1cc2-4a12-91ca-85d9d06a94f2` built `Dockerfile.cloudrun`
+  from `4.x` at `3a603e53c0ec22ee9fcca6d9d196303b9dd93e1a` into
+  `tastyigniter:mail-3a603e53`, digest `sha256:4b185b0c62bba10583cca4cc734953d00c1deaac57b7a73b0d53731972069278`.
+- Deployed revision `le-chateau-canada-staging-mail-3a603e53` with
+  `--no-traffic`, tag `mail-3a603e53`. Variables set on that revision only:
+  `APP_URL`, `ASSET_URL`, `CLOUD_RUN_SERVICE_URL` pinned to the tag URL;
+  `MAIL_MAILER=smtp`, `MAIL_PORT=587`, `MAIL_ENCRYPTION=tls`,
+  `MAIL_FROM_ADDRESS=info@lechateaudesenfants.ca`, `MAIL_FROM_NAME` the
+  restaurant's name, `MAIL_TEST_REDIRECT_TO` the test inbox,
+  `DELIVERY_ENABLED=false`; `MAIL_HOST`, `MAIL_USERNAME`, `MAIL_PASSWORD` bound
+  to the three secrets at `latest`; `DELIVERY_GEOCODER_DRIVER` and
+  `DELIVERY_GEOCODER_PROVIDERS` removed. Read back after deploy: every value
+  as set, revision Ready, home 200, `/healthz/` 200, no startup errors.
+- FP-1 on the main-traffic revision before and after:
+  `2127efd6d63de53e6d9fbc5388f9db3fee72d0575eec25a09b9f99e9ad8565d3` both
+  times, identical to the recorded baseline. Main traffic did not move.
+- A synthetic pickup order was placed on the tag (customer "QA MailTest",
+  Cash On Delivery, 3 × Puff-Puff CA$14.97, note marked as a test). The
+  order row exists and is marked processed. The mail send failed at SMTP
+  authentication with the provider's `525 5.7.1 Unauthorized IP address`;
+  nothing was delivered. Details and findings in `CLAUDE_HANDOFF.md`
+  section 10. The revision stays deployed for the retry after the user
+  changes the provider's IP restriction.
+- No secret value was read or shown by the agent. The log of the revision
+  carried no recipient address and no credential identifier; the checkout
+  page did show the transport exception, which is recorded as a finding.
+
+No change to the main-traffic revision, its environment, the database schema,
+any stored setting, or any secret value. One synthetic order row was created
+and is listed for cleanup in `D3C_PROGRESS.md`.
