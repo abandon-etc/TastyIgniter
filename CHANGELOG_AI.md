@@ -4172,3 +4172,31 @@ auto-merge.
   checkout page.
 
 Documentation only in this PR.
+
+## 2026-08-23 - Mail rehearsal closed: result recorded, the missing alert traced, synthetic orders deleted
+
+Environment: repository documentation, source inspection, Cloud Logging read
+only, and one disposable Cloud Run Job for the deletion. Status: the deletion
+is a Level 2 destructive action on the user's explicit authorization,
+recorded in `ADMIN_CONFIGURATION_TRACKER.md`; this docs PR is Level 0,
+eligible for auto-merge.
+
+- Recorded the user's rehearsal result: three messages in the test inbox
+  (confirmation, one alert, one status update), none in spam, sender correct,
+  the owner's real inbox untouched; the provider's log shows two messages at
+  13:12, so one alert was never handed over.
+- Traced why from source: three independent `mailSend()` calls, each with
+  its own recipient list from the order-notification setting and the stored
+  addresses; an empty list sends nothing and logs nothing. The missing alert
+  is an unticked recipient type or an empty stored address; which one is an
+  admin read, none of it visible on the storefront, nothing changed.
+- Deleted synthetic orders #6 and #7 with their child rows through a
+  disposable same-image Job, read-back before and after, guarded delete in
+  one transaction; total orders 6 to 4, #2 to #5 untouched. The job resource
+  awaits the user's confirmation for deletion.
+- Rechecked the mail revision's log for the hour: no address, no credential
+  identifier, no error.
+- Added the rehearsal's language evidence to the open mail item: the
+  messages were English or mixed.
+
+Documentation only in this PR.
