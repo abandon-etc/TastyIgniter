@@ -8,12 +8,14 @@ use App\BirthdayBooking\BirthdayRules;
 use App\Delivery\DeliveryApiWriteGuard;
 use App\Delivery\DeliveryAvailabilityGate;
 use App\Delivery\DeliveryCheckoutGuard;
+use App\Delivery\DeliveryOrderType;
 use App\Delivery\DeliveryOrderTypeListener;
 use App\Delivery\GeocoderChainOverride;
 use App\Delivery\LocationDeliveryAction;
 use App\Delivery\WeekdayScheduleCorrection;
 use App\Livewire\BirthdayReservation;
 use App\Livewire\DeliveryLocalSearch;
+use Igniter\Cart\OrderTypes\Delivery as VendorDeliveryOrderType;
 use Igniter\Flame\Pagic\Router;
 use Igniter\Local\Events\WorkingScheduleCreatedEvent;
 use Igniter\Local\Models\Location as LocationModel;
@@ -31,6 +33,12 @@ class AppServiceProvider extends ServiceProvider
     public function register()
     {
         $this->app->singleton(DeliveryAvailabilityGate::class);
+
+        // The vendor builds every order type through the container
+        // (OrderTypes::makeOrderTypes resolves each class), so binding the
+        // vendor's Delivery class to the project's subclass is enough for the
+        // storefront to receive it everywhere. See App\Delivery\DeliveryOrderType.
+        $this->app->bind(VendorDeliveryOrderType::class, DeliveryOrderType::class);
 
         // afterResolving, not resolving: TastyIgniter's own resolving callback
         // rewrites the geocoder configuration from the settings table, and

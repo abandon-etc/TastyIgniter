@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Delivery;
 
 use Igniter\Cart\Facades\Cart;
+use Igniter\Cart\OrderTypes\Delivery as VendorDelivery;
 use Igniter\Local\Classes\CoveredArea;
 use Igniter\Local\Classes\Location as LocationService;
 use Igniter\Local\Models\Location;
@@ -26,6 +27,11 @@ use Tests\TestCase;
  *
  * Whether the stored rules actually carry that shape is a separate question,
  * answered by reading them back, not by this test.
+ *
+ * The composition tests construct the vendor's own Delivery order type
+ * directly, so that the project's container binding to
+ * App\Delivery\DeliveryOrderType does not intercept them: this file pins the
+ * vendor, and the project's override is tested in DeliveryOrderTypeMinimumTest.
  */
 final class DeliveryAreaRuleMinimumTest extends TestCase
 {
@@ -114,10 +120,11 @@ final class DeliveryAreaRuleMinimumTest extends TestCase
         $location = $this->locationWithStoredDeliveryMinimum(20.0);
         $location->setCoveredArea($this->coveredArea(self::RECORDED_RULES));
         $this->fakeCartSubtotal(50.0);
+        $vendor = $this->vendorDeliveryType($location);
 
-        $this->assertSame(80.0, (float) $location->minimumOrderTotal(Location::DELIVERY));
-        $this->assertFalse($location->checkMinimumOrderTotal(50.0, Location::DELIVERY),
-            'A CA$50.00 Delivery basket should fail the minimum-order check under the recorded rules.');
+        $this->assertSame(80.0, $vendor->getMinimumOrderTotal());
+        $this->assertLessThan($vendor->getMinimumOrderTotal(), 50.0,
+            'A CA$50.00 basket is below the vendor minimum, so the vendor gate (subtotal >= minimum) refuses it.');
     }
 
     public function test_candidate_a_rules_enforce_the_stored_delivery_minimum(): void
@@ -125,10 +132,23 @@ final class DeliveryAreaRuleMinimumTest extends TestCase
         $location = $this->locationWithStoredDeliveryMinimum(20.0);
         $location->setCoveredArea($this->coveredArea(self::CANDIDATE_A_RULES));
         $this->fakeCartSubtotal(50.0);
+        $vendor = $this->vendorDeliveryType($location);
 
-        $this->assertSame(20.0, (float) $location->minimumOrderTotal(Location::DELIVERY));
-        $this->assertTrue($location->checkMinimumOrderTotal(50.0, Location::DELIVERY));
-        $this->assertFalse($location->checkMinimumOrderTotal(19.0, Location::DELIVERY));
+        $this->assertSame(20.0, $vendor->getMinimumOrderTotal());
+        $this->assertGreaterThanOrEqual($vendor->getMinimumOrderTotal(), 50.0);
+        $this->assertLessThan($vendor->getMinimumOrderTotal(), 19.0);
+    }
+
+    /**
+     * The vendor's own Delivery order type, constructed directly so that the
+     * project's container binding does not intercept it.
+     */
+    private function vendorDeliveryType(LocationService $location): VendorDelivery
+    {
+        return new VendorDelivery($location->getModel(), [
+            'code' => Location::DELIVERY,
+            'name' => 'lang:igniter.local::default.text_delivery',
+        ]);
     }
 
     /**
