@@ -416,6 +416,64 @@ proposing it: anything else that rests on week boundaries, such as weekly
 reporting or period statistics, moves with it. Do not change it globally without
 that assessment.
 
+### The Delivery minimum is read from the stored setting, not from the fee rules
+
+The vendor's Delivery minimum is the larger of the stored Location minimum
+and a minimum derived from the delivery area's fee rules, and that derivation
+returns the matched rule's threshold whatever the rule says. With the rules
+stored for D3B, "free at or above CA$80.00" then "CA$5.00 below CA$80.00",
+every basket under CA$80.00 matched the second rule and the minimum became
+CA$80.00, while the stored CA$20.00 never reached the customer. The basket's
+"Min. Order Amount" label and the checkout button read the same value, so
+both were wrong together. Pinned by
+`tests/Feature/Delivery/DeliveryAreaRuleMinimumTest.php`.
+
+`App\Delivery\DeliveryOrderType` replaces the vendor's Delivery order type
+through a container binding in `AppServiceProvider` (the vendor resolves each
+order type through the container, so the binding reaches every storefront
+path). It keeps the vendor's composition and narrows what counts as an area
+minimum: only a matched rule that makes delivery unavailable, a negative
+charge shown in the admin as "delivery is not available", carries one. That
+is the vendor's own way of giving an area a minimum, and it still blocks.
+Covered by `tests/Feature/Delivery/DeliveryOrderTypeMinimumTest.php`, which
+asserts the label path and the gate path separately and keeps a reverse
+assertion that an unavailable-below-total area still refuses.
+
+**Known cost.** A positive-charge "below" rule no longer implies a minimum.
+If the delivery range is ever split into zones with their own thresholds, a
+farther zone that starts at CA$40.00 must be expressed as "delivery is not
+available below CA$40.00", not as a fee rule below CA$40.00. In the vendor's
+data structure the two are distinguishable only by the sign of the charge,
+which is what the override reads. Recorded in `ADMIN_CONFIGURATION_GUIDE.md`
+for the owner.
+
+**Why not reshape the rules instead.** The stored rules cover disjoint
+ranges and are order-robust; the rules-only remedy would have added an
+all-orders rule and made free delivery depend on the row order in the admin,
+where a drag silently charges CA$5.00 on a CA$100.00 basket. The evaluation
+is in `D3C_PROGRESS.md` and `CHANGELOG_AI.md` for 2026-08-22.
+
+**Consumers enumerated before merging, 2026-08-22.** Who constructs the order
+type was settled by the binding; who reads the minimum was enumerated
+separately across `vendor/tastyigniter` (core and every installed
+extension, the Orange theme, the API), the project extension and theme, and
+`app/`. Every consumer reaches the overridden method: the basket label
+(`cart-box.blade.php` → `Location::minimumOrderTotal()`), the checkout
+button (`CartBox::hasMinimumOrder()` → `CartManager::
+cartTotalIsBelowMinimumOrder()` → `Location::checkMinimumOrderTotal()`), the
+server-side checkout security check in the theme's `Checkout` component
+(the same `cartTotalIsBelowMinimumOrder()` and the message's
+`minimumOrderTotal()`), and the deprecated `minimumOrder()` /
+`checkMinimumOrder()` wrappers. `CoveredArea::minimumOrderTotal()` had a
+single caller, the vendor Delivery class now replaced; nothing else derives
+a minimum from the rules. The API reads no minimum, covered area, or
+delivery amount; mail templates, the admin order detail, the Order model,
+and the theme's JavaScript read none. The information panel prints the raw
+rule labels, which is not a minimum and is unchanged. Two look-alikes are
+different concepts and untouched: a payment method's own `order_total`
+threshold (`alert_min_order_total` in payregister and `OrderManager`) and a
+coupon's `min_total`. No path bypasses the override; no known divergence.
+
 ### Locale-adjacent findings have three separate causes
 
 Three symptoms look like one problem and are not. Treating them as one would

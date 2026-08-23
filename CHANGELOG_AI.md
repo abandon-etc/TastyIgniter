@@ -3904,3 +3904,80 @@ semantics test, was approved and merged at `f4ce8f93`.
   command in a pipeline; read the check's own output.
 
 Documentation only. Every changed path is `.md`. No stored value was changed.
+
+## 2026-08-22 - Read the Delivery minimum from the stored setting, not from the fee rules
+
+Environment: repository, container-run tests. Status: PR open. Level 1, stops
+for user merge confirmation. Not deployed.
+
+- The user chose remedy B on 2026-08-22. Added `App\Delivery\DeliveryOrderType`,
+  a subclass of the vendor's Delivery order type, bound in `AppServiceProvider`
+  to the vendor class; the vendor resolves every order type through the
+  container, so the storefront receives the project class on every path.
+  Verified in source that nothing in the vendor constructs the class directly.
+- Semantics: the minimum stays the larger of the stored Location minimum and
+  the area minimum, and the area minimum is the matched rule's threshold only
+  when that rule makes delivery unavailable, the vendor's own way of giving an
+  area a minimum. A fee rule's threshold is a fee boundary and nothing more.
+  Settled the user's question first: the per-area minimum capability is kept,
+  because in the vendor's data the two cases differ by the sign of the charge;
+  what is given up is that a positive-charge "below" rule no longer implies a
+  minimum, recorded as the known cost in the handoff and, for the owner, in
+  the admin guide.
+- The stored fee rules are not changed and keep their order-robust shape.
+- Tests in `tests/Feature/Delivery/DeliveryOrderTypeMinimumTest.php`: the
+  storefront receives the project class through the binding; the label path,
+  `Location::minimumOrderTotal()`, reads CA$20.00 at subtotals 19, 20, 50, 79,
+  80 and 81; the gate path, `Location::checkMinimumOrderTotal()`, fails at 19
+  and passes from 20; the fee split is unchanged; the reverse assertion, an
+  area unavailable below CA$40.00 still blocks a CA$30.00 basket at a shown
+  minimum of CA$40.00 while a CA$50.00 basket passes at CA$20.00; and a larger
+  stored minimum still governs. CartManager itself is not constructed in the
+  test because its constructor reads the cart settings table; the gate
+  assertion targets the exact method it calls.
+- Container run: 6 tests, 25 assertions, PHP 8.3.32 / PHPUnit 11.5.56; the Delivery suite with the change: 105 tests, 223 assertions, 0 failures, the same 25 environment errors (no database, no APP_KEY) as the unchanged base at 99 tests, 197 assertions. Pint and `php -l` clean.
+- Independent review: this change sits next to the "money and availability"
+  neighbourhood of `AGENT_WORKFLOW.md` section 7. The user's review across
+  this conversation, which set the semantics, the boundary subtotals, the
+  reverse assertion, and the no-rule-change constraint, constitutes the
+  independent review; no second reviewer was sought, and the PR says so.
+- Deployment order fixed by the user: on Monday the CA$20.00 to CA$80.00
+  basket is taken on the deployed copy before this fix is merged and
+  deployed, so the blocked state is recorded for contrast; then the fix goes
+  to a 0% copy and the basket is repeated as its acceptance.
+
+No runtime, traffic, revision, image, environment variable, schema, secret,
+business data, or production change. No stored value was changed.
+
+## 2026-08-22 - Consumers of the Delivery minimum enumerated; before-and-after comparison entered into methodology
+
+Environment: repository, source inspection of `vendor/tastyigniter`, the
+project extension and theme, and `app/`. Status: recorded in the same pull
+request as the override, PR #101, merged on the user's approval after this
+check.
+
+- The user approved the override on condition that its consumers be
+  enumerated, since the binding proves who constructs the order type and not
+  who reads the minimum. Enumerated every reader of `getMinimumOrderTotal()`,
+  `Location::minimumOrderTotal()`, `checkMinimumOrderTotal()`, the deprecated
+  wrappers, `CoveredArea::minimumOrderTotal()`, and every direct reader of
+  area rules, across core, every installed extension, the Orange theme, the
+  API, mail templates, admin views, the project extension and theme, and
+  JavaScript. Every consumer reaches the overridden method: basket label,
+  checkout button, the theme's server-side checkout security check, and the
+  deprecated wrappers. `CoveredArea::minimumOrderTotal()` had one caller, the
+  vendor Delivery class now replaced. The API reads no minimum; mail, admin
+  order detail, and the Order model derive none. The information panel's rule
+  labels are not a minimum and are unchanged. Two look-alikes are different
+  concepts and untouched: a payment method's own order-total threshold and a
+  coupon's minimum total. Conclusion: no path bypasses the override; no known
+  divergence. Recorded against the override in `CLAUDE_HANDOFF.md`
+  section 10.
+- Entered two rules into `AGENT_WORKFLOW.md` section 8b for project-side
+  overrides of vendor behaviour: enumerate the consumers before merging, and
+  prove "nothing newly broken" with a same-container before-and-after run
+  (`git stash push -u`, run, `git stash pop`, compare counts and the names of
+  erroring tests) rather than a single green run.
+
+Documentation only in this entry. The override itself is recorded in the
+preceding entry.

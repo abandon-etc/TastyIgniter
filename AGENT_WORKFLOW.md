@@ -312,6 +312,38 @@ reproduce a defect has to exercise the same code path the defect lives on, and
 that path then gets examined under conditions the happy path never creates. A
 test that mocks its way to the assertion would have passed and taught nothing.
 
+### Overriding vendor behaviour: enumerate the consumers, then prove nothing else broke
+
+Two checks belong to every project-side override of a vendor method, and
+neither is covered by the override's own tests.
+
+**Enumerate the consumers.** Proving who constructs the object is not proving
+who reads the value. Before merging, list every reader of the overridden
+method and of anything it is derived from, across the vendor packages, every
+installed extension, the theme, the API, mail templates, admin views, the
+project's own extension and theme, and JavaScript. A reader that derives the
+same quantity by another route keeps the old behaviour and diverges from the
+storefront; either bring it under the override or record it as a known
+difference. Record the enumeration with the override so that a later reader
+sees it was done. The delivery-minimum override was merged only after this
+showed that the label, the checkout button, the checkout security check,
+and the deprecated wrappers all reach the one method, and that nothing else
+derives a minimum from the rules. The weekday correction had the same check
+earlier: a plausible off-by-one in `getWorkingHourByDateAndType` was
+discarded because it had no callers.
+
+**Prove "nothing newly broken" with a before-and-after run, not a pass.** A
+green run after the change says the change's own tests pass and that the
+suite is no worse than whatever it was; it does not say what it was. In the
+same container, run the relevant suite on the changed tree, then `git stash
+push -u`, run it again on the unchanged base, `git stash pop`, and compare:
+test and assertion counts, and the list of erroring or failing tests by
+name. Report both sides. The delivery-minimum override reported 99 tests and
+197 assertions with 25 environment errors before, 105 and 223 with the same
+25 after, which is a stronger statement than "all passing" and an honest one
+where the environment cannot run everything. Say why the environment errors
+are environment errors, from their messages, not from their count.
+
 ### An isolated test URL is not isolated until the URLs are pinned
 
 A Cloud Run revision at 0% traffic behind a tagged URL is only isolated for as

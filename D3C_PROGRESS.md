@@ -138,7 +138,7 @@ preserved, or reachable is not passed on *rendered* alone.
 | Delivery area: outside, and exactly on the boundary | Blocked | Needs delivery to be orderable |
 | Delivery fee of CA$5.00 below the free threshold | Partly seen | Rendered as a running total; not confirmed against a real basket |
 | Free delivery at CA$80.00, minimum CA$20.00, at the edges | Blocked | Needs delivery to be orderable. The enforced minimum is CA$80.00, not CA$20.00, established by test; see the next row |
-| Delivery minimum shown and enforced as CA$20.00 | **Failed**, blocking | Confirmed defect, highest priority. Stored minimum CA$20.00 (user read-back); stored rules "Free above $80.00" then "$5.00 below $80.00" (storefront read-back); vendor semantics under that shape established by test: enforced minimum 80, a CA$50.00 basket fails the check. Monday's basket confirms only that the deployed copy matches the installed code. See below |
+| Delivery minimum shown and enforced as CA$20.00 | **Failed**, blocking; fix written, not deployed | Confirmed defect, highest priority. Stored minimum CA$20.00 (user read-back); stored rules "Free above $80.00" then "$5.00 below $80.00" (storefront read-back); vendor semantics established by test. Fix: `App\Delivery\DeliveryOrderType`, tested, PR at Ready to merge. Monday: basket on the deployed copy first, then deploy the fix and repeat. See below |
 | Money reads and compares correctly in Canadian French | Not started | Decimal separator differs; the three amounts above are compared numerically |
 | Unrecognised, incomplete, out-of-area addresses; changing an address | Not started | |
 | Switching between pickup and delivery, both ways | Not started | |
@@ -333,14 +333,28 @@ and has reordered or changed them before.
   uses for vendor behaviour it cannot accept: `LocationDeliveryAction`,
   `GeocoderChainOverride`, `WeekdayScheduleCorrection`.
 
-**Recommendation: B.** A trades an order-robust configuration for an
-order-fragile one whose breakage is silent and lands on customers; the only
-guard that would catch it is infrastructure the project does not have; B
-keeps the configuration robust and moves the risk into code, where failure
-is loud and covered by tests. If the user prefers no further code, A is
-acceptable only together with the operating note below, the read-back at the
-start of every session, and an explicit acceptance that a reorder stays
-unnoticed until someone looks. Either way the operating note applies.
+**Decision: B, taken by the user on 2026-08-22.** Implemented as
+`App\Delivery\DeliveryOrderType`, bound in `AppServiceProvider`, with
+`tests/Feature/Delivery/DeliveryOrderTypeMinimumTest.php`: 6 tests and 25
+assertions on PHP 8.3.32 / PHPUnit 11.5.56. The whole Delivery suite with the
+change: 105 tests, 223 assertions, 0 failures, and the same 25 environment
+errors (no database, no APP_KEY in the container) as the unchanged base at 99
+tests and 197 assertions.
+The stored fee rules are untouched and keep their order-robust shape. The
+label path and the gate path are asserted separately; the reverse assertion
+shows an area that is unavailable below a total still blocks, so the override
+narrows what counts as an area minimum without discarding it. Known cost,
+recorded in `CLAUDE_HANDOFF.md` section 10 and the owner's guide: a future
+per-area minimum must be expressed as "delivery is not available below X",
+not as a fee rule below X. The PR stops at Ready to merge for the user's
+confirmation.
+
+**Order of operations on Monday, fixed by the user:** first the CA$20.00 to
+CA$80.00 basket on the deployed copy as it stands, to confirm the deployed
+state and record that the checkout was in fact blocked before the fix; only
+then merge and deploy the fix to a 0% copy and repeat the basket as the
+acceptance of the fix. Reversing the order loses the before-and-after
+contrast.
 
 **Visibility to live customers, verified.** On 2026-08-22 the main hostname
 was read directly: the order-type dialog offers only Cueillette, the "More
@@ -424,7 +438,8 @@ test. Each check waits for its real window.
 | --- | --- |
 | Delivery appears open on Sunday, confirming the cause | Sunday only |
 | Delivery refused on a closed day | Done 2026-08-22 afternoon, executed on both copies: an order was attempted and refused |
-| Delivery minimum: a CA$20.00 to CA$80.00 basket finds the checkout button disabled | Monday, once delivery is orderable on the fixed copy; confirms the deployed state only, the semantics are established |
+| Delivery minimum: a CA$20.00 to CA$80.00 basket finds the checkout button disabled | Monday, once delivery is orderable on the fixed copy, **before** the fix is deployed; confirms the deployed state and records the blocked state for contrast |
+| Delivery minimum fix: the same basket checks out at the stored CA$20.00 minimum and the label reads CA$20.00 | Monday, after the basket above, on a 0% copy carrying the fix |
 | Delivery stops taking orders at 21:00 | Any evening, once delivery works |
 | Pickup still open after delivery has stopped | Any evening, once delivery works |
 | Pickup stops at 22:00 | Done 2026-08-21 22:31, executed: an order was attempted and refused |
