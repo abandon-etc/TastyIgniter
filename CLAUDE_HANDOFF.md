@@ -785,11 +785,16 @@ legal interpretation of its own, and the conclusions are the owner's to apply:
 The implementation planning that follows from these answers (Q-001 import
 route, the Q-002 switcher, mail templates, and the currency-format question
 considered alongside them) is the language-and-localization workstream the
-user calls 板块二; its plan is produced as a scheduled follow-up recorded in
-`D3C_PROGRESS.md`, and planning precedes any implementation. Questions the
-relayed conclusions did not address — whether staging is in scope before
-launch, and what applies to the staff-facing admin interface — keep their
-previous status: unsettled, and not to be assumed.
+user calls 板块二; its plan is `LOCALIZATION_WORKSTREAM_PLAN.md`
+(2026-08-24), and planning precedes any implementation. Two facts verified
+on 2026-08-24 reshape Q-002: the current theme already renders
+Français | English header links (`/language/{locale}`), and switching to
+`en_CA` does not take effect — the page stays French, consistent with
+Q-005's fallback record; the switcher work is therefore verify-and-fix, not
+build-from-scratch. Questions the relayed conclusions did not address —
+whether staging is in scope before launch, and what applies to the
+staff-facing admin interface — keep their previous status: unsettled, and
+not to be assumed.
 
 ### Upgrading to a paid account must set the Geocoding quota in the same act
 
