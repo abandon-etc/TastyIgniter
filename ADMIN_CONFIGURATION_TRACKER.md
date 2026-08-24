@@ -2484,6 +2484,25 @@ during the run on Monday 2026-08-24 from 14:05).
   explicit confirmation for deletion. Its execution logs carry stored
   configuration values only — no address, credential, or geometry.
 
+## 2026-08-24 - Disposable Job qa-params-20260824 deleted on the user's confirmation
+
+Environment: Cloud Run Jobs in `northamerica-northeast1`. Status: recorded.
+Level 2 destructive action on the user's explicit confirmation naming the
+job.
+
+- Described before deletion: `qa-params-20260824`, created
+  2026-08-24T18:23:11Z, execution count 3 (the read-back, the partial
+  model write, and the raw settings write recorded in the entry above).
+- Deleted, then read back: describe answers "Cannot find job" and the
+  region's job list is empty. The region now holds no jobs.
+- Recoverability: the resource itself is gone; its three execution logs
+  remain under the platform's log retention and hold stored configuration
+  values only — no address, credential, or geometry. The job's spec can be
+  reconstructed from the entry above if a future write ever needs it.
+
+No change to any service, revision, traffic, environment variable, secret,
+schema, or stored setting. One disposable job resource removed.
+
 Live-site effect: none. The main-traffic revision serves
 `DELIVERY_ENABLED=false`, which hides every Delivery surface; the changed
 values are Delivery-only. The FP-1 pair above is the evidence the live path

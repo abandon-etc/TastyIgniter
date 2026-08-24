@@ -4438,3 +4438,19 @@ Step D of the fixed 2026-08-23 order, closing the batch.
 
 Documentation and two session-locale probes only. No code, theme, language
 pack, or setting change. This closes the 2026-08-23 A-B-C-D batch.
+
+## 2026-08-24 - Disposable Job qa-params-20260824 deleted on confirmation
+
+Environment: Cloud Run Jobs in `northamerica-northeast1`; repository
+documentation. Status: the deletion is Level 2 destructive on the user's
+explicit confirmation naming the job; this docs PR is Level 0, eligible for
+auto-merge.
+
+- Described before deletion (created 2026-08-24T18:23:11Z, 3 executions),
+  deleted, read back absent; the region's job list is empty. Execution
+  logs remain under platform retention and hold stored configuration
+  values only. Recorded in `ADMIN_CONFIGURATION_TRACKER.md`; the
+  outstanding row in `D3C_PROGRESS.md` is closed.
+
+No service, revision, traffic, environment variable, secret, schema, or
+stored-setting change. One disposable job resource removed.
