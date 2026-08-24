@@ -4273,3 +4273,37 @@ tonight.
 
 Documentation only. Every changed path is `.md`. No stored value was
 changed; the 20/80 pair remains in the shared database until step B.
+
+## 2026-08-23 - Contrast test and batch moved from Monday noon to Tuesday 18:00 at the user's direction
+
+Environment: repository documentation, plus the local scheduled task on the
+user's machine. Status: Level 0 docs-only PR, eligible for auto-merge under
+the standing authorization. No stored value, revision, or runtime state was
+changed; the A-D sequence and its content are unchanged.
+
+- The user cannot attend Monday and is near the computer from 18:00 Tuesday
+  for about an hour to approve permission prompts, so the scheduled session
+  moves to Tuesday 2026-08-25 at 18:00 America/Montreal. The scheduled task
+  `chateau-monday-abcd-sequence` was updated in place (one-time fire at
+  2026-08-25T18:00-04:00; prompt and description updated; the task id keeps
+  its historical name). The prompt now also states the operational
+  consequences of the later start: the storefront legs of A and B must
+  finish before the 21:00 delivery close, a leg that misses the window is
+  recorded as not run rather than substituted, actions likely to raise
+  permission prompts are front-loaded into the user's attendance hour, and
+  C and D have no time window.
+- `D3C_PROGRESS.md` day references updated from Monday to Tuesday
+  2026-08-25 (decision-batch section, acceptance rows, timed-check rows,
+  Next action, and the historical findings' forward references reworded to
+  "the contrast test"). `CLAUDE_HANDOFF.md` section 19 and the two decision
+  table rows in `DELIVERY_D3_BUSINESS_PARAMETER_PLAN.md` now say
+  "the defect-contrast reading" without naming a day, so the concrete
+  schedule lives in `D3C_PROGRESS.md` alone.
+- The user confirmed the 板块二 mapping recorded in `CLAUDE_HANDOFF.md`
+  section 11: the language-and-localization workstream (default pure
+  French, complete French, retained English switch; Q-001 import route,
+  Q-002 switcher, mail templates, currency format).
+
+Documentation only. Weekday hour references ("Monday to Friday",
+"Monday-Friday", the discrimination table) are stored-schedule facts and
+were deliberately not touched.

@@ -407,7 +407,7 @@ minimum is removed (CAD 20.00 to CAD 0.00) and the free-Delivery threshold
 moves from CAD 80.00 to CAD 50.00. Each row carries the original value, the
 new value, and the date, following this table's convention. **Neither value
 has been applied to the stored settings yet.** The stored 20/80 pair is
-deliberately kept in place until the Monday defect-contrast reading recorded
+deliberately kept in place until the defect-contrast reading recorded
 in `D3C_PROGRESS.md` is taken, because that reading documents the
 delivery-minimum defect under the configuration it was found in; the batch
 write follows it.
@@ -438,8 +438,8 @@ later as a bill.
 | Base Delivery fee | CAD amount | Non-negative, two decimals; amount `-1` means unavailable | Business decision required | CAD 5.00; confirmed 2026-08-19 |
 | Distance surcharge | Off / threshold rules | Added even when base fee condition is free | Off initially | Off; confirmed 2026-08-19 |
 | Free Delivery | Off / on | Implemented as an ordered area condition | Optional after base flow passes | On; confirmed 2026-08-19 |
-| Free threshold | CAD subtotal | Uses server `Cart::subtotal()`, before cart coupon and tax | Business decision required | Originally CAD 80.00, confirmed 2026-08-19. **Changed to CAD 50.00, confirmed 2026-08-23** (owner decision). The stored rule pair keeps its disjoint, order-robust shape: free at or above CAD 50.00, then CAD 5.00 below CAD 50.00. Not yet applied to the stored rules; applied only after the Monday defect-contrast reading, see `D3C_PROGRESS.md` |
-| Delivery minimum | CAD subtotal | Max of Location and matched-area minimum; excludes Delivery fee/tax | Business decision required | Originally CAD 20.00, confirmed 2026-08-19. **Removed — CAD 0.00, no Delivery minimum — confirmed 2026-08-23** (owner decision). Not yet applied to the stored setting; applied only after the Monday defect-contrast reading, see `D3C_PROGRESS.md` |
+| Free threshold | CAD subtotal | Uses server `Cart::subtotal()`, before cart coupon and tax | Business decision required | Originally CAD 80.00, confirmed 2026-08-19. **Changed to CAD 50.00, confirmed 2026-08-23** (owner decision). The stored rule pair keeps its disjoint, order-robust shape: free at or above CAD 50.00, then CAD 5.00 below CAD 50.00. Not yet applied to the stored rules; applied only after the defect-contrast reading, see `D3C_PROGRESS.md` |
+| Delivery minimum | CAD subtotal | Max of Location and matched-area minimum; excludes Delivery fee/tax | Business decision required | Originally CAD 20.00, confirmed 2026-08-19. **Removed — CAD 0.00, no Delivery minimum — confirmed 2026-08-23** (owner decision). Not yet applied to the stored setting; applied only after the defect-contrast reading, see `D3C_PROGRESS.md` |
 | Pickup minimum | CAD amount | Independent Collection setting | Keep CAD 0.00 | CAD 0.00; no Pickup minimum; confirmed 2026-08-20 |
 | Discount basis | Native subtotal behavior | Item conditions affect basis; cart-level coupon does not | Keep native behavior and document it | Keep native behavior; thresholds use `Cart::subtotal()` excluding Delivery fee and tax, and a cart-level coupon does not lower it; confirmed 2026-08-20 |
 | Delivery fee tax | Off / on | Current tax mode and rate are disabled/0 | Keep off until tax advice/approval | Delivery fee is taxable. Accountant conclusion relayed by the user 2026-08-23: the Delivery fee is its own taxable line inside the pre-tax subtotal and is taxed under the same rules as ordinary items, GST plus QST. The rates are **not** recorded here as numbers: at implementation time the current values are read from the official canada.ca and Revenu Québec pages and recorded with source and date; no second-hand figure is accepted. Enabling tax is a separately approved change — the tax settings are shared, so switching them on changes what real Pickup customers pay on the live storefront; timing is agreed with the owner first |
