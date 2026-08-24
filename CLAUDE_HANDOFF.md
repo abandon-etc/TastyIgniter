@@ -1010,8 +1010,8 @@ Use synthetic data and verify at minimum:
 - free-threshold and minimum edges at the values in the decision table of
   `DELIVERY_D3_BUSINESS_PARAMETER_PLAN.md` — from 2026-08-23 those are free at
   or above CAD 50.00 with no Delivery minimum; the earlier 80/20 pair is
-  exercised once more only in the Monday defect-contrast reading recorded in
-  `D3C_PROGRESS.md`, taken before the new values are written;
+  exercised once more only in the one-time defect-contrast reading recorded
+  in `D3C_PROGRESS.md`, taken before the new values are written;
 - Monday-Friday 12:00-21:00 and weekends closed;
 - unrecognized/incomplete/out-of-area address behavior and address changes;
 - Pickup to Delivery and Delivery to Pickup transitions;
