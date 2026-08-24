@@ -3,7 +3,7 @@
 Snapshot of where Delivery D3C acceptance stands. Overwritten as work moves;
 it is not a history. `CHANGELOG_AI.md` keeps the history.
 
-Last updated: 2026-08-23, Sunday afternoon.
+Last updated: 2026-08-23, Sunday evening.
 
 Delivery is being switched on for testing only, on copies of the staging site
 that receive no visitors. The live site is untouched throughout, and has been
@@ -131,6 +131,72 @@ check. The one link left is that the deployed copy behaves as the installed
 vendor code does, which Monday's CA$20.00 to CA$80.00 basket confirms.
 Details and the remedy options are in the Saturday findings below.
 
+The fix, `App\Delivery\DeliveryOrderType` (PR #101), is **merged and not yet
+deployed**: no revision carries it. Monday deploys it to a fresh 0% copy
+after the contrast reading, per the fixed order below.
+
+## The 2026-08-23 decision batch and its fixed execution order
+
+On Sunday evening 2026-08-23 the user relayed an owner decision and two
+professional conclusions, recorded durably in
+`DELIVERY_D3_BUSINESS_PARAMETER_PLAN.md` (parameter and tax rows) and
+`CLAUDE_HANDOFF.md` section 11 (language). The four items:
+
+1. The Delivery minimum is removed: stored CA$20.00 becomes CA$0.00.
+2. The free-Delivery threshold moves from CA$80.00 to CA$50.00, keeping the
+   disjoint, order-robust rule shape: free at or above CA$50.00, then
+   CA$5.00 below CA$50.00.
+3. Accountant: the Delivery fee is its own taxable line in the pre-tax
+   subtotal, taxed like ordinary items, GST plus QST; rates are read from
+   the official canada.ca and Revenu Québec pages at implementation time,
+   never from a relay.
+4. Language: default pure French, complete French, and a retained English
+   switch; Q-002 becomes a required build item.
+
+**The execution order is fixed by the user and must not be reordered:**
+
+- **A. Monday contrast test first, under the stored 20/80 values.** In the
+  Monday 12:00-21:00 window on the weekday-fixed copy `d3c-fix-be6835a9`:
+  a CA$20.00-to-CA$80.00 delivery basket, expecting the checkout blocked at
+  the computed CA$80.00 minimum — the record of the deployed defect (this
+  add during open hours is also the remaining positive leg of "Delivery
+  open during its hours"). Then build `4.x` head and deploy it as a new 0%
+  tagged copy (first revision carrying PR #101), URLs pinned, and repeat
+  the same basket there: label CA$20.00, checkout enabled — the fix's
+  acceptance. FP-1 on the main revision before the first action and after
+  the last. This test documents the defect itself; it is why the new
+  parameter values wait.
+- **B. Only after A: the parameter batch, one Level 2 shared-settings
+  write, already approved by the owner's 2026-08-23 instruction.** Set the
+  stored Delivery `min_order_amount` from 20.00 to 0 and the area rule pair
+  from (above/0/80, below/5/80) to (above/0/50, below/5/50), priorities and
+  shape unchanged. Read back before and after, record both in
+  `ADMIN_CONFIGURATION_TRACKER.md`. Both values affect Delivery only and
+  the main-traffic revision keeps `DELIVERY_ENABLED=false`, so live
+  customers see nothing (verified 2026-08-22: the storefront hides every
+  Delivery surface while the gate is false). Then, on the copy carrying the
+  fix: a below-CA$50.00 basket carries the CA$5.00 fee and **can check
+  out** — no minimum interception; a basket at and above CA$50.00 is free;
+  the information panel lists "Free above $50.00" then "$5.00 below
+  $50.00"; the basket label agrees with the stored no-minimum state.
+  Update the owner's operating note (here and in
+  `ADMIN_CONFIGURATION_GUIDE.md`) to name CA$50.00 as the first row.
+- **C. Only after B: tax, read-only.** Investigate the Taxation
+  configuration structure, whether the Delivery fee can be taxed as its own
+  line, the official current GST and QST values (read from canada.ca and
+  Revenu Québec directly), and the implementation and verification path.
+  **No setting is changed.** The tax settings are shared: enabling them
+  changes what real Pickup customers pay on the live storefront — the first
+  change in this project that touches real payment amounts — so
+  implementation needs its own approval and a time agreed with the owner.
+  Deliverable: a written plan.
+- **D. Only after C: language planning.** The consultation answers are
+  recorded in `CLAUDE_HANDOFF.md` section 11. Produce the
+  language-and-localization workstream plan (the user's 板块二): the Q-001
+  import route, the Q-002 language switcher, the mail templates, and the
+  currency-format question considered alongside them. Plan first;
+  implementation is approved separately.
+
 ## Acceptance checks
 
 This table is the acceptance record. **Evidence type matters**: *rendered* means
@@ -152,8 +218,8 @@ preserved, or reachable is not passed on *rendered* alone.
 | An in-area address is accepted | Passed | Executed, one address |
 | Delivery area: outside, and exactly on the boundary | Blocked | Needs delivery to be orderable |
 | Delivery fee of CA$5.00 below the free threshold | Partly seen | Rendered as a running total; not confirmed against a real basket |
-| Free delivery at CA$80.00, minimum CA$20.00, at the edges | Blocked | Needs delivery to be orderable. The enforced minimum is CA$80.00, not CA$20.00, established by test; see the next row |
-| Delivery minimum shown and enforced as CA$20.00 | **Failed**, blocking; fix written, not deployed | Confirmed defect, highest priority. Stored minimum CA$20.00 (user read-back); stored rules "Free above $80.00" then "$5.00 below $80.00" (storefront read-back); vendor semantics established by test. Fix: `App\Delivery\DeliveryOrderType`, tested, PR at Ready to merge. Monday: basket on the deployed copy first, then deploy the fix and repeat. See below |
+| Free delivery at the decision threshold, at the edges | Blocked | Needs delivery to be orderable. Decision changed 2026-08-23: threshold CA$50.00 and no minimum. The edge checks run at the new values once the batch write (B) lands, after Monday's contrast test (A) under the stored 20/80 |
+| Delivery minimum shown and enforced as the stored value | **Failed**, blocking; fix merged (PR #101), not deployed | Confirmed defect, highest priority. Stored minimum CA$20.00 (user read-back); stored rules "Free above $80.00" then "$5.00 below $80.00" (storefront read-back); vendor semantics established by test. Fix: `App\Delivery\DeliveryOrderType`, tested, merged as PR #101, in no deployed revision yet. Monday: basket on the deployed copy first, then deploy the fix to a fresh 0% copy and repeat; after that the 2026-08-23 batch write moves the stored values to no-minimum/50 and the verification moves with them. See the decision-batch section above |
 | Money reads and compares correctly in Canadian French | Not started | Decimal separator differs; the three amounts above are compared numerically |
 | Unrecognised, incomplete, out-of-area addresses; changing an address | Not started | |
 | Switching between pickup and delivery, both ways | Not started | |
@@ -367,9 +433,12 @@ confirmation.
 **Order of operations on Monday, fixed by the user:** first the CA$20.00 to
 CA$80.00 basket on the deployed copy as it stands, to confirm the deployed
 state and record that the checkout was in fact blocked before the fix; only
-then merge and deploy the fix to a 0% copy and repeat the basket as the
-acceptance of the fix. Reversing the order loses the before-and-after
-contrast.
+then deploy the fix (PR #101, already merged) to a 0% copy and repeat the
+basket as the acceptance of the fix. Reversing the order loses the
+before-and-after contrast. On 2026-08-23 the user extended the same ordering
+past the fix: the test runs under the stored 20/80 values, and only after it
+does the approved parameter batch (no minimum, threshold CA$50.00) get
+written — see the decision-batch section above.
 
 **Visibility to live customers, verified.** On 2026-08-22 the main hostname
 was read directly: the order-type dialog offers only Cueillette, the "More
@@ -387,7 +456,9 @@ is the order in which the system applies them, and it uses only the first
 rule that matches a basket. "Free delivery from CA$80.00" must stay as the
 first row. Dragging the rows changes what customers are charged, silently,
 with no warning. After any change, open the storefront menu page's "More
-info" panel and check that "Free above $80.00" is listed first.
+info" panel and check that "Free above $80.00" is listed first. (The
+threshold becomes CA$50.00 with the 2026-08-23 batch write; the note and the
+owner's guide are updated to say CA$50.00 when that write lands.)
 
 One menu observation in passing: Puff-Puff carries a stored minimum quantity
 of 3, so its dialog opens at three pieces. That is stored menu data, possibly
@@ -457,6 +528,7 @@ test. Each check waits for its real window.
 | Delivery refused on a closed day | Done 2026-08-22 afternoon, executed on both copies: an order was attempted and refused |
 | Delivery minimum: a CA$20.00 to CA$80.00 basket finds the checkout button disabled | Monday, once delivery is orderable on the fixed copy, **before** the fix is deployed; confirms the deployed state and records the blocked state for contrast |
 | Delivery minimum fix: the same basket checks out at the stored CA$20.00 minimum and the label reads CA$20.00 | Monday, after the basket above, on a 0% copy carrying the fix |
+| The 2026-08-23 parameter batch: below-CA$50.00 basket pays CA$5.00 and checks out, at/above CA$50.00 free, panel and label agree | Monday, only after both baskets above; write, read back, then verify on the fix copy |
 | Delivery stops taking orders at 21:00 | Any evening, once delivery works |
 | Pickup still open after delivery has stopped | Any evening, once delivery works |
 | Pickup stops at 22:00 | Done 2026-08-21 22:31, executed: an order was attempted and refused |
@@ -528,8 +600,13 @@ improvement, not part of this phase.
 
 ## Next action
 
-The Sunday reading is taken and passed. Monday, once delivery is orderable on
-the fixed copy: the CA$20.00 to CA$80.00 basket on the deployed copy first,
-then the minimum fix goes to a 0% copy and the basket is repeated. The hours
-change waits for the user's approval. In parallel, the mail test revision and
-its verification proceed under the rules in `CLAUDE_HANDOFF.md` section 10.
+The Sunday reading is taken and passed; the mail rehearsal is closed. What
+remains runs in the fixed order of the decision-batch section above: Monday
+in the 12:00-21:00 window, A (the 20/80 contrast test and the PR #101
+deployment), then B (the approved parameter batch write and its
+verification), then C (the read-only tax investigation and plan — no tax
+setting is touched), then D (the language-and-localization workstream plan).
+A scheduled session for Monday 12:05 Montreal carries this out; if it cannot
+drive the storefront, it records what did not run rather than claiming it.
+The hours change (every day 12:00-21:00) still waits separately for the
+user's approval.

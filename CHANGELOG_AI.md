@@ -4222,3 +4222,54 @@ the user's confirmation. Status: docs PR Level 0, eligible for auto-merge.
   templates.
 
 Documentation only in this PR.
+
+## 2026-08-23 - Four business decisions recorded; execution order fixed as contrast test, parameter batch, tax plan, language plan
+
+Environment: repository documentation. Status: Level 0 docs-only PR,
+eligible for auto-merge under the standing authorization; every value below
+was stated by the user in the evening instruction of 2026-08-23 and none is
+new to this entry. No stored value, revision, or runtime state was changed
+tonight.
+
+- Recorded the owner's two parameter decisions in the decision table of
+  `DELIVERY_D3_BUSINESS_PARAMETER_PLAN.md`, each with original value, new
+  value, and date, per the table's convention: the Delivery minimum is
+  removed (CA$20.00 to CA$0.00), and the free-Delivery threshold moves from
+  CA$80.00 to CA$50.00 with the rule pair keeping its disjoint,
+  order-robust shape (free at or above CA$50.00, then CA$5.00 below
+  CA$50.00). Both rows state that the stored settings are deliberately
+  **not yet changed**: the Monday contrast test documents the
+  delivery-minimum defect under the stored 20/80 configuration first.
+- Recorded the accountant's conclusion in the two tax rows: the Delivery
+  fee is its own taxable line inside the pre-tax subtotal, taxed under the
+  same rules as ordinary items, GST plus QST; display stays tax-exclusive.
+  No numeric rate was written down: the current values are read from the
+  official canada.ca and Revenu Québec pages at implementation time,
+  recorded with source and date, and no relayed figure is accepted. The
+  rows also state that enabling tax is a separately approved change,
+  because the tax settings are shared and switching them on changes what
+  real Pickup customers pay on the live storefront.
+- Recorded the language consultation's conclusions in `CLAUDE_HANDOFF.md`
+  section 11, as received and without legal interpretation: default pure
+  French, complete French on customer-facing surfaces, and a retained
+  English switch entry point. Q-002 is upgraded from an open question to a
+  required build item. The section names what the conclusions did not
+  address (staging scope before launch, the admin interface), which keeps
+  its previous unsettled status.
+- Entered the fixed execution order in `D3C_PROGRESS.md` as the
+  decision-batch section: A, the Monday 20/80 contrast test and the first
+  deployment of PR #101 to a fresh 0% copy; B, only after A, the approved
+  Level 2 parameter batch write with before/after read-back and storefront
+  verification (below CA$50.00 pays CA$5.00 and can check out, at/above
+  CA$50.00 free, panel and label agree); C, only after B, a read-only tax
+  investigation and plan with no setting touched; D, only after C, the
+  language-and-localization workstream plan (the user's 板块二). Corrected
+  the stale acceptance rows while there: PR #101 is merged, not "Ready to
+  merge", and no deployed revision carries it yet.
+- Aligned `CLAUDE_HANDOFF.md` section 19's fee-edge bullet with the
+  decision table so the two cannot diverge: the edges follow the table's
+  values, and the 80/20 pair is exercised once more only in the contrast
+  reading.
+
+Documentation only. Every changed path is `.md`. No stored value was
+changed; the 20/80 pair remains in the shared database until step B.

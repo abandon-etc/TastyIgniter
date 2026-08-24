@@ -753,7 +753,7 @@ production launch, separately approve and verify at least:
 
 Never experiment directly in production.
 
-### French-language requirements are unresolved
+### French-language requirements: consultation answered 2026-08-23
 
 Quebec has statutory French-language requirements for commercial websites, under
 the Charter of the French Language as amended by Bill 96. The Canada staging
@@ -762,25 +762,28 @@ message reads "Your selected order time is outside our Cueillette hours", and it
 is not the only string affected, because the package translations were never
 imported. That is Q-001, still open, translation count 0 of 2992.
 
-This is recorded as a production gate rather than a defect because it is not a
-technical judgement. Nothing here establishes what the law requires of this
-business, and this document does not attempt to. What is recorded is the
-observable fact that customer-facing English text is being served from a
-Montreal restaurant's checkout, and that the position needs to be settled before
-launch.
+The owner sought professional advice, and on 2026-08-23 the user relayed the
+conclusions. They are recorded here as received; this document still adds no
+legal interpretation of its own, and the conclusions are the owner's to apply:
 
-The owner needs professional advice on this. The questions that advice should
-answer, at minimum:
+- **The default language is French, and the French experience is pure
+  French** — no English mixed into pages served in the default language.
+- **French coverage must be complete** on the customer-facing surfaces. The
+  English strings falling out of Q-001, and the English-only mail templates
+  recorded in section 10, are therefore build items, not accepted state.
+- **An English language switch stays.** The site is bilingual with French as
+  the default, so the storefront needs a visible language switch entry point.
+  Q-002 — the storefront has no visible language switcher — is upgraded from
+  an open question to a required build item.
 
-- which customer-facing surfaces are in scope, and whether staging is in scope
-  at all before launch;
-- whether French must be present, or present and at least equally prominent;
-- what applies to text that comes from an upstream package rather than from the
-  business;
-- what applies to the admin interface, which staff rather than customers use.
-
-The technical work that follows depends on those answers. Do not begin
-translating on the assumption of a particular reading.
+The implementation planning that follows from these answers (Q-001 import
+route, the Q-002 switcher, mail templates, and the currency-format question
+considered alongside them) is the language-and-localization workstream the
+user calls 板块二; its plan is produced as a scheduled follow-up recorded in
+`D3C_PROGRESS.md`, and planning precedes any implementation. Questions the
+relayed conclusions did not address — whether staging is in scope before
+launch, and what applies to the staff-facing admin interface — keep their
+previous status: unsettled, and not to be assumed.
 
 ### Upgrading to a paid account must set the Geocoding quota in the same act
 
@@ -1004,7 +1007,11 @@ Use synthetic data and verify at minimum:
   recomputed after the last, identical across the pair;
 - polygon inside, outside, and inclusive boundary behavior;
 - CAD 5.00 fee below the free threshold;
-- CAD 80.00 free threshold and CAD 20.00 minimum at below/equal/above edges;
+- free-threshold and minimum edges at the values in the decision table of
+  `DELIVERY_D3_BUSINESS_PARAMETER_PLAN.md` — from 2026-08-23 those are free at
+  or above CAD 50.00 with no Delivery minimum; the earlier 80/20 pair is
+  exercised once more only in the Monday defect-contrast reading recorded in
+  `D3C_PROGRESS.md`, taken before the new values are written;
 - Monday-Friday 12:00-21:00 and weekends closed;
 - unrecognized/incomplete/out-of-area address behavior and address changes;
 - Pickup to Delivery and Delivery to Pickup transitions;
