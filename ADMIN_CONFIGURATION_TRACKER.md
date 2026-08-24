@@ -2411,3 +2411,81 @@ the user. Status: recorded.
 
 No change to any revision, traffic, environment variable, secret, schema, or
 stored setting. One disposable job resource removed.
+
+## 2026-08-24 - Contrast test taken, PR #101 deployed to a 0% copy, and the approved parameter batch written
+
+Environment: Canada staging Cloud Run service and Jobs in
+`northamerica-northeast1`, the storefronts of two 0%-traffic tagged copies,
+Cloud Logging read-only, and the shared database through a disposable Job.
+Status: recorded. Level 2, executed on the user's 2026-08-23 written
+instruction (brought forward from the Tuesday schedule by the user, present
+during the run on Monday 2026-08-24 from 14:05).
+
+- **FP-1 pair.** `tools/fp1.py` on the main-traffic revision
+  (`d2fix-31821289`, 100%) before the first action (14:0x) and after the
+  last runtime action:
+  `2127efd6d63de53e6d9fbc5388f9db3fee72d0575eec25a09b9f99e9ad8565d3` both
+  times, identical to the recorded baseline. Main traffic never moved.
+- **Contrast test, before leg (14:1x, `d3c-fix-be6835a9`, hostname
+  verified, stored 20/80 still in place — the info panel read back "Free
+  above $80.00" then "$5.00 below $80.00").** A delivery basket of CA$23.99
+  (ATA RICE + EBA, typed in-area address, server-side geocode): basket
+  label "Min. Order Amount: $80.00", checkout button rendered disabled, and
+  a direct `/checkout` request bounced back to the menu with "Order total
+  is below the $80.00 minimum order total. You need to spend more to
+  order." The deployed defect is recorded as executed evidence.
+- **Deployment.** Cloud Build `18bdb27e-36c1-4919-a410-b515c8a466e9` built
+  `Dockerfile.cloudrun` from `4.x` at `9a4c1bc8` (first image carrying
+  PR #101) into `tastyigniter:d3c-min-9a4c1bc8`, digest
+  `sha256:fe348ff7729ef6114cae570f24dc7902c2d4b51be3f9f9adcfa32a62a549bce7`.
+  Deployed as revision `le-chateau-canada-staging-d3c-min-9a4c1bc8`,
+  `--no-traffic`, tag `d3c-min-9a4c1bc8`, URLs pinned to the tag,
+  `DELIVERY_ENABLED=true`, geocoder pinned to Google, `MAIL_MAILER=log`, no
+  mail variables, the five application secrets by reference. Read back
+  after deploy: env exactly as set, Ready, home 200, `/healthz/` 200 `ok`.
+- **Contrast test, after leg (same CA$23.99 basket on the new copy).**
+  Label "Min. Order Amount: $20.00", fee CA$5.00 unchanged, checkout button
+  enabled, `/checkout` reached with no minimum warning; stopped at the
+  checkout page, nothing submitted. One transient observation: the first
+  address lookup on the fresh revision failed with the generic
+  couldn't-locate message and no technical detail; the identical resubmit
+  succeeded. Fail-closed behaviour, noted, not pursued.
+- **Parameter batch (approved 2026-08-23).** Disposable Job
+  `qa-params-20260824` built from the `d3c-min` image and spec: Cloud SQL
+  attached, five secrets by reference, `MAIL_MAILER=log`, command
+  `sh -c 'export DB_SOCKET=/cloudsql/$DB_INSTANCE_CONNECTION_NAME; php
+  artisan tinker --execute "$TINKER_SNIPPET"'`. Three executions:
+  1. `-jxj7k`, read-back only: delivery settings row id=3 (location 2)
+     `min_order_amount="20.00"`; area id=1 `D3 Montreal Delivery Area`
+     conditions `[{above,total:80,amount:0,priority:0},
+     {below,total:80,amount:5,priority:1}]` (priorities stored as 0/1).
+  2. `-jmfcw`, guarded transactional write through the models: the **area
+     rule pair updated to totals 50/50** (shape, amounts, priorities
+     unchanged) and committed; the settings write was a silent no-op — the
+     settings model spreads `data` into top-level attributes on
+     assignment, so `save()` persisted nothing for it. Caught by the
+     in-execution read-back; recorded as the reason for execution 3.
+  3. `-gqx8f`, exact-target raw update inside a transaction with
+     `lockForUpdate`, guarded to refuse unless the raw JSON still carried
+     `"20.00"`: `location_settings` id=3 `data.min_order_amount`
+     `"20.00" -> "0.00"`, exactly one row affected. Read back after, raw
+     and through the model: `"0.00"`. Nothing else in the JSON changed.
+- **Storefront verification on `d3c-min-9a4c1bc8` after the write.** Info
+  panel: "D3 Montreal Delivery Area — Free above $50.00 / $5.00 below
+  $50.00", free rule listed first. CA$23.99 basket: fee CA$5.00, total
+  CA$28.99, no minimum label rendered (stored minimum 0 renders no label),
+  checkout button enabled and `/checkout` reached with no warning.
+  CA$48.00: fee CA$5.00 (below-boundary side). CA$50.00 exactly: free —
+  total equals subtotal at CA$50.00 (the at-or-above boundary is
+  inclusive, as recorded for D3B). CA$62.00: free, total equals subtotal.
+  Cosmetic note: a free fee renders as "Delivery:" with a blank amount.
+  Nothing was ordered; the baskets are session state on the 0% copy.
+- The Job resource `qa-params-20260824` remains and awaits the user's
+  explicit confirmation for deletion. Its execution logs carry stored
+  configuration values only — no address, credential, or geometry.
+
+Live-site effect: none. The main-traffic revision serves
+`DELIVERY_ENABLED=false`, which hides every Delivery surface; the changed
+values are Delivery-only. The FP-1 pair above is the evidence the live path
+never moved. No schema, Order, Customer, Reservation, Birthday, payment,
+mail, secret, production, Render, or DigitalOcean change.
