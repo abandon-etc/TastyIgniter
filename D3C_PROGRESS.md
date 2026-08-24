@@ -3,7 +3,7 @@
 Snapshot of where Delivery D3C acceptance stands. Overwritten as work moves;
 it is not a history. `CHANGELOG_AI.md` keeps the history.
 
-Last updated: 2026-08-23, Sunday evening.
+Last updated: 2026-08-24, Monday afternoon.
 
 Delivery is being switched on for testing only, on copies of the staging site
 that receive no visitors. The live site is untouched throughout, and has been
@@ -114,26 +114,24 @@ schedule that the fix corrects. Sunday, unfixed: schedule open, order time now,
 add accepted. Sunday, fixed: schedule closed, early return, add refused. The
 procedure above is unchanged.
 
-## The delivery minimum: the highest-priority open defect
+## The delivery minimum: resolved and confirmed deployed
 
-**Priority: highest among open defects.** The storefront enforces a CA$80.00
-minimum on delivery where the decision is CA$20.00. CA$20.00 to CA$80.00 is
-the main band of delivery orders, and in that band the checkout button is
-disabled, so delivery is effectively unusable rather than merely unattractive.
+**Closed on 2026-08-24.** The contrast test was taken Monday 2026-08-24
+(brought forward from Tuesday by the user, present during the run): on
+`d3c-fix-be6835a9` under the stored 20/80, a CA$23.99 delivery basket was
+blocked — label "Min. Order Amount: $80.00", checkout button disabled, a
+direct `/checkout` bounced with the served minimum message. Then `4.x` at
+`9a4c1bc8` was deployed as the 0% copy `d3c-min-9a4c1bc8` (first revision
+carrying PR #101), and the same basket there read "Min. Order Amount:
+$20.00" with the checkout page reachable and no warning. The override is
+confirmed in the deployed environment; the fee split was unchanged by it.
 
-Every link but one is now verified: the stored minimum is CA$20.00 (user
-read-back); the stored fee rules are "Free above $80.00" then "$5.00 below
-$80.00", in that order (read back from the storefront's own information
-panel); and the vendor's semantics under exactly that shape are established
-by `tests/Feature/Delivery/DeliveryAreaRuleMinimumTest.php` (PR #98):
-the enforced minimum is 80 and a CA$50.00 basket fails the minimum-order
-check. The one link left is that the deployed copy behaves as the installed
-vendor code does, which the contrast test's CA$20.00 to CA$80.00 basket
-confirms. Details and the remedy options are in the Saturday findings below.
-
-The fix, `App\Delivery\DeliveryOrderType` (PR #101), is **merged and not yet
-deployed**: no revision carries it. The Tuesday session deploys it to a
-fresh 0% copy after the contrast reading, per the fixed order below.
+One leg stands on unit tests rather than a deployed reading, and now always
+will: refusal *below* a stored minimum was never exercised on a deployed
+copy while the stored minimum was 20.00, because the approved batch write
+moved it to no-minimum immediately after the contrast reading.
+`DeliveryOrderTypeMinimumTest` pins that gate (fails at 19, passes at 20);
+recorded here so nobody later reads the deployed evidence as covering it.
 
 ## The 2026-08-23 decision batch and its fixed execution order
 
@@ -153,16 +151,13 @@ professional conclusions, recorded durably in
 4. Language: default pure French, complete French, and a retained English
    switch; Q-002 becomes a required build item.
 
-**The execution order is fixed by the user and must not be reordered:**
+**The execution order is fixed by the user and must not be reordered.**
+On 2026-08-24 the user, present in chat, brought the run forward from the
+Tuesday schedule and it began at 14:05 Monday, inside the window. **A and B
+are done (2026-08-24); C and D remain, in order.**
 
-- **A. Contrast test first, under the stored 20/80 values — Tuesday
-  2026-08-25, from 18:00, inside the 12:00-21:00 delivery window.**
-  (Moved from Monday noon at the user's direction on 2026-08-23: the user
-  cannot attend Monday, and is near the computer from 18:00 Tuesday for
-  about an hour to approve permission prompts. The storefront legs of A and
-  B must finish before the 21:00 close; a leg that misses the window is
-  recorded as not run, never substituted.) On the weekday-fixed copy
-  `d3c-fix-be6835a9`:
+- **A. Contrast test first, under the stored 20/80 values — DONE
+  2026-08-24.** On the weekday-fixed copy `d3c-fix-be6835a9`:
   a CA$20.00-to-CA$80.00 delivery basket, expecting the checkout blocked at
   the computed CA$80.00 minimum — the record of the deployed defect (this
   add during open hours is also the remaining positive leg of "Delivery
@@ -172,8 +167,10 @@ professional conclusions, recorded durably in
   acceptance. FP-1 on the main revision before the first action and after
   the last. This test documents the defect itself; it is why the new
   parameter values wait.
-- **B. Only after A: the parameter batch, one Level 2 shared-settings
-  write, already approved by the owner's 2026-08-23 instruction.** Set the
+- **B. Only after A: the parameter batch — DONE 2026-08-24, with
+  before/after read-back in `ADMIN_CONFIGURATION_TRACKER.md` and the
+  storefront verification passed (below 50 pays 5.00 and checks out; 50.00
+  exactly and above are free; panel and label agree).** As approved: set the
   stored Delivery `min_order_amount` from 20.00 to 0 and the area rule pair
   from (above/0/80, below/5/80) to (above/0/50, below/5/50), priorities and
   shape unchanged. Read back before and after, record both in
@@ -218,14 +215,14 @@ preserved, or reachable is not passed on *rendered* alone.
 | Address provider unavailable: pickup still offered **and reachable** | Passed | Executed: followed through from the basket to a working pickup checkout |
 | Address provider unavailable: basket kept | Passed | Executed: the item survived a failed address lookup, with no delivery fee added |
 | Delivery closed before 12:00 and after 21:00, every day | Partly passed | Executed for Saturday, closed all day: a delivery order was attempted on both copies on 2026-08-22 in the afternoon and refused at the moment of adding, basket kept empty. The before-12:00 and after-21:00 legs on open days still need their windows |
-| Delivery open during its hours | **Failed** on the unfixed code, historical reading; **fix confirmed in place** on 2026-08-23 | Friday 2026-08-21 reading kept as history (taken under the setting "None"). Sunday 2026-08-23, executed on both copies: unfixed accepts a delivery add on a closed day, fixed refuses it. The weekday correction is confirmed in the deployed environment. A weekday add on the fixed copy during 12:00-21:00 is the remaining positive leg and falls out of the contrast test's basket |
+| Delivery open during its hours | Passed | Executed. Friday 2026-08-21 reading kept as history (taken under the setting "None"). Sunday 2026-08-23, both copies: unfixed accepts on a closed day, fixed refuses — the weekday correction confirmed deployed. Monday 2026-08-24 14:1x, the positive leg: delivery adds accepted on the weekday-fixed copies during the 12:00-21:00 window |
 | Address lookup works with one provider pinned | Passed | Executed: the home-page widget geocodes the typed address server-side and it works on both copies |
 | Address autocomplete on the Google-pinned copies | **Failed** | Executed: the suggestion call is refused by the provider, and the raw technical error is shown to the customer. See below |
 | An in-area address is accepted | Passed | Executed, one address |
 | Delivery area: outside, and exactly on the boundary | Blocked | Needs delivery to be orderable |
-| Delivery fee of CA$5.00 below the free threshold | Partly seen | Rendered as a running total; not confirmed against a real basket |
-| Free delivery at the decision threshold, at the edges | Blocked | Needs delivery to be orderable. Decision changed 2026-08-23: threshold CA$50.00 and no minimum. The edge checks run at the new values once the batch write (B) lands, after the contrast test (A) under the stored 20/80 |
-| Delivery minimum shown and enforced as the stored value | **Failed**, blocking; fix merged (PR #101), not deployed | Confirmed defect, highest priority. Stored minimum CA$20.00 (user read-back); stored rules "Free above $80.00" then "$5.00 below $80.00" (storefront read-back); vendor semantics established by test. Fix: `App\Delivery\DeliveryOrderType`, tested, merged as PR #101, in no deployed revision yet. Tuesday 2026-08-25: basket on the deployed copy first, then deploy the fix to a fresh 0% copy and repeat; after that the 2026-08-23 batch write moves the stored values to no-minimum/50 and the verification moves with them. See the decision-batch section above |
+| Delivery fee of CA$5.00 below the free threshold | Passed | Executed 2026-08-24 against real baskets on `d3c-min-9a4c1bc8`: CA$23.99 and CA$48.00 both carried the CA$5.00 fee in the served totals |
+| Free delivery at the decision threshold (CA$50.00), at the edges | Passed | Executed 2026-08-24 at the new values: below (48.00) pays 5.00; exactly 50.00 free; above (62.00) free; total equals subtotal on the free legs. The at-or-above boundary is inclusive, as recorded for D3B |
+| Delivery minimum shown and enforced as the stored value | Passed, with one leg on tests | Executed 2026-08-24, the contrast test: under stored 20.00 the unfixed copy showed and enforced a computed 80.00 (label, disabled button, served `/checkout` refusal); the copy carrying PR #101 showed 20.00 and let the same CA$23.99 basket through to checkout. After the batch write the stored minimum is 0 and no label renders, which is correct. Refusal below a stored positive minimum was never exercised deployed (the minimum moved to 0 right after the reading); it stands on `DeliveryOrderTypeMinimumTest` (fails at 19, passes at 20) and is recorded in the section above |
 | Money reads and compares correctly in Canadian French | Not started | Decimal separator differs; the three amounts above are compared numerically |
 | Unrecognised, incomplete, out-of-area addresses; changing an address | Not started | |
 | Switching between pickup and delivery, both ways | Not started | |
@@ -375,7 +372,7 @@ each delivery area's rules as the vendor sorts them, by priority. On
 $5.00 below $80.00", in that order, matching the D3B record. That panel is
 the read-back route for fee rules when neither admin nor database is at hand.
 
-**What the contrast reading still settles:** only that the deployed copy behaves as the
+**What the contrast reading still settles (settled 2026-08-24, see the resolved section above):** only that the deployed copy behaves as the
 installed vendor code does. Add items to a delivery basket between CA$20.00
 and CA$80.00 and confirm the checkout button is disabled with the minimum
 message; that is the executed evidence.
@@ -459,12 +456,11 @@ in the shared database either way.
 **Operating note for the owner** (also in `ADMIN_CONFIGURATION_GUIDE.md`,
 in the owner's language): the order of the delivery fee rules in the admin
 is the order in which the system applies them, and it uses only the first
-rule that matches a basket. "Free delivery from CA$80.00" must stay as the
-first row. Dragging the rows changes what customers are charged, silently,
-with no warning. After any change, open the storefront menu page's "More
-info" panel and check that "Free above $80.00" is listed first. (The
-threshold becomes CA$50.00 with the 2026-08-23 batch write; the note and the
-owner's guide are updated to say CA$50.00 when that write lands.)
+rule that matches a basket. "Free delivery from CA$50.00" must stay as the
+first row (CA$50.00 since the 2026-08-24 batch write; CA$80.00 before it).
+Dragging the rows changes what customers are charged, silently, with no
+warning. After any change, open the storefront menu page's "More info"
+panel and check that "Free above $50.00" is listed first.
 
 One menu observation in passing: Puff-Puff carries a stored minimum quantity
 of 3, so its dialog opens at three pieces. That is stored menu data, possibly
@@ -532,9 +528,9 @@ test. Each check waits for its real window.
 | --- | --- |
 | Delivery appears open on Sunday, confirming the cause | Done 2026-08-23 12:26-12:28, executed on both copies: unfixed accepted, fixed refused |
 | Delivery refused on a closed day | Done 2026-08-22 afternoon, executed on both copies: an order was attempted and refused |
-| Delivery minimum: a CA$20.00 to CA$80.00 basket finds the checkout button disabled | Tuesday 2026-08-25 from 18:00, delivery orderable on the fixed copy until 21:00, **before** the fix is deployed; confirms the deployed state and records the blocked state for contrast |
-| Delivery minimum fix: the same basket checks out at the stored CA$20.00 minimum and the label reads CA$20.00 | Tuesday, after the basket above, on a 0% copy carrying the fix; before the 21:00 close |
-| The 2026-08-23 parameter batch: below-CA$50.00 basket pays CA$5.00 and checks out, at/above CA$50.00 free, panel and label agree | Tuesday, only after both baskets above; write, read back, then verify on the fix copy, storefront legs before the 21:00 close |
+| Delivery minimum: a CA$20.00 to CA$80.00 basket finds the checkout button disabled | Done 2026-08-24 14:1x, executed on `d3c-fix-be6835a9` before the fix deployed: CA$23.99 basket, label $80.00, button disabled, `/checkout` refused |
+| Delivery minimum fix: the same basket checks out at the stored CA$20.00 minimum and the label reads CA$20.00 | Done 2026-08-24, executed on `d3c-min-9a4c1bc8`: label $20.00, checkout page reached, nothing submitted |
+| The 2026-08-23 parameter batch: below-CA$50.00 basket pays CA$5.00 and checks out, at/above CA$50.00 free, panel and label agree | Done 2026-08-24, executed after the write: 23.99 and 48.00 pay 5.00 and check out; 50.00 exactly and 62.00 free; panel lists Free above $50.00 first; no minimum label renders |
 | Delivery stops taking orders at 21:00 | Any evening, once delivery works |
 | Pickup still open after delivery has stopped | Any evening, once delivery works |
 | Pickup stops at 22:00 | Done 2026-08-21 22:31, executed: an order was attempted and refused |
@@ -553,7 +549,8 @@ All receive 0% of visitors.
 
 | Name | Purpose | Usable for multi-step flows |
 | --- | --- | --- |
-| `d3c-fix-be6835a9` | The weekday fix, pinned to Google. Use for the Sunday reading | Yes |
+| `d3c-min-9a4c1bc8` | `4.x` at `9a4c1bc8`: weekday fix plus the minimum override (PR #101), pinned to Google, URLs pinned. The current copy for delivery flows | Yes |
+| `d3c-fix-be6835a9` | The weekday fix, pinned to Google. Used for the Sunday reading and the 2026-08-24 contrast before-leg; superseded by `d3c-min` for new work | Yes |
 | `d3c-g2-1f8f0c75` | Unfixed comparison, pinned to Google. Use for the Sunday reading | Yes |
 | `d3c-pu2-1f8f0c75` | Provider-unavailable testing, no address provider | Yes |
 | `d3c-g-1f8f0c75` | Superseded by `g2` | No |
@@ -577,6 +574,7 @@ Cleaning any of these up needs explicit confirmation and is not done yet.
 | Assess a global change of the week start, so that `WorkingHour::getDay()` stops being locale-shifted for any future caller. A different thing from the merged targeted correction above, which rebuilds schedules and leaves `getDay()` as it is; a global change moves every week boundary in the framework and needs its blast radius assessed first | Agent | Deferred; not needed for D3C |
 | Apply the new delivery hours, every day 12:00-21:00 | Agent, on the user's approval | **The precondition is met: the Sunday 2026-08-23 A/B reading was taken and passed.** The change is a write to a shared setting that the live site also reads, so it is Level 2 and stops for explicit approval with the exact prior value (Monday to Friday 12:00-21:00, stored rows weekday 0-4 status 1, 5-6 status 0) and the way back recorded. Not executed yet |
 | Static check that stops an exception being written into a log context | Agent | Deferred |
+| Delete disposable Job `qa-params-20260824` (its two write executions and one read-back are recorded in the tracker) | Agent, on the user's explicit confirmation naming it | Awaiting confirmation |
 
 ### Address autocomplete does not work today
 
@@ -606,17 +604,12 @@ improvement, not part of this phase.
 
 ## Next action
 
-The Sunday reading is taken and passed; the mail rehearsal is closed. What
-remains runs in the fixed order of the decision-batch section above:
-Tuesday 2026-08-25 from 18:00 Montreal, A (the 20/80 contrast test and the
-PR #101 deployment), then B (the approved parameter batch write and its
-verification), then C (the read-only tax investigation and plan — no tax
-setting is touched), then D (the language-and-localization workstream plan).
-Rescheduled from Monday noon at the user's direction on 2026-08-23: the
-user cannot attend Monday and is near the computer from 18:00 Tuesday for
-about an hour to approve permission prompts. A scheduled session for
-Tuesday 18:00 Montreal carries this out; the storefront legs of A and B
-must finish before the 21:00 delivery close, and if the session cannot
-drive the storefront, or a leg misses the window, it records what did not
-run rather than claiming it. The hours change (every day 12:00-21:00) still
-waits separately for the user's approval.
+A and B are done (2026-08-24, user present; the Tuesday scheduled task is
+to be cancelled so it does not re-run). What remains, in the fixed order:
+C — the read-only tax investigation and plan, with no tax setting touched;
+then D — the language-and-localization workstream plan (板块二), noting the
+storefront header now carries Français | English links that Q-002's
+original "no visible switcher" record predates, so D verifies what the
+theme already provides before planning new work. The hours change (every
+day 12:00-21:00) still waits separately for the user's approval, and the
+`qa-params-20260824` Job awaits a deletion confirmation.

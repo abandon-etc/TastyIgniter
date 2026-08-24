@@ -4307,3 +4307,70 @@ changed; the A-D sequence and its content are unchanged.
 Documentation only. Weekday hour references ("Monday to Friday",
 "Monday-Friday", the discrimination table) are stored-schedule facts and
 were deliberately not touched.
+
+## 2026-08-24 - The contrast test: the deployed CA$80.00 block recorded, then PR #101 deployed and the same basket passes at CA$20.00
+
+Environment: Canada staging, two 0%-traffic tagged copies through pinned
+URLs, Cloud Build, Cloud Run. Status: Level 2 on the user's 2026-08-23
+instruction, executed Monday 2026-08-24 from 14:05 with the user present
+(the user brought the Tuesday schedule forward in chat); runtime detail in
+`ADMIN_CONFIGURATION_TRACKER.md`; this docs PR is Level 0, eligible for
+auto-merge.
+
+- FP-1 on the main-traffic revision before the first action and after the
+  last: identical pair, equal to the recorded baseline. The live path never
+  moved.
+- Before leg on `d3c-fix-be6835a9` under the stored 20/80 (info panel read
+  back first): a CA$23.99 delivery basket showed "Min. Order Amount:
+  $80.00", a disabled checkout button, and a served refusal on a direct
+  `/checkout` — the defect recorded as executed evidence, completing the
+  reading the acceptance table was holding for.
+- Built `4.x` at `9a4c1bc8` and deployed
+  `le-chateau-canada-staging-d3c-min-9a4c1bc8` at 0% with pinned URLs — the
+  first revision carrying the merged minimum override. The same basket
+  there: label CA$20.00, fee CA$5.00 unchanged, checkout page reached, no
+  minimum warning, nothing submitted. The override is confirmed in the
+  deployed environment: label path and gate path corrected together.
+- Transient, noted: the new revision's first address lookup failed with the
+  generic customer message and no technical leak; the identical retry
+  succeeded.
+
+No stored value changed in this step; no traffic, production, or live-site
+change. The acceptance record is updated in `D3C_PROGRESS.md`.
+
+## 2026-08-24 - The approved parameter batch: no Delivery minimum, free threshold CA$50.00, written and verified
+
+Environment: the shared database through disposable Job
+`qa-params-20260824`, and the `d3c-min-9a4c1bc8` storefront. Status:
+Level 2 shared-settings write, pre-approved by the owner's 2026-08-23
+instruction, executed after the contrast test per the fixed order; runtime
+detail and before/after read-backs in `ADMIN_CONFIGURATION_TRACKER.md`;
+this docs PR is Level 0, eligible for auto-merge.
+
+- Stored Delivery `min_order_amount` `"20.00" -> "0.00"`
+  (`location_settings` id=3), and the `D3 Montreal Delivery Area` rule
+  pair totals `80 -> 50` with shape, amounts, and priorities unchanged:
+  free at or above CA$50.00 first, CA$5.00 below CA$50.00 second, still
+  disjoint and order-robust.
+- The write was guarded and exact-target: read-back execution first, then
+  a transactional write that refused unless the stored state matched it.
+  One honest wrinkle recorded: the settings model silently ignores a
+  `data` assignment on `save()` (it spreads the array into attributes), so
+  the settings half of the first write execution was a no-op caught by
+  read-back and completed by an exact-target raw column update with
+  `lockForUpdate`. The area half went through the model normally.
+- Verified on the fix copy: below CA$50.00 the fee is CA$5.00 and checkout
+  is reachable with no minimum interception (CA$23.99 and CA$48.00 legs);
+  at exactly CA$50.00 and at CA$62.00 delivery is free with total equal to
+  subtotal; the info panel lists "Free above $50.00" then "$5.00 below
+  $50.00"; no minimum label renders, which is the stored no-minimum state.
+- Owner notes updated to CA$50.00 and no-minimum in
+  `ADMIN_CONFIGURATION_GUIDE.md` and `D3C_PROGRESS.md`; the decision table
+  rows are marked applied 2026-08-24.
+- Live customers see none of this: `DELIVERY_ENABLED=false` on the
+  main-traffic revision hides every Delivery surface, and the FP-1 pair is
+  identical. The Job resource remains until the user confirms its
+  deletion.
+
+Next in the fixed order: C, the read-only tax investigation and plan — no
+tax setting is touched; then D, the language-and-localization plan.
