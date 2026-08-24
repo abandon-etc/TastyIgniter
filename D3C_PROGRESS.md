@@ -577,7 +577,7 @@ Cleaning any of these up needs explicit confirmation and is not done yet.
 | Assess a global change of the week start, so that `WorkingHour::getDay()` stops being locale-shifted for any future caller. A different thing from the merged targeted correction above, which rebuilds schedules and leaves `getDay()` as it is; a global change moves every week boundary in the framework and needs its blast radius assessed first | Agent | Deferred; not needed for D3C |
 | Apply the new delivery hours, every day 12:00-21:00 | Agent, on the user's approval | **The precondition is met: the Sunday 2026-08-23 A/B reading was taken and passed.** The change is a write to a shared setting that the live site also reads, so it is Level 2 and stops for explicit approval with the exact prior value (Monday to Friday 12:00-21:00, stored rows weekday 0-4 status 1, 5-6 status 0) and the way back recorded. Not executed yet |
 | Static check that stops an exception being written into a log context | Agent | Deferred |
-| Delete disposable Job `qa-params-20260824` (its two write executions and one read-back are recorded in the tracker) | Agent, on the user's explicit confirmation naming it | Awaiting confirmation |
+| Delete disposable Job `qa-params-20260824` (its two write executions and one read-back are recorded in the tracker) | Agent, on the user's explicit confirmation naming it | Done 2026-08-24: confirmed by name, described before, deleted, read back absent; the region holds no jobs |
 
 ### Address autocomplete does not work today
 
@@ -610,8 +610,7 @@ improvement, not part of this phase.
 The 2026-08-23 batch is complete: A, B, C, and D were all executed on
 2026-08-24 with the user present, in the fixed order (the Tuesday scheduled
 task is cancelled so it does not re-run). Open items now: the hours change
-(every day 12:00-21:00) waits separately for the user's approval; the
-`qa-params-20260824` Job awaits a deletion confirmation; the remaining D3C
+(every day 12:00-21:00) waits separately for the user's approval; the remaining D3C
 acceptance rows (boundary/out-of-area, address-change, pickup/delivery
 transitions, session/totals/spoof/API, evening cut-offs, admin regression)
 continue on `d3c-min-9a4c1bc8` under the applied no-minimum/50 values; and
