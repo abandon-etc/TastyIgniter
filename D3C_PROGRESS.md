@@ -184,7 +184,9 @@ are done (2026-08-24); C and D remain, in order.**
   $50.00"; the basket label agrees with the stored no-minimum state.
   Update the owner's operating note (here and in
   `ADMIN_CONFIGURATION_GUIDE.md`) to name CA$50.00 as the first row.
-- **C. Only after B: tax, read-only.** Investigate the Taxation
+- **C. Only after B: tax, read-only — DONE 2026-08-24, delivered as
+  `QUEBEC_TAX_PLAN.md`; no setting was touched.** As specified, the
+  investigation covered the Taxation
   configuration structure, whether the Delivery fee can be taxed as its own
   line, the official current GST and QST values (read from canada.ca and
   Revenu Québec directly), and the implementation and verification path.
