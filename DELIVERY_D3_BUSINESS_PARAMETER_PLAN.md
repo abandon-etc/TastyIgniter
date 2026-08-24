@@ -396,11 +396,21 @@ fee composition while using only native server-side behavior.
 ## User decision table
 
 The `User final value` column records only values explicitly confirmed by the
-user. As of 2026-08-20 every row in this table is confirmed. One confirmed
-direction still carries an outstanding numeric value: the tax rate and Delivery
-fee applicability await accountant confirmation. That does not block D3C
-isolated acceptance, because staging tax remains disabled and D3C uses
-synthetic addresses only.
+user. As of 2026-08-20 every row in this table is confirmed. The tax rate and
+Delivery fee applicability, outstanding at that date, were settled by the
+accountant's conclusion relayed by the user on 2026-08-23; see the two tax
+rows. Staging tax remains disabled and enabling it is a separately approved
+change, so nothing here blocks D3C isolated acceptance.
+
+On 2026-08-23 the owner changed two confirmed parameter values: the Delivery
+minimum is removed (CAD 20.00 to CAD 0.00) and the free-Delivery threshold
+moves from CAD 80.00 to CAD 50.00. Each row carries the original value, the
+new value, and the date, following this table's convention. **Neither value
+has been applied to the stored settings yet.** The stored 20/80 pair is
+deliberately kept in place until the Monday defect-contrast reading recorded
+in `D3C_PROGRESS.md` is taken, because that reading documents the
+delivery-minimum defect under the configuration it was found in; the batch
+write follows it.
 
 The Google geocoding daily usage cap, left open when the direction was
 confirmed, was set on 2026-08-20 at 500 requests per day with a budget alert.
@@ -428,12 +438,12 @@ later as a bill.
 | Base Delivery fee | CAD amount | Non-negative, two decimals; amount `-1` means unavailable | Business decision required | CAD 5.00; confirmed 2026-08-19 |
 | Distance surcharge | Off / threshold rules | Added even when base fee condition is free | Off initially | Off; confirmed 2026-08-19 |
 | Free Delivery | Off / on | Implemented as an ordered area condition | Optional after base flow passes | On; confirmed 2026-08-19 |
-| Free threshold | CAD subtotal | Uses server `Cart::subtotal()`, before cart coupon and tax | Business decision required | CAD 80.00; confirmed 2026-08-19 |
-| Delivery minimum | CAD subtotal | Max of Location and matched-area minimum; excludes Delivery fee/tax | Business decision required | CAD 20.00; confirmed 2026-08-19 |
+| Free threshold | CAD subtotal | Uses server `Cart::subtotal()`, before cart coupon and tax | Business decision required | Originally CAD 80.00, confirmed 2026-08-19. **Changed to CAD 50.00, confirmed 2026-08-23** (owner decision). The stored rule pair keeps its disjoint, order-robust shape: free at or above CAD 50.00, then CAD 5.00 below CAD 50.00. Not yet applied to the stored rules; applied only after the Monday defect-contrast reading, see `D3C_PROGRESS.md` |
+| Delivery minimum | CAD subtotal | Max of Location and matched-area minimum; excludes Delivery fee/tax | Business decision required | Originally CAD 20.00, confirmed 2026-08-19. **Removed — CAD 0.00, no Delivery minimum — confirmed 2026-08-23** (owner decision). Not yet applied to the stored setting; applied only after the Monday defect-contrast reading, see `D3C_PROGRESS.md` |
 | Pickup minimum | CAD amount | Independent Collection setting | Keep CAD 0.00 | CAD 0.00; no Pickup minimum; confirmed 2026-08-20 |
 | Discount basis | Native subtotal behavior | Item conditions affect basis; cart-level coupon does not | Keep native behavior and document it | Keep native behavior; thresholds use `Cart::subtotal()` excluding Delivery fee and tax, and a cart-level coupon does not lower it; confirmed 2026-08-20 |
-| Delivery fee tax | Off / on | Current tax mode and rate are disabled/0 | Keep off until tax advice/approval | Delivery fee is taxable; the CAD 5.00 fee is a pre-tax amount taxed with the items at checkout; direction confirmed 2026-08-20, rate and applicability pending accountant confirmation |
-| Fee displayed as tax-inclusive | Inclusive / exclusive | Controlled by tax mode/menu-price settings, not area rule | Do not change in D3 | Tax-exclusive; menu prices are pre-tax and tax is added at checkout; direction confirmed 2026-08-20, pending accountant confirmation |
+| Delivery fee tax | Off / on | Current tax mode and rate are disabled/0 | Keep off until tax advice/approval | Delivery fee is taxable. Accountant conclusion relayed by the user 2026-08-23: the Delivery fee is its own taxable line inside the pre-tax subtotal and is taxed under the same rules as ordinary items, GST plus QST. The rates are **not** recorded here as numbers: at implementation time the current values are read from the official canada.ca and Revenu Québec pages and recorded with source and date; no second-hand figure is accepted. Enabling tax is a separately approved change — the tax settings are shared, so switching them on changes what real Pickup customers pay on the live storefront; timing is agreed with the owner first |
+| Fee displayed as tax-inclusive | Inclusive / exclusive | Controlled by tax mode/menu-price settings, not area rule | Do not change in D3 | Tax-exclusive; menu prices are pre-tax and tax is added at checkout; direction confirmed 2026-08-20, accountant confirmation relayed 2026-08-23 |
 | Admin temporary fee change | Allowed / disallowed/change control | Native admin has no D3-specific approval or audit workflow | Disallow ad hoc edits; use recorded change control | Allowed at any time with no approval workflow; confirmed 2026-08-20. Recorded risk: the platform stores no actor or timestamp for such an edit |
 | Delivery hours | Weekly schedule | Independent from Pickup/general opening | Confirm whether retained daily 12:00-21:00 is real | Originally Monday-Friday 12:00-21:00 with weekends closed, confirmed 2026-08-19. Changed to every day 12:00-21:00, confirmed 2026-08-21; not yet applied to the stored schedule |
 | Lead time | Minutes | Current retained value 25 | Confirm operational value | 25 minutes, retained; confirmed 2026-08-20 |
