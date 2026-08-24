@@ -745,6 +745,12 @@ production launch, separately approve and verify at least:
 - Full D3C isolated acceptance and an explicitly approved staging cutover.
 - Business decisions still marked pending in
   `DELIVERY_D3_BUSINESS_PARAMETER_PLAN.md` where they affect launch behavior.
+- Quebec tax enablement per `QUEBEC_TAX_PLAN.md` (2026-08-24): GST 5% plus
+  QST 9.975% on the same pre-tax base per the official pages read that day;
+  the vendor's single integer-cast rate cannot express QST, so the
+  implementation is project-owned; enabling tax changes live Pickup totals
+  and is separately approved with owner-agreed timing; the restaurant
+  WEB-SRM mandatory-billing question is open for the accountant.
 - Payment, webhook, refund, authentication, email verification, and outbound
   notification architecture.
 - Real domain/DNS, TLS, production environment variables, backups, restore

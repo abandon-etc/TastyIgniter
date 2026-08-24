@@ -4374,3 +4374,36 @@ this docs PR is Level 0, eligible for auto-merge.
 
 Next in the fixed order: C, the read-only tax investigation and plan — no
 tax setting is touched; then D, the language-and-localization plan.
+
+## 2026-08-24 - Quebec tax investigated read-only; the plan is QUEBEC_TAX_PLAN.md; no setting touched
+
+Environment: repository source inspection (`vendor/tastyigniter/ti-ext-cart`)
+and official web pages read in the browser. Status: Level 0, docs-only PR,
+eligible for auto-merge. Step C of the fixed 2026-08-23 order.
+
+- Official rates read directly on 2026-08-24, per the instruction to accept
+  no relayed figure: canada.ca's province table lists Quebec at GST 5% /
+  PST 9.975%, and Revenu Québec states GST 5% on the selling price and QST
+  9.975% on the selling price excluding the GST — same pre-tax base, no
+  compounding. URLs and retrieval date recorded in the plan.
+- Vendor structure: one `Tax` cart condition (priority 300) driven by
+  `tax_mode`, `tax_percentage`, `tax_menu_price`, `tax_delivery_charge`;
+  with `tax_delivery_charge` on, the Delivery fee is taxed inside the same
+  base, which matches the accountant's conclusion. **Blocking limit found:
+  the condition casts the rate to an integer**, so 9.975 (or a combined
+  14.975) cannot be expressed by configuration; there is also only one rate
+  and one line for what are two taxes. Implementation must therefore be
+  project-owned; the plan recommends two conditions, TPS 5% and TVQ 9.975%
+  on the shared pre-tax base, pending the accountant's confirmation of the
+  receipt format.
+- Also surfaced for the accountant, from Revenu Québec's Mandatory Billing
+  page: restaurants are a covered sector (WEB-SRM); whether this
+  online-ordering flow falls under those obligations is an open question
+  recorded in the plan.
+- Enabling tax is flagged throughout as the project's first change touching
+  real payment amounts: shared settings, live Pickup totals move at the
+  moment of enablement, separate approval and owner-agreed timing required,
+  rollback recorded.
+
+No tax setting, cart-condition setting, code, schema, or runtime state was
+changed. Documentation only.
