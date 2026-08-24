@@ -4407,3 +4407,34 @@ eligible for auto-merge. Step C of the fixed 2026-08-23 order.
 
 No tax setting, cart-condition setting, code, schema, or runtime state was
 changed. Documentation only.
+
+## 2026-08-24 - 板块二 planned: LOCALIZATION_WORKSTREAM_PLAN.md; the theme's own language switcher found present but ineffective
+
+Environment: repository documentation; two read-only storefront probes on
+the 0% copy (`/language/en_CA`, `/language/fr_CA` — they set only the
+session locale). Status: Level 0, docs-only PR, eligible for auto-merge.
+Step D of the fixed 2026-08-23 order, closing the batch.
+
+- Delivered `LOCALIZATION_WORKSTREAM_PLAN.md` (the user's 板块二), built on
+  the consultation answers in `CLAUDE_HANDOFF.md` section 11: W2 the
+  switcher (first, since nothing bilingual can be verified until it
+  works), W1 the Q-001 import route with complete-French batching and a
+  missing-translation audit to close, W3 mail templates with the
+  per-recipient-language question to investigate, W4 currency format as a
+  locale question joined at checkout with the tax lines. Plan only;
+  every implementation is separately approved.
+- Verified on 2026-08-24, reshaping Q-002: the current theme already
+  renders Français | English header links (`/language/{locale}`), so the
+  old "no visible switcher" analysis in `FRONTEND_REMEDIATION_PLAN.md` is
+  outdated — but following `/language/en_CA` leaves the page entirely
+  French (`<html lang>` still `fr_CA`), consistent with Q-005's en_CA
+  fallback record. Q-002 is therefore verify-and-fix and converges with
+  Q-005; the exact mechanism is pinned at implementation time.
+- Q-004 recorded as superseded by the business decision to launch
+  Delivery: the home-page delivery widget is now intentional.
+- `FRONTEND_REMEDIATION_PLAN.md` carries a dated banner naming what is
+  outdated and pointing at the new plan; its Carté Key safety rules stay in
+  force. `CLAUDE_HANDOFF.md` section 11 points at the plan file.
+
+Documentation and two session-locale probes only. No code, theme, language
+pack, or setting change. This closes the 2026-08-23 A-B-C-D batch.

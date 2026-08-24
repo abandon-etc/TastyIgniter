@@ -195,11 +195,12 @@ are done (2026-08-24); C and D remain, in order.**
   change in this project that touches real payment amounts — so
   implementation needs its own approval and a time agreed with the owner.
   Deliverable: a written plan.
-- **D. Only after C: language planning.** The consultation answers are
-  recorded in `CLAUDE_HANDOFF.md` section 11. Produce the
-  language-and-localization workstream plan (the user's 板块二): the Q-001
-  import route, the Q-002 language switcher, the mail templates, and the
-  currency-format question considered alongside them. Plan first;
+- **D. Only after C: language planning — DONE 2026-08-24, delivered as
+  `LOCALIZATION_WORKSTREAM_PLAN.md`.** The consultation answers are
+  recorded in `CLAUDE_HANDOFF.md` section 11; the plan covers the Q-001
+  import route, the Q-002 switcher (found present in the current theme but
+  not yet effective for `en_CA` — verify-and-fix, joined with Q-005), the
+  mail templates, and the currency-format question. Plan only;
   implementation is approved separately.
 
 ## Acceptance checks
@@ -606,12 +607,12 @@ improvement, not part of this phase.
 
 ## Next action
 
-A and B are done (2026-08-24, user present; the Tuesday scheduled task is
-to be cancelled so it does not re-run). What remains, in the fixed order:
-C — the read-only tax investigation and plan, with no tax setting touched;
-then D — the language-and-localization workstream plan (板块二), noting the
-storefront header now carries Français | English links that Q-002's
-original "no visible switcher" record predates, so D verifies what the
-theme already provides before planning new work. The hours change (every
-day 12:00-21:00) still waits separately for the user's approval, and the
-`qa-params-20260824` Job awaits a deletion confirmation.
+The 2026-08-23 batch is complete: A, B, C, and D were all executed on
+2026-08-24 with the user present, in the fixed order (the Tuesday scheduled
+task is cancelled so it does not re-run). Open items now: the hours change
+(every day 12:00-21:00) waits separately for the user's approval; the
+`qa-params-20260824` Job awaits a deletion confirmation; the remaining D3C
+acceptance rows (boundary/out-of-area, address-change, pickup/delivery
+transitions, session/totals/spoof/API, evening cut-offs, admin regression)
+continue on `d3c-min-9a4c1bc8` under the applied no-minimum/50 values; and
+the 板块二 and tax implementations start only on their own approvals.
