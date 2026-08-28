@@ -2554,6 +2554,31 @@ untouched, per the instruction.
   awaits the user's explicit confirmation for deletion; its logs carry
   stored schedule values only.
 
+## 2026-08-28 - Disposable Job qa-hours-20260828 deleted on the user's confirmation; qa-params re-verified absent
+
+Environment: Cloud Run Jobs in `northamerica-northeast1`. Status: recorded.
+Level 2 destructive action on the user's explicit confirmation naming both
+disposable jobs.
+
+- The confirmation named `qa-params-20260824` and `qa-hours-20260828`.
+  `qa-params-20260824` was already deleted on 2026-08-24 on the user's
+  earlier confirmation (recorded above); re-verified now: describe answers
+  "Cannot find job". Nothing to do for it.
+- `qa-hours-20260828` described before deletion: created
+  2026-08-28T21:05:54Z, execution count 4 (rows read-back, rows write,
+  hours-JSON read-back, hours-JSON write — all recorded in the entry
+  above). Deleted, then read back: describe answers "Cannot find job" and
+  the region's job list is empty. The region now holds no jobs.
+- Recoverability: the resource itself is gone; its four execution logs
+  remain under the platform's log retention and hold stored schedule and
+  configuration values only — no address, credential, or geometry. The
+  spec can be reconstructed from the entry above if a future write ever
+  needs it.
+
+No change to any service, revision, traffic, environment variable, secret,
+schema, or stored setting. One disposable job resource removed; the other
+named job was already absent.
+
 Live-site effect: none on behaviour — the main-traffic revision keeps
 `DELIVERY_ENABLED=false`, which hides every Delivery surface including the
 panel's Delivery Areas and delivery schedule reachability; the FP-1 pair is
