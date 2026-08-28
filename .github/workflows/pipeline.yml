@@ -45,7 +45,13 @@ jobs:
           extensions: bcmath, curl, exif, gd, intl, mbstring, opcache, pdo_mysql, zip
 
       - name: Install composer dependencies
-        run: composer install --no-interaction --no-progress
+        # The tastyigniter.com registry's dist zips fail lock-file checksum
+        # verification (first run, 2026-08-28); Dockerfile.cloudrun works
+        # around the same issue the same way: install tastyigniter/* from
+        # source.
+        run: |
+          composer config --no-plugins --no-scripts "preferred-install.tastyigniter/*" source
+          composer install --no-interaction --no-progress
 
       - name: Generate application key
         run: echo "APP_KEY=base64:$(openssl rand -base64 32)" >> "$GITHUB_ENV"
