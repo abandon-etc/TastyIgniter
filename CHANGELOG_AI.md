@@ -4454,3 +4454,23 @@ auto-merge.
 
 No service, revision, traffic, environment variable, secret, schema, or
 stored-setting change. One disposable job resource removed.
+
+## 2026-08-28 - The Friday reverse reading closes the weekday defect in both directions
+
+Environment: repository documentation; the reading itself was taken by the
+user's Cowork session (WebFetch against the two pinned hostnames) and
+relayed by the user. Status: Level 0, docs-only PR, eligible for
+auto-merge.
+
+- 2026-08-28 16:58-17:00 EDT: `d3c-fix-be6835a9` "Delivery dans 25
+  minutes" (open on Friday — correct), `d3c-g2-1f8f0c75` "Delivery is
+  CLOSED" (closed on Friday — the shifted schedule's wrong direction, as
+  predicted). Mirror-symmetric to the Sunday 2026-08-23 reading; the
+  weekday correction is now runtime-confirmed in both directions on top of
+  its unit tests.
+- With both discriminating days read, the user retired the discriminating
+  condition and approved executing the hours change (Delivery to every day
+  12:00-21:00); that write and its records follow as their own Level 2
+  action and entry.
+
+Documentation only in this entry. No stored value was changed by it.
