@@ -9,7 +9,19 @@ Delivery is being switched on for testing only, on copies of the staging site
 that receive no visitors. The live site is untouched throughout, and has been
 verified unchanged before and after every deployment.
 
-## The weekday defect: fixed, awaiting one runtime confirmation
+## The weekday defect: fixed and confirmed in both directions
+
+**Both discriminating days are now read.** The Friday reverse reading was
+taken on 2026-08-28 at 16:58-17:00 EDT by the user's Cowork session
+(WebFetch against the two pinned hostnames; result relayed by the user):
+`d3c-fix-be6835a9` showed "Delivery dans 25 minutes" — open on Friday,
+which is the correct stored schedule — while `d3c-g2-1f8f0c75` showed
+"Delivery is CLOSED" — closed on Friday, the shifted schedule's wrong
+direction, exactly as the discrimination table below predicted. This
+mirrors the Sunday 2026-08-23 reading (unfixed open on a stored-closed
+day, fixed closed): the two copies now disagree in both directions, each
+in the predicted one. The weekday correction stands on unit tests and on
+runtime confirmation in both directions; nothing about it remains open.
 
 Delivery reported itself closed on Friday 2026-08-21, inside its own opening
 hours, and refused an as-soon-as-possible order. That observation is now a
@@ -50,8 +62,13 @@ disabled day outside delivery.
 
 ## The Sunday window is one-shot, and it is the last chance
 
-**Taken and passed on 2026-08-23; see the section above.** What follows is
-the design of the reading, kept for the record.
+**Taken and passed on 2026-08-23; the Friday reverse reading followed on
+2026-08-28; see the section above. With both directions in hand the
+discriminating condition has served its purpose, and the user retired it
+on 2026-08-28 by approving the hours change to every day 12:00-21:00 —
+after that write the two schedules can never be told apart again, and
+nothing needs them to be.** What follows is the design of the reading,
+kept for the record.
 
 **Priority at the time: high. Sunday only.**
 
@@ -530,6 +547,7 @@ test. Each check waits for its real window.
 | Check | Window |
 | --- | --- |
 | Delivery appears open on Sunday, confirming the cause | Done 2026-08-23 12:26-12:28, executed on both copies: unfixed accepted, fixed refused |
+| Friday reverse reading: fixed copy open, unfixed copy closed | Done 2026-08-28 16:58-17:00 EDT by the user's Cowork session (WebFetch, pinned hostnames, relayed): fix "Delivery dans 25 minutes", unfixed "Delivery is CLOSED" — mirror of Sunday; both directions closed |
 | Delivery refused on a closed day | Done 2026-08-22 afternoon, executed on both copies: an order was attempted and refused |
 | Delivery minimum: a CA$20.00 to CA$80.00 basket finds the checkout button disabled | Done 2026-08-24 14:1x, executed on `d3c-fix-be6835a9` before the fix deployed: CA$23.99 basket, label $80.00, button disabled, `/checkout` refused |
 | Delivery minimum fix: the same basket checks out at the stored CA$20.00 minimum and the label reads CA$20.00 | Done 2026-08-24, executed on `d3c-min-9a4c1bc8`: label $20.00, checkout page reached, nothing submitted |
