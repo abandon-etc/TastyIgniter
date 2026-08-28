@@ -7,8 +7,31 @@ jobs:
     name: PHP Tests
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         php-version: [ 8.3, 8.4, 8.5 ]
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: citest
+          MYSQL_DATABASE: igniter_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -pcitest --silent"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      APP_ENV: testing
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: "3306"
+      DB_DATABASE: igniter_test
+      DB_USERNAME: root
+      DB_PASSWORD: citest
+      DB_PREFIX: ti_
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -19,6 +42,13 @@ jobs:
           php-version: ${{ matrix.php-version }}
           tools: composer:v2
           coverage: none
+          extensions: bcmath, curl, exif, gd, intl, mbstring, opcache, pdo_mysql, zip
 
       - name: Install composer dependencies
         run: composer install --no-interaction --no-progress
+
+      - name: Generate application key
+        run: echo "APP_KEY=base64:$(openssl rand -base64 32)" >> "$GITHUB_ENV"
+
+      - name: Run test suite
+        run: vendor/bin/phpunit --no-coverage
