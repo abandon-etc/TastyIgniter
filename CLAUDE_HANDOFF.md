@@ -169,7 +169,7 @@ The accepted D2 runtime is the current 100%-traffic revision listed above.
 | Free threshold | CAD 80.00 subtotal |
 | Minimum | CAD 20.00 |
 | Distance surcharge | Off |
-| Hours | Monday-Friday 12:00-21:00 |
+| Hours | Monday-Friday 12:00-21:00 (changed to every day 12:00-21:00 on 2026-08-28; see the decision table) |
 | Weekend | Saturday-Sunday closed |
 | Pickup | Unchanged |
 | Tax | Unchanged |
@@ -415,6 +415,23 @@ that the admin is what-you-see-is-what-you-get. Assess the blast radius before
 proposing it: anything else that rests on week boundaries, such as weekly
 reporting or period statistics, moves with it. Do not change it globally without
 that assessment.
+
+#### Hours live in two stores, and they use different day indexing
+
+Found on 2026-08-28 while applying the every-day Delivery hours. The vendor
+keeps a schedule twice: the `working_hours` rows (weekday 0 = Monday, the
+store the behavioural `WorkingSchedule` is built from, and what the weekday
+correction rebuilds) and a `hours` LocationSettings JSON
+(`HasWorkingHours::createScheduleItem()` reads it; the storefront info
+panel and the admin form render from it). The admin's `updateSchedule()`
+writes both; any direct write must too, or display and behaviour diverge.
+The JSON's `daily.days` list indexes Sunday as 0 (the stored Monday-Friday
+schedule was `["1".."5"]` there, against rows 0-4), and the info panel's
+day labels shift with the locale week start, so the panel looked right
+under fr_CA only because the two offsets cancelled. With every day open the
+indexing differences map open onto open and are harmless; they matter again
+the moment any schedule is day-restricted. Recorded with the write in
+`ADMIN_CONFIGURATION_TRACKER.md`.
 
 ### The Delivery minimum is read from the stored setting, not from the fee rules
 
@@ -1023,7 +1040,9 @@ Use synthetic data and verify at minimum:
   or above CAD 50.00 with no Delivery minimum; the earlier 80/20 pair is
   exercised once more only in the one-time defect-contrast reading recorded
   in `D3C_PROGRESS.md`, taken before the new values are written;
-- Monday-Friday 12:00-21:00 and weekends closed;
+- the Delivery schedule as the decision table holds it (every day
+  12:00-21:00 since 2026-08-28; Monday-Friday with weekends closed before
+  that);
 - unrecognized/incomplete/out-of-area address behavior and address changes;
 - Pickup to Delivery and Delivery to Pickup transitions;
 - stale session cleanup, cart preservation, totals, spoof resistance, and API
