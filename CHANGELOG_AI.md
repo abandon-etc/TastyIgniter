@@ -4474,3 +4474,39 @@ auto-merge.
   action and entry.
 
 Documentation only in this entry. No stored value was changed by it.
+
+## 2026-08-28 - Delivery hours written: every day 12:00-21:00; the schedule's second store found and completed
+
+Environment: the shared database through disposable Job
+`qa-hours-20260828`, and the `d3c-min-9a4c1bc8` storefront. Status: the
+write is Level 2 on the user's explicit 2026-08-28 approval; runtime detail
+and read-backs in `ADMIN_CONFIGURATION_TRACKER.md`; this docs PR is
+Level 0, eligible for auto-merge.
+
+- Delivery `working_hours` weekday 5 and 6 flipped closed-to-open (times
+  already 12:00-21:00), guarded and transactional, exactly 2 rows;
+  Collection (every day 12:00-22:00) and Opening untouched, as instructed.
+  FP-1 identical around the write; the live path never moved.
+- One honest discovery, recorded durably in `CLAUDE_HANDOFF.md`
+  section 10: the schedule lives twice. The rows drive behaviour; the
+  storefront info panel renders the `hours` LocationSettings JSON, whose
+  `daily.days` indexes Sunday as 0 (the panel looked right before only
+  because that offset cancelled against the locale label shift). The
+  admin writes both; so did this change, in a second guarded execution
+  (`delivery.days` to all seven, nothing else). Panel read back correct:
+  Delivery every day 12:00 pm-09:00 pm, "Delivery dans 25 minutes" inside
+  the Friday window.
+- The discriminating condition is retired: with every day open the two
+  schedules can no longer be told apart, and nothing needs them to be —
+  the weekday fix closed in both directions first (Sunday 2026-08-23,
+  Friday 2026-08-28). The item is permanently closed; the remaining
+  behavioural legs are windowed readings listed in `D3C_PROGRESS.md`
+  (Saturday open — discriminating, since Saturday was closed before this
+  write; closed after 21:00).
+- `DELIVERY_D3_BUSINESS_PARAMETER_PLAN.md` hours row and section marked
+  applied; `CLAUDE_HANDOFF.md` sections 6 and 19 aligned; the outstanding
+  row in `D3C_PROGRESS.md` is closed. Job `qa-hours-20260828` remains
+  until the user confirms its deletion.
+
+Documentation only in this PR; the runtime write is recorded in the
+tracker entry of the same date.

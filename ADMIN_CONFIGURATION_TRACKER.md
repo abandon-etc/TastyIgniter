@@ -2503,6 +2503,63 @@ job.
 No change to any service, revision, traffic, environment variable, secret,
 schema, or stored setting. One disposable job resource removed.
 
+## 2026-08-28 - Delivery hours applied: every day 12:00-21:00, both stores, on the user's approval
+
+Environment: the shared database through disposable Job `qa-hours-20260828`
+(built from the `d3c-min` image and spec, same pattern as `qa-params`), and
+the `d3c-min-9a4c1bc8` storefront. Status: recorded. Level 2
+shared-settings write on the user's explicit 2026-08-28 approval, given
+after the Friday reverse reading closed the weekday fix in both directions
+and retired the discriminating condition. Pickup/Collection and Opening
+untouched, per the instruction.
+
+- **FP-1** on the main-traffic revision before the write and after the last
+  runtime action:
+  `2127efd6d63de53e6d9fbc5388f9db3fee72d0575eec25a09b9f99e9ad8565d3` both
+  times, identical to the recorded baseline.
+- **Read-back before** (execution `-nqx97`): `working_hours` for location
+  2 — delivery weekday 0-4 status 1 and weekday 5-6 status 0, all
+  12:00:00-21:00:00; collection and opening all seven days status 1
+  (12:00-22:00). Exactly the state recorded on 2026-08-22.
+- **Write 1** (execution `-snfhh`, guarded, transactional,
+  `lockForUpdate`): delivery weekday 5 and 6 status 0 to 1; times
+  untouched; exactly 2 rows affected; guards asserted the full 7-row
+  before-state first. After: all seven delivery rows status 1,
+  12:00:00-21:00:00; collection and opening carry no non-open rows.
+- **Second store discovered and completed.** After write 1 the storefront
+  info panel still showed the old five-day delivery schedule: source
+  tracing showed the panel renders from
+  `HasWorkingHours::createScheduleItem()`, which reads the `hours`
+  LocationSettings JSON, not the `working_hours` rows; the admin's
+  `updateSchedule()` writes both stores. Read-back (execution `-fws58`):
+  settings row id=2, `delivery.days = ["1","2","3","4","5"]`, open 12:00,
+  close 21:00, type daily (the JSON indexes Sunday as 0, unlike the rows'
+  Monday-as-0 — the panel looked right before only because that offset and
+  the locale label shift cancelled). **Write 2** (execution `-96kz5`,
+  guarded on the exact before-state): `delivery.days` to
+  `["0","1","2","3","4","5","6"]`, nothing else in the JSON touched;
+  exactly 1 row affected; read back after: delivery all seven days,
+  opening and collection unchanged. Recorded durably in
+  `CLAUDE_HANDOFF.md` section 10.
+- **Storefront verification** on `d3c-min-9a4c1bc8` (hostname verified):
+  the info panel's Delivery tab now lists all seven days 12:00 pm-09:00 pm,
+  and the Info block shows "Delivery dans 25 minutes" (Friday 17:2x, inside
+  the window). The behavioural legs wait for their windows and are listed
+  in `D3C_PROGRESS.md`: Saturday 2026-08-29 delivery open (discriminating —
+  Saturday was closed before this write), and closed after 21:00 any
+  evening.
+- **Way back:** delivery `working_hours` weekday 5 and 6 status back to 0,
+  and `delivery.days` back to `["1","2","3","4","5"]` in the `hours` JSON.
+- The Job resource `qa-hours-20260828` remains (four executions) and
+  awaits the user's explicit confirmation for deletion; its logs carry
+  stored schedule values only.
+
+Live-site effect: none on behaviour — the main-traffic revision keeps
+`DELIVERY_ENABLED=false`, which hides every Delivery surface including the
+panel's Delivery Areas and delivery schedule reachability; the FP-1 pair is
+the evidence the live path never moved. Pickup hours, tax, fees, and all
+other settings untouched.
+
 Live-site effect: none. The main-traffic revision serves
 `DELIVERY_ENABLED=false`, which hides every Delivery surface; the changed
 values are Delivery-only. The FP-1 pair above is the evidence the live path

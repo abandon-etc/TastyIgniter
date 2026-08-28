@@ -161,23 +161,24 @@ matched condition amount. Consequently, a free base-delivery threshold does
 not remove distance surcharge automatically.
 
 
-### Delivery hours changed on 2026-08-21
+### Delivery hours changed on 2026-08-21, applied 2026-08-28
 
 Delivery moves from Monday to Friday 12:00-21:00 to **every day 12:00-21:00**.
 Pickup is unchanged at every day 12:00-22:00. The original value and the date of
 the change are kept above rather than overwritten.
 
-**The stored schedule has deliberately not been updated yet.** The weekday-shift
-defect recorded in `CLAUDE_HANDOFF.md` section 10 is currently visible only
-because delivery is restricted to five days. Opening it to seven would make
-every lookup land on an open day, the symptom would disappear, and the defect
-would remain, exactly as it already hides in pickup. It would also destroy the
-Sunday observation that is the remaining end-to-end confirmation of the cause.
-
-Apply the change after the defect is settled. If it has to be applied sooner,
-the record must say that the symptom vanishing is not evidence of repair, that
-the root cause is still open, and that it returns the moment any schedule is
-restricted by day again.
+The stored schedule was deliberately left at five days until the weekday-shift
+defect was settled, because five-day restriction was what made the defect
+observable, and the Sunday A/B reading depended on it. That condition is now
+spent: the fix was confirmed in the deployed environment on Sunday 2026-08-23
+and in the reverse direction on Friday 2026-08-28, and the user then approved
+the write. **Applied on 2026-08-28** to both stores (the `working_hours` rows
+and the `hours` settings JSON the info panel renders), with before/after
+read-back in `ADMIN_CONFIGURATION_TRACKER.md`. With all seven days open, a
+week-start shift maps open days onto open days, so the retired defect could
+not resurface for delivery even on code without the correction — the same
+reason it always hid in pickup. It would return only if any schedule is again
+restricted by day on uncorrected code.
 
 The one-hour gap between delivery closing at 21:00 and the shop closing at 22:00
 survives the change and remains deliberate.
@@ -446,7 +447,7 @@ later as a bill.
 | Delivery fee tax | Off / on | Current tax mode and rate are disabled/0 | Keep off until tax advice/approval | Delivery fee is taxable. Accountant conclusion relayed by the user 2026-08-23: the Delivery fee is its own taxable line inside the pre-tax subtotal and is taxed under the same rules as ordinary items, GST plus QST. The rates are **not** recorded here as numbers: at implementation time the current values are read from the official canada.ca and Revenu Québec pages and recorded with source and date; no second-hand figure is accepted. Enabling tax is a separately approved change — the tax settings are shared, so switching them on changes what real Pickup customers pay on the live storefront; timing is agreed with the owner first |
 | Fee displayed as tax-inclusive | Inclusive / exclusive | Controlled by tax mode/menu-price settings, not area rule | Do not change in D3 | Tax-exclusive; menu prices are pre-tax and tax is added at checkout; direction confirmed 2026-08-20, accountant confirmation relayed 2026-08-23 |
 | Admin temporary fee change | Allowed / disallowed/change control | Native admin has no D3-specific approval or audit workflow | Disallow ad hoc edits; use recorded change control | Allowed at any time with no approval workflow; confirmed 2026-08-20. Recorded risk: the platform stores no actor or timestamp for such an edit |
-| Delivery hours | Weekly schedule | Independent from Pickup/general opening | Confirm whether retained daily 12:00-21:00 is real | Originally Monday-Friday 12:00-21:00 with weekends closed, confirmed 2026-08-19. Changed to every day 12:00-21:00, confirmed 2026-08-21; not yet applied to the stored schedule |
+| Delivery hours | Weekly schedule | Independent from Pickup/general opening | Confirm whether retained daily 12:00-21:00 is real | Originally Monday-Friday 12:00-21:00 with weekends closed, confirmed 2026-08-19. Changed to every day 12:00-21:00, confirmed 2026-08-21. **Applied to the stored schedule on 2026-08-28** (both stores: the `working_hours` rows and the `hours` settings JSON), after the weekday fix was confirmed in both directions; before/after read-back in `ADMIN_CONFIGURATION_TRACKER.md` |
 | Lead time | Minutes | Current retained value 25 | Confirm operational value | 25 minutes, retained; confirmed 2026-08-20 |
 | Add lead time to start | Off / on | Changes generated first timeslot behavior | Test both only after business choice | Off, retained; confirmed 2026-08-20 |
 | Time interval | Minutes | Current retained value 15 | Confirm 15 minutes | 15 minutes, retained; confirmed 2026-08-20 |
