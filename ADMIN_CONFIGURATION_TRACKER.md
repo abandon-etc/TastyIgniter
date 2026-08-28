@@ -2579,6 +2579,77 @@ No change to any service, revision, traffic, environment variable, secret,
 schema, or stored setting. One disposable job resource removed; the other
 named job was already absent.
 
+## 2026-08-28 - Restore rehearsal executed and verified; payment test database created and initialized
+
+Environment: Cloud SQL and Cloud Run Jobs in the staging project. Status:
+recorded. Level 2, executed on the user's explicit 2026-08-28 approval of
+the three pre-payment items (per `PAYMENT_WORKSTREAM_PLAN.md` §4 and
+`CI_ENABLEMENT_PLAN.md`). FP-1 on the main-traffic revision before the
+first action and after the last:
+`2127efd6d63de53e6d9fbc5388f9db3fee72d0575eec25a09b9f99e9ad8565d3` both
+times — no Cloud Run state was touched by any of this.
+
+- **Restore rehearsal (workstream plan §4.1), executed end to end:**
+  1. On-demand backup of `le-chateau-staging-mysql`, id `1787958480451`,
+     description `qa-restore-rehearsal-20260828`: 19:07:57-19:09:34 EDT
+     (**97 s**), read back SUCCESSFUL.
+  2. Temporary instance `qa-restore-20260828` created (same region,
+     MYSQL_8_4, db-custom-2-8192, ZONAL, 10GB SSD): 19:10:09-19:13:08
+     (**~3 min**), RUNNABLE.
+  3. Backup restored into it: 19:13:10-19:17:29 (**4 min 19 s**),
+     RESTORE_EXIT=0.
+  4. Verification through disposable Job `qa-payinfra-20260828` with both
+     instances attached, one execution comparing source and restored over
+     their sockets: tables 90/90; row counts equal on ti_orders,
+     ti_locations, ti_location_settings, ti_location_areas,
+     ti_working_hours, ti_menus, ti_customers, ti_reservations,
+     ti_order_totals, ti_statuses; `CHECKSUM TABLE` identical on
+     ti_location_settings, ti_location_areas, ti_working_hours; spot
+     values match the live written state (delivery `min_order_amount`
+     "0.00"; area conditions above/0/50 then below/5/50).
+  **RTO observed: ~10 minutes end to end** (backup to verified restore) at
+  this data size. **RPO:** the backup is a snapshot at its window; PITR
+  (binlog, 7-day retention) narrows recovery to minute granularity when
+  needed. Production-launch re-rehearsal remains on the plan.
+  The temporary instance `qa-restore-20260828` is left RUNNABLE and
+  **awaits the user's named confirmation for deletion** (it bills while it
+  exists).
+- **Payment test database (workstream plan §4.2), created and
+  initialized:** database `tastyigniter_paytest` created on the shared
+  instance (metadata operation; first attempt 409'd against the backup
+  operation lock and was retried after it cleared). Recon execution first:
+  the application image carries `mysqldump`/`mysql` (MariaDB 10.11
+  client), and the configured application user holds global privileges, so
+  no grant work was needed. Initialized in one guarded execution
+  (destination-must-be-empty guard) by
+  `mysqldump --single-transaction --triggers --routines` piped to the new
+  database over the socket, password via `MYSQL_PWD`, never on a command
+  line or in a log. Verified in the same execution: tables 90/90, foreign
+  keys 12/12, row counts equal on eight key tables, spot value carried
+  (delivery min "0.00"). Boundary rules per the plan stand: no
+  main-traffic revision ever points at the test database; revisions that
+  do must be 0% with pinned URLs; Jobs name their target database
+  explicitly.
+- **Observation, recorded and not investigated:** the source database now
+  holds 8 rows in `ti_orders` where the 2026-08-23 cleanup record left 4.
+  Four order rows appeared between 2026-08-24 and 2026-08-28 through
+  ordinary application paths on the shared database. Data drift on a
+  shared staging database, not a configuration change and not produced by
+  this batch; flagged to the user.
+- **CI step 0 (suite re-run) is blocked on the local Docker engine**,
+  which did not become responsive across three Docker Desktop launches on
+  the workstation; the pipeline-rework PR is held per the user's ordering
+  (step 0 first). No cloud resource is involved in that step.
+- Disposable Job `qa-payinfra-20260828` (four executions: recon, copy,
+  restore-verify, plus the initial recon list) remains and awaits the
+  user's confirmation for deletion; its logs carry stored configuration
+  values and counts only — no address, credential, or geometry.
+
+No change to any Cloud Run service, revision, traffic, environment
+variable, secret, or stored setting of the application. New resources:
+one on-demand backup, one temporary SQL instance (pending deletion), one
+database on the shared instance, one disposable Job (pending deletion).
+
 Live-site effect: none on behaviour — the main-traffic revision keeps
 `DELIVERY_ENABLED=false`, which hides every Delivery surface including the
 panel's Delivery Areas and delivery schedule reachability; the FP-1 pair is

@@ -4584,3 +4584,45 @@ file, or runtime state changed, and each execution is separately approved.
 Documentation only. No stored value, schema, workflow, or runtime state
 was changed; the only runtime actions were read-only describes of the
 Cloud SQL instance and its backup list.
+
+## 2026-08-28 - Restore rehearsal passed (RTO ~10 min); payment test database live; CI step 0 blocked on the local Docker engine
+
+Environment: Cloud SQL and Cloud Run Jobs in the staging project; the
+local workstation for CI step 0. Status: Level 2 runtime work on the
+user's explicit 2026-08-28 approval of the three pre-payment items;
+runtime detail in `ADMIN_CONFIGURATION_TRACKER.md`; this docs PR is
+Level 0, eligible for auto-merge. FP-1 identical before and after — no
+Cloud Run state was touched.
+
+- **Restore rehearsal executed end to end and passed**: on-demand backup
+  `1787958480451` (97 s) → temporary instance `qa-restore-20260828`
+  (~3 min) → restore (4 min 19 s) → dual-socket comparison through the
+  disposable Job: 90/90 tables, ten row counts equal, three config-table
+  checksums identical, spot values matching the live written state.
+  Observed RTO ~10 minutes end to end at current data size; RPO snapshot
+  plus PITR to minute granularity. The temporary instance bills while it
+  exists and awaits named deletion confirmation; the pre-launch
+  re-rehearsal stays on the plan.
+- **Payment test database live**: `tastyigniter_paytest` on the shared
+  instance, initialized full-fidelity by in-image mysqldump (90/90 tables,
+  12/12 foreign keys, eight row counts equal), destination-empty guard,
+  password never on a command line. Boundary rules in force: no
+  main-traffic revision ever points at it. Step D migrations can rehearse
+  there first.
+- **Observation flagged**: source `ti_orders` holds 8 rows where the
+  2026-08-23 cleanup left 4 — application-path data drift on the shared
+  staging database between 08-24 and 08-28, not produced by this batch;
+  recorded, not investigated.
+- **CI step 0 held**: Docker Desktop's engine never became responsive
+  across three launches, so the suite re-run and the dependent
+  pipeline-rework PR wait, per the user's ordering. The workflow draft
+  (extensions `bcmath curl exif gd intl mbstring opcache pdo_mysql zip`
+  aligned to `Dockerfile.cloudrun`, mysql:8.4 service, phpunit step) is
+  ready to submit as a Level 1 PR once step 0 names the residual errors.
+- `PAYMENT_WORKSTREAM_PLAN.md` §4 carries the execution records.
+
+Runtime resources created this batch: one on-demand backup, one temporary
+SQL instance (pending named deletion), one database on the shared
+instance, one disposable Job (pending named deletion). No application
+setting, schema object inside the live database, revision, or traffic
+changed.
