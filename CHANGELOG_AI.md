@@ -4510,3 +4510,21 @@ Level 0, eligible for auto-merge.
 
 Documentation only in this PR; the runtime write is recorded in the
 tracker entry of the same date.
+
+## 2026-08-28 - Disposable Job qa-hours-20260828 deleted on confirmation; qa-params re-verified absent
+
+Environment: Cloud Run Jobs in `northamerica-northeast1`; repository
+documentation. Status: the deletion is Level 2 destructive on the user's
+explicit confirmation naming both jobs; this docs PR is Level 0, eligible
+for auto-merge.
+
+- The confirmation named `qa-params-20260824` and `qa-hours-20260828`. The
+  former was already deleted on 2026-08-24 (recorded then); re-verified
+  absent now rather than assumed. The latter was described before deletion
+  (created 2026-08-28T21:05:54Z, 4 executions), deleted, and read back
+  absent; the region's job list is empty. Execution logs remain under
+  platform retention and hold stored schedule values only. Recorded in
+  `ADMIN_CONFIGURATION_TRACKER.md`.
+
+No service, revision, traffic, environment variable, secret, schema, or
+stored-setting change. One disposable job resource removed.
