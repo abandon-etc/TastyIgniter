@@ -269,6 +269,14 @@ Read `BIRTHDAY_PAYMENT_ARCHITECTURE_DESIGN.md` before any payment work. Payment,
 authentication, authorization, PII boundaries, and money/availability races
 require independent review and explicit user approval.
 
+The payment workstream (the user's 板块四) was planned on 2026-08-28:
+`PAYMENT_WORKSTREAM_PLAN.md` carries the step D and step F implementation
+plans and the infrastructure options (restore rehearsal; separate payment
+test database), `CI_ENABLEMENT_PLAN.md` the CI decision, and
+`QUEBEC_REFUND_CANCELLATION_RESEARCH.md` the step H research. All are plans
+and research only; each execution is separately approved, and CI enablement
+is sequenced before the step D code merges.
+
 ## 9. Security constraints
 
 - Use only synthetic test data unless a separately approved task explicitly
@@ -708,6 +716,14 @@ defects in the code; they are a missing extension in the runner. A CI image
 built with the extensions the application already declares, against a database,
 should be far greener than "expect broad failure" suggested. Confirm that
 before deciding, rather than carrying either expectation forward on faith.
+
+One more fact, found 2026-08-28 and worse than the empty-checks trap: **the
+committed pipeline runs no tests at all.** `pipeline.yml` ends after
+checkout, PHP setup, and `composer install` — enabling Actions as-is would
+produce a green check that tested nothing. The enablement plan, including
+the test step, service database, extension list, and the disposition of
+the 82 recorded errors, is `CI_ENABLEMENT_PLAN.md`; enabling, editing the
+workflow, and the first run are each separately approved.
 
 ### Log redaction does not reach inside a Throwable
 

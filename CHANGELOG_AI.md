@@ -4528,3 +4528,59 @@ for auto-merge.
 
 No service, revision, traffic, environment variable, secret, schema, or
 stored-setting change. One disposable job resource removed.
+
+## 2026-08-28 - 板块四 planned: CI enablement, payment steps D and F, Quebec refund research, restore rehearsal and test-database options
+
+Environment: repository source inspection, read-only gcloud read-backs
+(Cloud SQL instance and backups), and official web pages in the browser.
+Status: Level 0, docs-only PR, eligible for auto-merge. Everything in this
+batch is a plan or research record; no code, setting, migration, workflow
+file, or runtime state changed, and each execution is separately approved.
+
+- **`CI_ENABLEMENT_PLAN.md`.** Decisive new fact: the committed
+  `pipeline.yml` (24 lines) runs no tests — checkout, PHP setup, composer
+  install, end — so enabling Actions as-is would green without testing;
+  recorded in `CLAUDE_HANDOFF.md` section 10. Plan: setup-php extensions
+  aligned to `Dockerfile.cloudrun` (pdo_mysql the known blocker), a
+  mysql:8.4 service container, artisan + phpunit steps, the 82 recorded
+  errors dispositioned by class (78 driver, environment remainder, at most
+  4 to name in a step-0 re-run — the local Docker engine was down on
+  2026-08-28, so the re-classification runs at enablement), and a
+  first-green path whose workflow edit is a Level 1 PR outside every
+  standing authorization.
+- **`PAYMENT_WORKSTREAM_PLAN.md`** (板块四, steps lettered per
+  `BIRTHDAY_PAYMENT_ARCHITECTURE_DESIGN.md` §16; A-C already complete).
+  Step D: the three additive ledger tables with a shared-database risk
+  assessment (new-tables-only, disposable-Job execution at an agreed time,
+  `--pretend` read-back, FP-1 pair, on-demand backup first, rollback =
+  exact-batch rollback while empty, reconcile-don't-rollback once data
+  exists), idempotency, event ledger, refund interface shell, Level 1 code
+  with independent review + separately approved Level 2 migration. Step F:
+  registration gate with email verification before payment, vendor
+  capability audit first, zero-migration preference, mail via the proven
+  log/redirect rules, French under 板块二, server-side gate tests.
+  Infrastructure: restore rehearsal (backups verified healthy today —
+  daily 15:00Z, 7 retained, PITR on, last three SUCCESSFUL; the gap is the
+  rehearsal: restore-from-backup into a temporary instance, verify against
+  source read-backs, record RTO/RPO, delete on named confirmation) and the
+  payment test database (recommended: a second database on the same
+  instance, initialized by export/import, selected per revision by a plain
+  `DB_DATABASE` env override, with the isolation boundary and residual
+  shared-instance risks stated; a separate instance kept as the upgrade
+  path; step D migrations rehearse there first).
+- **`QUEBEC_REFUND_CANCELLATION_RESEARCH.md`** (step H, same discipline as
+  the tax research). OPC pages read 2026-08-28 with URLs and page dates:
+  the pre-contract disclosure block (including the cancellation/refund
+  policy and accept/modify/refuse), the 15-day contract copy, the
+  cancellation-and-chargeback procedure with its 15/60/30/90-day clocks —
+  and the exception lists that name quickly-perishing goods such as food,
+  and successive-performance services with day camps among the examples.
+  Both payables are read onto the rules strictly as open questions for the
+  owner's professional advisor; the operational implications that hold
+  under any reading (refund tooling regardless, the checkout disclosure
+  block, French text, the 15-day tempo) are separated from the legal
+  questions. LegisQuébec P-40.1 anchored as the authoritative text.
+
+Documentation only. No stored value, schema, workflow, or runtime state
+was changed; the only runtime actions were read-only describes of the
+Cloud SQL instance and its backup list.
