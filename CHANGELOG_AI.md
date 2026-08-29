@@ -4714,5 +4714,37 @@ database — the verification used the workflow's own throwaway MySQL.
 
 Documentation only in this entry; the code lives in PR #124.
 
+## 2026-08-29 - First fully green suite run; #124 merged, #122 Ready, #126 open with the green evidence
+
+Environment: repository and GitHub Actions. Status: PR #124 merged at
+`443b250c` on the user's explicit confirmation (its branch was MERGEABLE
+with no changelog conflict — the scope discipline paid off); PR #122
+flipped from draft to Ready on the same instruction, independent review;
+PR #126 (the two test-expectation fixes, both chosen as fixes rather than
+quarantines with the rationale in the PR) created and stopped at Ready
+for its own confirmation. This docs PR is Level 0, eligible for
+auto-merge.
+
+- **The repository's first fully green suite run**: Actions run
+  33223931822 on the throwaway combination branch (the #122 workflow +
+  mainline including #124 + the #126 fixes; branch deleted after the
+  run). All three PHP rows SUCCESS — **209 tests, 925 assertions, 0
+  errors, 0 failures on 8.3, 8.4, and 8.5.** The journey in one line:
+  82 environment errors (2026-08-21, container) → 75 errors + 3 failures
+  (run 2, no migrations) → migrate blocked (run 3, ordering defect) →
+  2 failures (run 4, fix verified) → **green** (run 5).
+- The old workflow's red check on PR #124 was the known registry-checksum
+  failure of the unreworked pipeline, recorded and unrelated to the
+  change; the user confirmed the merge with the real verification in
+  hand.
+- Remaining to reach green **on mainline**: merge #126 and #122, each on
+  its own confirmation; then update this PR's branch-verification note in
+  `CLAUDE_HANDOFF.md` section 10 and the merge-gate reading in
+  `AGENT_WORKFLOW.md` (the "CI has never run / empty means untested" era
+  ends only when the mainline check itself is green — that documentation
+  flip belongs to those merges, not to this entry).
+
+Documentation only in this entry.
+
 Deletions aside, no runtime state changed; the workflow edits live only on
 the draft-PR branch.
