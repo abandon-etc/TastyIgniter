@@ -191,6 +191,25 @@ baseline; scheduling the deployment while assuming the baseline exists fails if
 cleanup ran first. Neither side may pass this copy without checking the other.
 It shares the live database, so it is a read-only comparator.
 
+**Deployment-day checklist.** Each line is its own step, deliberately: folding
+any of them into "deploy" is how they get lost.
+
+1. Record FP-1 on the main-traffic revision before anything.
+2. Build and deploy the new image to a **tagged 0%-traffic revision**.
+3. Read the tagged revision side by side against `d3c-a2ee559c` (see the
+   baseline note above), not against the live site.
+4. Cut traffic over, under its own gate.
+5. **Set `DELIVERY_GEOCODER_DRIVER` and `DELIVERY_GEOCODER_PROVIDERS` on the
+   production revision** - *unless* the stored-setting path in section 7 was
+   taken instead. **This is not part of step 2 and is not completed by it.** The
+   deployed image only gains the *ability* to pin the chain;
+   `GeocoderChainOverride` does nothing while the variables are unset, and the
+   production revision has never had them. Skipping this leaves the site on the
+   stored `chain`, reaching Nominatim, with Delivery open.
+6. Verify the storefront open/closed state against Montreal time on a
+   cold-started instance.
+7. Record FP-1 again.
+
 **What overturns this and makes the fix urgent again:**
 
 - the live site begins taking real orders; or
@@ -253,7 +272,22 @@ This is not fixable by setting an environment variable on the live revision - th
 variable has no reader there. It can, however, be **observed** before launch:
 `d3c-a2ee559c` is the same image with `DELIVERY_ENABLED=true` and no geocoder
 variable, so it shows what main traffic will do the moment Delivery opens. That
-is another reason it must survive until the deployment rehearsal. It needs either the deployment (which brings #86)
+is another reason it must survive until the deployment rehearsal.
+
+**Two ways to close this gate, and the deployment alone is not one of them.**
+After a deployment the production revision can pin the chain but will not,
+because `GeocoderChainOverride` returns early with the variables unset and that
+revision has never carried them. So either **deploy and then set the two
+variables** (two steps; no shared-setting write; the risk is the second step
+being dropped once the first is marked done), or **change the shared stored
+setting `default_geocoder` from `chain` to `google`** (one step; effective on
+every revision immediately including today's production image, with no
+deployment at all; but it is a shared-settings write hitting the live site at
+once, so it needs separate approval, the prior value recorded, a read-back, and
+a way back). The stored-setting path has no front-end side effect: the map
+library branches on `nominatim` versus anything else, and both `chain` and
+`google` fall on the same side. Neither path is executed here. The full
+statement is in the Nominatim production gate in `CLAUDE_HANDOFF.md`. It needs either the deployment (which brings #86)
 or a change to the shared stored setting. It is therefore reclassified from
 "handle before launch" to **an item needing its own schedule**, and it is one more
 thing the pre-launch deployment of Option C would resolve.

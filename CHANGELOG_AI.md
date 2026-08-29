@@ -5138,3 +5138,42 @@ deployed, deleted or changed.
   comparison only. No write on it would be isolated.
 
 Documentation only. Every changed path is `.md`.
+
+## 2026-08-29 - The Nominatim gate is written as two steps, with a one-step alternative recorded beside it
+
+Environment: repository documentation. Status: documentation. Nothing deployed,
+written to any setting, or executed.
+
+- **Deploying does not close the Nominatim gate, and the gate now says so.** A
+  current image gives the production revision the *capability* to pin the
+  provider chain; it does not pin it. `GeocoderChainOverride` returns early when
+  the environment says nothing, and the production revision **has never carried
+  `DELIVERY_GEOCODER_DRIVER` or `DELIVERY_GEOCODER_PROVIDERS`** - confirmed by
+  the 2026-08-29 read-back. A deployed production revision with no variables
+  still runs the stored `chain` and still reaches Nominatim. The gate is
+  therefore stated as two steps: deploy, then set the variables.
+- **The second step is called out as the one at risk**, because the first gets
+  described as "the deployment solves the geocoder". This is the same failure
+  shape already recorded for the week-start fix, where a merged and deployed
+  correction was explicitly noted as *not* releasing the hours change that
+  depended on it. The gate cross-references that row so the pattern is named
+  rather than rediscovered.
+- **The deployment-day checklist in Option C now lists "set the geocoder
+  variables on the production revision" as its own numbered line**, separate
+  from the deploy step, with a note that step 2 does not complete it.
+- **A one-step alternative is recorded, not executed**: change the shared stored
+  setting `default_geocoder` from `chain` to `google`. TastyIgniter reads that
+  value into `igniter-geocoder.default` on every geocoder resolution, so it takes
+  effect on every revision at once, **including today's production image, with
+  nothing deployed**. Checked for side effects: the front-end map library
+  branches on `nominatim` versus anything else, and `chain` and `google` fall on
+  the same side, so the map assets do not change.
+- **Cost of each path recorded in one line each.** Deploy-then-set: two steps, no
+  shared-settings write, live site untouched until the deployment; risk is the
+  second step being dropped. Stored-setting change: one step, no deployment, but
+  a shared-settings write effective on the live site immediately, needing its own
+  approval, the prior value recorded, a read-back, and a way back.
+- At launch this is a **choice between two paths**, not a side effect of
+  deploying.
+
+Documentation only. Every changed path is `.md`.

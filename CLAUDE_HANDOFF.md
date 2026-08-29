@@ -780,6 +780,50 @@ can be watched there on 0% traffic instead of being reasoned about. It shares th
 live database, so read-only. That copy is held out of the test-copy cleanup until
 the deployment rehearsal; see "The main-traffic twin" in `D3C_PROGRESS.md`.
 
+#### Closing this gate takes two steps, and the second is the one that gets lost
+
+Deploying a current image gives the production revision the **capability** to
+pin the chain. It does not pin it. `App\Delivery\GeocoderChainOverride` returns
+early when the environment says nothing, and **the production revision has never
+carried `DELIVERY_GEOCODER_DRIVER` or `DELIVERY_GEOCODER_PROVIDERS`** - the
+2026-08-29 read-back confirms neither is set. So a deployed production revision
+with no variables still runs the stored `chain` and still reaches Nominatim.
+
+1. Deploy an image containing #86.
+2. **Set `DELIVERY_GEOCODER_DRIVER` and `DELIVERY_GEOCODER_PROVIDERS` on the
+   production revision.**
+
+Step 2 is at risk precisely because step 1 gets described as "the deployment
+solves the geocoder". It does not. This is the same failure shape recorded for
+the week-start fix, where a merged and deployed correction was explicitly noted
+as *not* releasing the hours change that depended on it (`D3C_PROGRESS.md`,
+"This Done does not release the hours change two rows below"). Marking the
+deployment Done must not be read as releasing this gate.
+
+#### An alternative that takes one step and no deployment
+
+Change the shared stored setting `default_geocoder` from `chain` to `google`.
+TastyIgniter reads it into `igniter-geocoder.default` on every geocoder
+resolution (`System/ServiceProvider.php`), so it takes effect on **every
+revision at once, including today's production image**, with nothing deployed.
+Checked for side effects: the front-end map library is chosen by that same
+stored value - Leaflet only when it reads `nominatim`, Google Maps JS otherwise
+- and both `chain` and `google` take the same branch, so the map assets do not
+change.
+
+Cost of each path, one line each:
+
+- **Deploy then set variables:** two steps, no shared-setting write, and the
+  live site is unaffected until the deployment itself; the risk is step 2 being
+  dropped.
+- **Change the stored setting:** one step and no deployment, but it is a
+  shared-settings write that takes effect on the live site immediately, so it
+  needs its own approval, the prior value recorded, a read-back after, and a
+  stated way back.
+
+Neither is executed. At launch this is a **choice between two paths**, not a
+side effect of deploying.
+
 ### Continuous integration: live since 2026-08-29
 
 The pipeline (PR #122) runs on every push and pull request: PHP 8.3, 8.4,
