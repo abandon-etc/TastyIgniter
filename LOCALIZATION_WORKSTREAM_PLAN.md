@@ -293,6 +293,88 @@ tastyigniter.com 的是正式站 URL,两者不一致(见上文)。两种处理:
 **独立脚本那条路根本没有这个问题**,因为 `url` 字段由脚本显式给定。这也是它现在
 比"从副本绑定"更优的理由。
 
+##### Cloudflare 1010 的正当后续:联系 TastyIgniter 支持
+
+不换 UA 重试。正当路径是**向 TastyIgniter 支持询问该来源为何被 Cloudflare 1010
+拦截** —— 很可能是云端出口 IP 或通用 UA 触发的误判,而本站持有有效 Carte。
+这是首选后续,排在任何技术性绕行之前。
+
+##### igniter-translate 评估(2026-08-29,只读,未安装)
+
+包名 `tastyigniter/ti-ext-translate`,仓库 `github.com/tastyigniter/ti-ext-translate`。
+
+**一、v4 兼容性:真实,不只是市场页面的声明。** Packagist 元数据:最新
+**v4.0.13,发布于 2026-08-22**(一周前,活跃维护),`require` 为
+`{"tastyigniter/core": "^v4.0"}`,类型 `tastyigniter-package`。本站 core 为
+**v4.3.1**,满足该约束。共 15 个版本。
+
+**二、迁移与共享库影响:只增一张表,不动任何既有表。**
+全仓库只有一个迁移 `2020_06_04_000300_create_attributes_table.php`,内容是
+`Schema::create('igniter_translate_attributes')`(带前缀即
+`ti_igniter_translate_attributes`),字段 `id` / `locale`(索引) /
+`translatable_id`(索引) / `translatable_type`(索引) / `attribute`(mediumText)。
+`down()` 只 `dropIfExists` 这张表。
+
+**它不 ALTER 任何既有表,也不改任何既有行。** 因此审批规格是"在共享库新增一张
+独立表",而不是"改动既有 schema":仍需审批,但爆炸半径是一张新表,且可干净回退。
+
+**三、存储模型与继承 —— 用户现在录的法语不会白录。**
+非默认语言的译文以"每(locale, 模型)一条 JSON"存进上述表。**默认语言走模型自己的
+列**,两处源码各自坐实:
+
+- 写:`performSetTranslatableAttribute()` 中
+  `if (activeLocale === defaultLocale && !is_array($value)) return $value;`
+  —— 默认语言的值原样落回普通列,不进译文表;
+- 读:`getAttributeTranslatedValue()` 中
+  `elseif ($locale == $translatableDefaultLocale || $translatableUseFallback)`
+  取 `$this->model->getAttributes()`,且 `$translatableUseFallback` 默认为 `true`。
+
+`translatableDefaultLocale` 取自 `$localization->getDefaultLocale()`,即
+`Language::getDefault()->code`,**当前是 fr_CA**。
+
+**结论:现在录进 `ti_menus` 等列里的法语,会成为默认语言内容,并且同时是任何
+缺译语言的回退值。装扩展不会让它作废。**
+
+**一条随之而来的不变量,请当作约束记住:** 以上成立的前提是**法语始终是默认
+语言记录**。若日后把默认语言改成英语,所有既有列的含义会整体翻转。"法语是默认
+语言"从此是承重设定,不是偏好。
+
+覆盖的模型(`EventRegistry::bootTranslatableModels()`):`Menu`
+(`menu_name`, `menu_description`)、`Category`、`Ingredient`、`MenuOption`、
+`MenuOptionValue`、`Mealtime`、`Location`、`MailTemplate`、`Page`、
+`StaticPageMenu`、`StaticPageMenuItem`。菜品名与描述确在其中。
+
+**四、locale 选择器:源码与市场页面的说法不一致。**
+`Extension.php` 只注册了**后台表单控件**(`TRLText`/`TRLTextarea`/`TRLRichEditor`/
+`TRLMarkdownEditor`/`TRLRepeater`)与模型引导。**没有任何路由、没有前台组件、
+没有前台 locale 选择器。** 市场页面所称的"选择器"实为后台表单里的逐字段语言页签。
+
+由此两条:
+
+- **不与现有 `Français|English` 切换器冲突** —— 它不注册竞争路由或组件;
+- **不解决 W2。** `en` 与 `en_CA` 的代码不匹配在本项目自己的 `routes/web.php`
+  白名单与语言记录里,该扩展不碰。
+
+**但它依赖 W2 被修好:** `initTranslatableLocale()` 用的是
+`$localization->getLocale()` —— 正是那个校验失败时静默回落的函数。**W2 未修之前,
+顾客切到英文会静默回落 fr_CA,该扩展也就跟着供给 fr_CA 内容。** 所以 W2 是这个
+扩展对英文顾客产生价值的前置条件,不是被它取代。
+
+##### 内容翻译与界面字符串是两件事,不要合并
+
+该扩展解决的是**内容**(菜品、分类、页面)。**W1 的 2992 条界面字符串不在其内。**
+
+界面字符串从哪来仍**未知**:市场没有语言分类,而代码里确有
+`HubManager::listLanguages()`。那个端点背后是否还有活着的服务,**从这里无法判定**
+—— 唯一一次探测在到达 API 之前就被 Cloudflare 1010 挡住。在支持答复或一次成功
+调用之前,这一项保持"未知",不要按任一假设推进。
+
+##### 给店主的行动建议(不是阻塞项)
+
+**继续录菜单,只写法语。** 理由已由上文第三点坐实:法语会成为默认语言内容并兼作
+回退值,任何情况下都是必需的那一份,先录不会白费。装扩展要在共享库跑迁移、需要
+审批,且扩展尚未验证——但这些都**不构成停下来的理由**,店主不必等待。
+
 ##### W1 状态(保持)
 
 官方有没有 `fr_CA` 包,在绑定走通前**无法确认**。不要按任一假设先行开工:若最终
