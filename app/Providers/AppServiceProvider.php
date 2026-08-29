@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\BirthdayBooking\BirthdayAvailabilityService;
+use App\BirthdayBooking\BirthdayMigrationOrder;
 use App\BirthdayBooking\BirthdayReservationRules;
 use App\BirthdayBooking\BirthdayRules;
 use App\Delivery\DeliveryApiWriteGuard;
@@ -72,6 +73,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot()
     {
+        // The local extension registers before every vendor extension and
+        // migration groups run in registration order, so on a fresh database
+        // abandon.birthday would migrate before the igniter extensions whose
+        // tables it references. Move its group to the end of the map; the
+        // group key, and with it the migrations ledger identity, stays the
+        // same. See App\BirthdayBooking\BirthdayMigrationOrder.
+        BirthdayMigrationOrder::apply();
+
         $this->app->booted(static function (): void {
             Livewire::component('igniter-orange::local-search', DeliveryLocalSearch::class);
         });
