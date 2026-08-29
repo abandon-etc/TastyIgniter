@@ -17,10 +17,13 @@ use App\Delivery\WeekdayScheduleCorrection;
 use App\Livewire\BirthdayReservation;
 use App\Livewire\DeliveryLocalSearch;
 use App\Mail\MailTestRedirect;
+use App\Payments\CheckoutStateStore;
+use App\Payments\PaymentGateConfiguration;
 use Igniter\Cart\OrderTypes\Delivery as VendorDeliveryOrderType;
 use Igniter\Flame\Pagic\Router;
 use Igniter\Local\Events\WorkingScheduleCreatedEvent;
 use Igniter\Local\Models\Location as LocationModel;
+use Illuminate\Auth\Events\Logout;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Livewire\Livewire;
@@ -41,6 +44,10 @@ class AppServiceProvider extends ServiceProvider
         // message can reach a real recipient. Applied during registration so
         // it precedes any mailer being built. See App\Mail\MailTestRedirect.
         MailTestRedirect::apply($this->app['config']);
+
+        // Production may not run with the payment verification rule off.
+        // See App\Payments\PaymentGateConfiguration.
+        PaymentGateConfiguration::assert($this->app['config']);
 
         // The vendor builds every order type through the container
         // (OrderTypes::makeOrderTypes resolves each class), so binding the
@@ -90,6 +97,13 @@ class AppServiceProvider extends ServiceProvider
         // Rebuilds working-schedule periods with the stored Monday-first weekday
         // convention. See App\Delivery\WeekdayScheduleCorrection.
         Event::listen(WorkingScheduleCreatedEvent::class, app(WeekdayScheduleCorrection::class)->handle(...));
+
+        // Auth::logout() forgets the auth session key without invalidating
+        // the session, so a checkout draft would outlive its author on a
+        // shared device. See App\Payments\CheckoutStateStore.
+        Event::listen(Logout::class, static function (): void {
+            app(CheckoutStateStore::class)->forget();
+        });
 
         Event::listen('location.orderType.updated', app(DeliveryOrderTypeListener::class)->handle(...));
         Event::listen('igniter.checkout.beforeSaveOrder', app(DeliveryCheckoutGuard::class)->handle(...));
