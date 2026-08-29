@@ -4967,3 +4967,37 @@ setting, schema, revision, traffic split, image, or code path was changed.
   against the standing production boundary.
 
 Documentation only in this repository. Every changed path is `.md`.
+
+## 2026-08-29 - The owner's switch passes all four checks; stale sessions close with them; a geocoder contradiction is left open rather than argued away
+
+Environment: the `d3c-min` admin and storefront, the shared database through
+disposable Job `qa-toggle-20260829`, and the main-traffic revision for FP-1.
+Status: recorded. Level 2 write on explicit approval, restored and read back.
+
+- **Four owner's-switch checks executed and passed**, with the switch thrown
+  through the admin rather than by writing the row, because two of them measure
+  propagation and cache behaviour and a direct write would have measured a path
+  the owner never takes. No cache delay - the setting is read per request; a
+  part-way delivery basket degrades to pickup intact; delivery disappears from
+  the storefront rather than blocking at checkout; switching back on needs
+  nothing further.
+- **Stale-session cleanup closed as a by-product** and marked PASS, executed.
+  It had been blocked on precisely this write.
+- **Pickup proved untouched** three ways, matching the earlier source reading of
+  `SettingsEditor::onSaveRecord()`. Both toggles read back at 1.
+- **FP-1 identical across the pair**, the live home page word-for-word
+  unchanged, and no new order row.
+- **A contradiction is recorded unresolved rather than reasoned away.** A
+  storefront reading reported the geocoder as `chain` on a copy recorded as
+  pinned to Google. The environment variables are set and the override code is
+  in that image, and the container's ordering argument says the pin should win -
+  but the project's own test file states that this path is verified on a
+  deployed revision by reading back which provider answered, not asserted, and
+  the reading that was meant to be that verification is the one now
+  disagreeing. Both hypotheses are written down, together with the point that
+  the driver pin and the provider narrowing come from the same call, so there is
+  no independent safety net to fall back on. A claim in
+  `DEPLOYMENT_IMPACT_TIMEZONE_FIX.md` that depended on the copies being pinned
+  has been corrected in the same commit.
+
+Documentation only in this repository. Every changed path is `.md`.

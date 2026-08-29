@@ -246,7 +246,7 @@ preserved, or reachable is not passed on *rendered* alone.
 | Money reads and compares correctly in Canadian French | Comparison passed; display recorded as wrong for the locale, not fixed here | Executed 2026-08-29 on `d3c-min-9a4c1bc8`. **Comparison is correct**: the fee applies below CA$50.00 and not at or above it, verified against real baskets at 23.99, 48.00, 50.00 and 62.00 (2026-08-24). **Display is not Canadian French**: every amount renders as `$12.00` — symbol first, period decimal — on a page whose `<html lang>` is `fr_CA`, where the local convention is `12,00 $`. Cause already traced in `CLAUDE_HANDOFF.md` section 10: the currency formatter is null, so `number_format()` uses the separators on the currency record and the locale-aware formatter never runs. Recorded only; the fix belongs to the localization workstream (`LOCALIZATION_WORKSTREAM_PLAN.md` W4), which considers it together with the tax lines at checkout |
 | Unrecognised, incomplete, out-of-area addresses; changing an address | Out-of-area and unrecognised passed; incomplete open; address change not started | Executed 2026-08-29 on `d3c-min-9a4c1bc8`, each with the submitted value verified in the component before submitting (see the debounce note below). **Out-of-area** (a downtown address, well outside the polygon): delivery refused, the page stayed put with "We do not have any local restaurant near you.", no URL, provider text, geometry or internal id in the message, and the pickup entry point remained on the page. **Unrecognised** ("zzqx nonexistent street 99999 Nowhereville"): the generic "We couldn't locate the entered address or postcode, please enter a valid address or postcode.", no technical detail. Both messages are English on a French page — Q-001, not a new defect. **Incomplete** (a street name with no number): the widget **accepted** it and opened a delivery basket, and the area even matched — the basket showed the CA$5.00 fee. The requirement bites where the decision said it would: at 12:05 EDT the checkout page rendered **"No delivery address provided"**, so no delivery order can be placed on that address. Recorded as the block, with one honest limit: the final refusal on pressing Confirm was **not** exercised, because that attempts to place an order, and no real order may be created without approval. One inconsistency worth carrying: the basket priced a delivery the checkout considers addressless. **Changing an address**, executed 2026-08-29 12:11 EDT: from a working in-area delivery basket (item, CA$5.00 fee, CA$7.00 total), a change to the out-of-area address was refused at the widget with the same generic message — and the existing session **survived intact**: still Delivery, item still there, fee and total unchanged. A rejected change does not strand the customer or silently reprice the basket. An in-area to in-area change was not run separately: with one zone and a flat fee it would produce the same totals and prove nothing the refusal has not already shown about re-geocoding and re-matching |
 | Switching between pickup and delivery, both ways | Passed | Executed 2026-08-29 12:02-12:04 EDT on `d3c-min-9a4c1bc8`, one basket carried through both directions. Pickup with one item: subtotal CA$2.00, **no delivery line**, total CA$2.00. Switched to Delivery through the order-type dialog: the item survived, the CA$5.00 fee appeared, total CA$7.00 — the arithmetic of the applied parameters, with no minimum interception. Switched back to Cueillette: the item survived, the **fee line disappeared**, total back to CA$2.00. The dialog offers only "Dès que possible": there is exactly one `isAsap` radio and the date and time selects are present in the DOM but not visible, which is the ASAP-only setting rendering as recorded, and leaves Q-010 masked rather than fixed |
-| Old sessions cleared, totals correct, resistant to tampering, API rules enforced | Totals, tampering and API passed; stale sessions still blocked | Executed 2026-08-29 on `d3c-min-9a4c1bc8`. **Totals**: verified against real baskets in both fulfilment directions and at the threshold edges — CA$2.00 pickup with no fee line, CA$2.00 + CA$5.00 = CA$7.00 on delivery, and the 23.99 / 48.00 / 50.00 / 62.00 series of 2026-08-24. **Tampering**: the client holds no money at all — the cart component's state carries `tipAmount`, `isCustomTip`, `couponCode` and display flags, and no subtotal, fee or total, all of which the server computes per render. A component state altered by hand and posted through the page's own Livewire endpoint was **refused with HTTP 419**, and the control proves the mechanism: the identical request with the state untouched returned 200 and a valid response, so the refusal was the integrity check and not a CSRF failure. The address does not dictate the area either — the server geocodes and matches it, which is what refused the out-of-area address above. **API**: every request to `/api/orders` and `/api/menus` without a token answered 401, including a POST carrying a client-supplied `order_total`, so no unauthenticated write path exists and nothing was created. The deeper policy — client `order_totals` and `order_menus` stripped, Delivery writes gated — lives in `App\Delivery\DeliveryApiWriteGuard` and its tests, which now run in CI; an authenticated end-to-end API check is **not** done, because it needs a token this session does not hold and would create real data. **Stale sessions**: still not tested. Forcing a delivery session to go stale needs Delivery turned off, which is the owner's switch and a shared-settings write awaiting approval. One leg is reachable without it: hold a delivery basket across the 21:00 closing and see whether the session normalises to pickup or errors |
+| Old sessions cleared, totals correct, resistant to tampering, API rules enforced | **PASS** - totals, tampering, API and stale sessions all executed | Executed 2026-08-29 on `d3c-min-9a4c1bc8`. **Totals**: verified against real baskets in both fulfilment directions and at the threshold edges — CA$2.00 pickup with no fee line, CA$2.00 + CA$5.00 = CA$7.00 on delivery, and the 23.99 / 48.00 / 50.00 / 62.00 series of 2026-08-24. **Tampering**: the client holds no money at all — the cart component's state carries `tipAmount`, `isCustomTip`, `couponCode` and display flags, and no subtotal, fee or total, all of which the server computes per render. A component state altered by hand and posted through the page's own Livewire endpoint was **refused with HTTP 419**, and the control proves the mechanism: the identical request with the state untouched returned 200 and a valid response, so the refusal was the integrity check and not a CSRF failure. The address does not dictate the area either — the server geocodes and matches it, which is what refused the out-of-area address above. **API**: every request to `/api/orders` and `/api/menus` without a token answered 401, including a POST carrying a client-supplied `order_total`, so no unauthenticated write path exists and nothing was created. The deeper policy — client `order_totals` and `order_menus` stripped, Delivery writes gated — lives in `App\Delivery\DeliveryApiWriteGuard` and its tests, which now run in CI; an authenticated end-to-end API check is **not** done, because it needs a token this session does not hold and would create real data. **Stale sessions**: **PASS, executed 2026-08-29 14:17-14:37 EDT**, closed as a by-product of the owner's-switch checks rather than needing its own write. With a CA$7.00 delivery basket held open, Delivery was switched off through the admin: the session normalised to pickup cleanly - items kept, delivery fee line gone, total CA$2.00, checkout still available, no error, order-type badge Delivery to Cueillette. This was the leg that had been blocked on the shared-settings write |
 | Mobile at 390px: no sideways scrolling, no broken images | Passed | Executed |
 | Browser console clean | Passed | Executed: no messages |
 | Keyboard: focus is visible, no tab-order traps | Passed | Executed |
@@ -545,15 +545,48 @@ The holiday plan agreed in decision 6 is "turn delivery off in the admin for the
 day, turn it back on tomorrow". That switch has never been tested. Four checks,
 all to the *executed* standard:
 
+**All four PASS, executed 2026-08-29 14:17-14:37 EDT** on `d3c-min-9a4c1bc8`,
+with the switch thrown through the admin screen - the owner's real path - and
+not by writing the row directly. Baseline: Offer Delivery Enabled, Offer Pick-up
+Enabled, a CA$7.00 in-area delivery basket (SCOTCH EGG Small CA$2.00 + delivery
+CA$5.00), checkout available, "We are open - Delivery dans 25 min".
+
 | Check | Status |
 | --- | --- |
-| How long after switching off does a customer actually see it? Measure it; do not assume it is instant | Not started |
-| A customer already part-way through a delivery order when it is switched off: do they fall back to pickup with the basket intact, or hit an error? | Not started |
-| Does delivery disappear entirely, or is the customer only stopped at checkout after choosing their food? | Not started |
-| After switching back on, does everything return, or is a cache clear or redeploy needed? | Not started |
+| How long after switching off does a customer actually see it? | **PASS. No cache delay: the setting is read per request.** Switching back on was sampled every 2 seconds - last "off" 14:30:20, first "on" 14:30:22 - so the change lands inside one 2-second window. The off direction was seen in effect within 100 seconds but was not sampled tightly. Reported per instance, as required: this is the instance that was serving `d3c-min` at the time, not a service-wide figure |
+| A customer already part-way through a delivery order when it is switched off | **PASS.** The CA$7.00 delivery basket degraded to pickup by itself: items kept, delivery fee line gone, total CA$2.00, checkout button still available, no error, order-type badge Delivery to Cueillette |
+| Does delivery disappear entirely, or is the customer only stopped at checkout? | **It disappears entirely.** The home page Livraison block is gone and the heading changes from "Commandez pour cueillette, verifiez la livraison ou reservez..." to "Commandez pour cueillette ou reservez..." |
+| After switching back on, does everything return, or is a cache clear or redeploy needed? | **PASS, nothing else needed.** Saving the switch brings the home-page block and the three-part heading back on the next request |
 
-This needs writing to a setting shared with the live site, so it stops for
-approval first, with the exact prior value and the way back recorded.
+**Proof that Pickup was never touched**, three independent ways: (a) Offer
+Pick-up read Enabled throughout and still Enabled on the closing read-back; (b)
+the Delivery section's form carries only its own ten delivery fields
+(`is_enabled`, `add_lead_time`, `time_interval`, `lead_time`, `time_restriction`,
+`cancellation_timeout`, `min_order_amount`, `future_orders.*`) and no
+`collection` field; (c) each collapsible section loads only its own form, so two
+never co-exist in the DOM. This is the measured counterpart of the source
+reading of `SettingsEditor::onSaveRecord()`, which resolves
+`LocationSettings::instance($location, $definition->code)` and saves that one
+`item` row.
+
+**Closing read-back** through job `qa-toggle-20260829` (execution `-9s4bv`):
+location 2 `delivery.is_enabled = 1` and `collection.is_enabled = 1`, agreeing
+with the admin read-back. `ti_working_hours` re-read in the same execution and
+unchanged - 21 rows, all enabled, one window per type.
+
+**FP-1 on the main-traffic revision**, before the first action and after the
+last: `2127efd6d63de53e6d9fbc5388f9db3fee72d0575eec25a09b9f99e9ad8565d3` both
+times, identical. The live path was not touched. The live storefront home page
+was also read before and after the write window and was word-for-word the same
+pickup-only page, and the order table still holds 9 rows with highest #12 - no
+new row, since `/checkout` was never loaded.
+
+**Method note, recorded rather than glossed:** adding the item and some of the
+switch clicks were driven by in-page script (`.click()`), because the add
+buttons carry no accessible name and the switch is a style-covered checkbox, so
+coordinate clicking is unreliable. Every verdict above rests on
+server-rendered output - basket totals, the home-page block, the heading text -
+which is independent of how the click was emitted.
 
 ## Timed checks and their windows
 
@@ -695,6 +728,69 @@ Cross-verified for the owner's-switch checks. Admin showed Offer Delivery =
 Enabled and Offer Pick-up = Enabled; the same job read `ti_location_settings`
 directly and returned, for location 2, `delivery.is_enabled = 1` and
 `collection.is_enabled = 1`. The two sources agree, so the baseline is trusted.
+
+## Open question: which geocoder actually answered on the copies
+
+Raised 2026-08-29 by a storefront reading on `d3c-min-9a4c1bc8` in which the
+local-search component reported `geocoder: "chain"`, against a record that says
+this copy is pinned to Google. **Unresolved. It is not a cosmetic discrepancy:
+if the pin never took effect, every area-sensitive address reading taken on the
+copies has unknown coordinate provenance.**
+
+What was established, all of it consistent with the pin working:
+
+- the revision does set `DELIVERY_GEOCODER_DRIVER=google` and
+  `DELIVERY_GEOCODER_PROVIDERS=google`;
+- `app/Delivery/GeocoderChainOverride.php` **is** present at the build commit
+  `9a4c1bc8`, so the code is in that image;
+- the override is registered as `afterResolving('geocoder')`, and TastyIgniter
+  sets `igniter-geocoder.default` from the stored `default_geocoder` setting
+  inside a `resolving('geocoder')` callback
+  (`vendor/tastyigniter/core/src/System/ServiceProvider.php:192`). The container
+  runs every `resolving` callback before any `afterResolving` one, so ours
+  should win;
+- `GeocoderChainOverrideChannelTest` pins that registration, including that it
+  is *not* registered as `resolving`.
+
+What was **not** established, and why the argument above is not enough: the test
+file says so itself. Its docblock records that resolving the geocoder for real is
+deliberately not attempted, because it needs a database the test environment
+lacks, and that "the resolve-and-apply path is verified on a deployed revision by
+reading back which provider answered, not asserted here on faith." **The reading
+that was supposed to be that verification is the one now reporting `chain`.**
+
+Two hypotheses remain open, and they have very different consequences:
+
+- **H1 - the override ran.** Effective driver `google`, provider list narrowed to
+  Google alone. The string `chain` then comes from something reporting the
+  *stored* setting rather than the effective driver, and every recorded reading
+  stands.
+- **H2 - the override did not take effect.** Effective driver `chain` over the
+  full provider list, so **Nominatim was reachable** and any address could have
+  been placed by it.
+
+There is no independent safety net between them: the driver pin and the provider
+narrowing are both done by the same `GeocoderChainOverride::apply()` call, so if
+one did not run, neither did. It is not valid to argue "even if the driver is
+chain, the chain only contains Google."
+
+**How to settle it, and nothing weaker:** a read-only runtime probe on the
+`d3c-min` image with that revision's exact environment, resolving the geocoder
+and printing `config('igniter-geocoder.default')`, the keys of
+`config('igniter-geocoder.providers')`, and the concrete class of
+`Geocoder::driver()`. That separates H1 from H2 in one execution and changes
+nothing. It needs its own approval: the existing job carries neither the
+application key nor the geocoder variables.
+
+**Scope of the doubt, stated so it is neither inflated nor minimised.** Verdicts
+that do not depend on which provider resolved the coordinate are unaffected -
+the owner's-switch checks, the stale-session normalisation, totals, tamper
+resistance, API policy, and the schedule readings. The readings genuinely at
+risk are the area-sensitive ones - outside-area, boundary, unrecognised and
+incomplete addresses - because, as `GeocoderChainOverride`'s own docblock notes,
+Google and Nominatim can place the same address tens of metres apart while
+Delivery Area boundaries are decided at that scale. Main traffic is not
+implicated: Delivery is closed there, so no customer reaches the lookup.
 
 ## Known problem carried over
 

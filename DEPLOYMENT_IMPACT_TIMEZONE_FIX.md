@@ -220,8 +220,16 @@ Two reads settle what main traffic actually does:
 
 So main traffic is not pinned to Google and cannot be: the code that would pin it
 is not in its image. It runs the stored Chain configuration, and **can therefore
-fall through to OpenStreetMap Nominatim today**. The test copies are pinned to
-Google by revision, which is why this was invisible from them.
+fall through to OpenStreetMap Nominatim today**.
+
+An earlier version of this section added that the test copies are pinned to
+Google by revision, "which is why this was invisible from them". **That half is
+now itself in question** and should not be relied on: a storefront reading on
+`d3c-min` reported `geocoder: "chain"`, and whether the pin takes effect on the
+copies is an open question recorded in `D3C_PROGRESS.md`. The copies do set both
+variables and do carry the override code; what is unverified is the effect. It
+does not change anything about main traffic, which sets no variable and has no
+override code at all.
 
 This is not fixable by setting an environment variable on the live revision - the
 variable has no reader there. It needs either the deployment (which brings #86)

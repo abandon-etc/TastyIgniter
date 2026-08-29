@@ -2839,3 +2839,48 @@ schema, revision, traffic split, environment variable or secret was changed.**
   `item` row. `delivery` and `collection` are separate rows, so saving the
   Delivery section cannot write the Pickup toggle. The before/after read-back of
   both toggles is still performed as proof rather than relying on this.
+
+## 2026-08-29 - Owner's delivery switch: four checks executed through the admin, all pass; stale sessions closed with them
+
+Environment: the `d3c-min-9a4c1bc8` admin and storefront, the shared database
+through disposable Job `qa-toggle-20260829`, and the main-traffic revision for
+FP-1. Status: recorded. Level 2 shared-settings write on the user's explicit
+2026-08-29 approval. Pickup/Collection untouched and proved so.
+
+- **Write path deliberately not the job.** The switch was thrown through the
+  admin screen, because two of the four checks measure propagation and cache
+  behaviour and writing the row directly would have measured a path the owner
+  never takes. The job was used only for the before/after read-backs.
+- **Before**: admin Offer Delivery Enabled, Offer Pick-up Enabled; job read of
+  `ti_location_settings` for location 2 gave `delivery.is_enabled = 1`,
+  `collection.is_enabled = 1`. Two sources agreed.
+- **After** (execution `-9s4bv`): `delivery.is_enabled = 1`,
+  `collection.is_enabled = 1` - both restored, agreeing with the admin
+  read-back. `ti_working_hours` re-read in the same execution and unchanged: 21
+  rows, all status 1, one window per type.
+- **Four results**: propagation carries no cache delay, the setting is read per
+  request (the on direction landed inside a 2-second sampling window, 14:30:20
+  to 14:30:22; the off direction was seen within 100 seconds, not tightly
+  sampled) - reported per instance, not as a service-wide figure; a part-way
+  delivery basket degrades to pickup by itself with items kept and no error;
+  delivery disappears from the storefront entirely rather than blocking at
+  checkout; switching back on needs no cache clear or redeploy.
+- **Pickup untouched, proved three ways**: unchanged read-back; the Delivery
+  form carries only its own ten delivery fields and no `collection` field; each
+  section loads only its own form. This matches the source reading of
+  `SettingsEditor::onSaveRecord()`.
+- **FP-1** on the main-traffic revision before the first action and after the
+  last: `2127efd6d63de53e6d9fbc5388f9db3fee72d0575eec25a09b9f99e9ad8565d3` both
+  times, identical. The live storefront home page read word-for-word the same
+  pickup-only page on both sides of the window, and the order table still holds
+  9 rows, highest #12, with no new row.
+- **Method note**: the item add and some switch clicks were driven by in-page
+  script because the controls carry no accessible name and the switch is a
+  style-covered checkbox. Every verdict rests on server-rendered output.
+- **Job `qa-toggle-20260829` remains and awaits the user's named confirmation
+  for deletion.** Two executions, `-9gmzw` and `-9s4bv`, both read-only; the job
+  body contains no write statement.
+- **Open and unresolved**: a storefront reading reported the local-search
+  geocoder as `chain` on a copy recorded as pinned to Google. Recorded in
+  `D3C_PROGRESS.md` with the two hypotheses and the read-only runtime probe that
+  would settle it. Nothing was changed.
