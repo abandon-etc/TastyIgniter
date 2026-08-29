@@ -234,6 +234,64 @@ the pickup-only surface production actually serves, because delivery is open on
 it. Where that surface matters, the live site before cutover is the comparator
 for everything except the image.
 
+### Also riding with this deployment: fail-safe indexing control
+
+Added 2026-08-29. Independent of the domain work and worth doing regardless.
+
+**The premise correction first.** An earlier draft of this thread treated mapping
+a staging hostname as *opening* an indexing window. It is not: the window is
+already open. The `run.app` address serves the storefront with no
+`X-Robots-Tag`, no robots or googlebot `<meta>`, no `<link rel="canonical">`
+anywhere in the theme, and a `public/robots.txt` that disallows only `/admin/`.
+Its certificate has been in the public Certificate Transparency logs for weeks.
+A new hostname adds a door to a house that is already unlocked. (A search turned
+up no trace of the site, only an unrelated clothing brand of the same name. That
+is weak evidence - it is not Google's own index - and is recorded as suggestive,
+not as proof of non-indexing.)
+
+**The design is a whitelist, not a blacklist.** Sending `noindex` only to a
+staging hostname would leave `run.app` and every future tagged-revision URL
+indexable, and would leave each new hostname indexable by default. Inverted:
+
+> **Only `lechateaudesenfants.ca` may be indexed. Every other Host gets
+> `X-Robots-Tag: noindex, nofollow`.**
+
+New hostnames are then safe by default and have to be deliberately allowed.
+
+**Implementation in `docker/render/nginx.conf.template`**, with two details that
+would otherwise make the fail-safe leak:
+
+1. A `map $host $robots_tag` at http scope - the template is rendered into
+   `conf.d`, which is inside `http {}`, so a `map` can sit above the `server`
+   block. Default `"noindex, nofollow"`; `lechateaudesenfants.ca` maps to the
+   empty string, and nginx omits an `add_header` whose value is empty.
+2. **`add_header` does not inherit into a location that declares its own.** Six
+   locations in this template set `Cache-Control` (`/_assets/`,
+   `/admin/_assets/`, `@tastyigniter_combined_assets`, the static-extension
+   block, `/storage/`, `/media/`) and would therefore **drop** a server-level
+   `X-Robots-Tag`. The header must be repeated in each of those six. The HTML
+   paths - `location = /`, `location /`, `/robots.txt`, `/favicon.ico` - declare
+   no `add_header` and do inherit, so pages are covered by the server-level
+   directive alone.
+
+**Canonical, with one correction to where it belongs.** There is no canonical
+link anywhere today. It should be added, but **not on the noindexed hosts**:
+`noindex` together with a canonical pointing elsewhere is contradictory
+signalling and Google advises against combining them. Canonical belongs on the
+allowed host, pointing at itself, where it earns its keep on trailing-slash and
+query-string variants.
+
+The cheapest correct mechanism is an HTTP header rather than a template edit:
+
+    Link: <https://lechateaudesenfants.ca$request_uri>; rel="canonical"
+
+emitted only where `$robots_tag` is empty. Google honours the `Link` form. It
+also sidesteps two problems: the theme is `vendor/tastyigniter/ti-theme-orange`
+and **vendor must not be modified**, so an in-page `<link rel="canonical">`
+would need a project-level theme override; and a page-generated canonical would
+depend on `APP_URL`, coupling it to phase two of the domain work. The header
+form depends on neither.
+
 **What overturns this and makes the fix urgent again:**
 
 - the live site begins taking real orders; or

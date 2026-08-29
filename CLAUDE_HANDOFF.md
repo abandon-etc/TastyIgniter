@@ -135,6 +135,45 @@ place.
    and it isolates no data whatever. Anything written through the staging name is
    written to the live data.
 
+### Domain onboarding: 1a now, 1b held on a stated trigger
+
+Split 2026-08-29 so the two halves stop sharing a schedule.
+
+**1a - Google domain ownership verification. Doing now.** It adds one TXT record
+and nothing else: no hostname is created, no certificate is issued, nothing
+enters the Certificate Transparency logs, and there is no new exposure. It is
+also the only step needing the owner's own Google account, so it is the one with
+human waiting time in it. Verify the **root** `lechateaudesenfants.ca`, which
+covers every subdomain and the bare domain at launch, using the same account
+gcloud authenticates as. The agent cannot mint the token: the Site Verification
+API rejects the gcloud credential with `ACCESS_TOKEN_SCOPE_INSUFFICIENT`. Note
+for whoever writes the record - a TXT record has no Cloudflare proxy toggle at
+all, only A, AAAA and CNAME do, so the grey-cloud requirement applies to the
+mapping CNAME later and not to this TXT.
+
+**1b - the `staging.` mapping and its certificate. Held.** Not because it would
+open an indexing window; that window is already open, see
+`DEPLOYMENT_IMPACT_TIMEZONE_FIX.md`. Held because **the hostname has no consumer
+yet**. Its real user is payment callbacks, and that work waits on the Snappy
+conversation. Creating it now buys nothing and adds a name to maintain.
+
+**Trigger to release 1b, whichever comes first**, recorded here so it does not
+quietly die:
+
+- the fail-safe indexing control ships with the Option C deployment; **or**
+- step E is about to start.
+
+Phase two of the domain work - setting `APP_URL` and `ASSET_URL` explicitly, so
+generated links stop falling back to `CLOUD_RUN_SERVICE_URL` and silently
+pointing at `run.app` - travels with 1b and still needs its own approval.
+
+Carried forward from the phase-one read: whether Cloud Run domain mappings are
+supported in `northamerica-northeast1` is **not yet proven**. Listing works
+(HTTP 200, no items), but creation is the test. If the region does not support
+them the fallback is an external HTTP(S) load balancer with a serverless NEG,
+which is the same mechanism needed to point a hostname at a tagged revision, so
+that work would not be wasted.
+
 That fingerprint is **void**. The freeze described it as a SHA-256 of
 normalized, redacted service metadata but never recorded the normalized field
 list or the algorithm, and neither can be reconstructed from anything still

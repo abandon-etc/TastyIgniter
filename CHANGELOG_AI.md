@@ -5249,3 +5249,45 @@ plus read-only HTTP against the live service. Status: read-only investigation.
   is not an isolated environment, because every mapping shares the one database.
 
 Documentation only. Every changed path is `.md`.
+
+## 2026-08-29 - Indexing control inverted to a whitelist; domain phase one split into 1a now, 1b held
+
+Environment: repository documentation, plus read-only HTTP against the live
+service. Status: documentation. Nothing deployed, mapped, verified or changed.
+
+- **A premise this thread had wrong is corrected.** Mapping a staging hostname
+  was described as opening an indexing window. The window is already open: the
+  `run.app` address serves the storefront with no `X-Robots-Tag`, no robots or
+  googlebot `<meta>`, **no canonical link anywhere in the theme**, and a
+  `robots.txt` disallowing only `/admin/` - and its certificate has been in the
+  public Certificate Transparency logs for weeks. A new hostname adds a door to
+  an unlocked house. A search found no trace of the site, only an unrelated
+  clothing brand of the same name; that is recorded as weak, suggestive
+  evidence and explicitly not as proof of non-indexing.
+- **The indexing rule is inverted from blacklist to whitelist.** Sending
+  `noindex` to a staging hostname alone would leave `run.app` and every future
+  tagged-revision URL indexable, and would leave each new hostname indexable by
+  default. The rule is now: **only `lechateaudesenfants.ca` may be indexed;
+  every other Host gets `X-Robots-Tag: noindex, nofollow`.** New hostnames are
+  safe by default and must be deliberately allowed.
+- **Two implementation traps recorded with it.** A `map $host $robots_tag` must
+  sit at http scope, which the rendered template provides. And `add_header` does
+  **not** inherit into a location that declares its own: six locations in
+  `nginx.conf.template` set `Cache-Control` and would silently drop a
+  server-level `X-Robots-Tag`, so it has to be repeated in each. The HTML paths
+  declare no `add_header` and do inherit.
+- **Canonical is placed on the allowed host, not the blocked ones.** `noindex`
+  combined with a canonical pointing elsewhere is contradictory signalling.
+  Recommended as an HTTP `Link: <...>; rel="canonical"` header emitted only where
+  indexing is allowed, which avoids modifying the vendor theme - forbidden - and
+  avoids depending on `APP_URL`, which would couple it to phase two.
+- **Phase one is split.** 1a, the Google ownership verification, proceeds now: it
+  adds one TXT record, creates no hostname, issues no certificate, enters no CT
+  log, and is the only step gated on the owner's own Google account. 1b, the
+  `staging.` mapping and certificate, is held - not for exposure reasons but
+  because the hostname has no consumer until payment callbacks need it. Its
+  release trigger is recorded so it cannot lapse silently: the fail-safe indexing
+  control shipping with Option C, or step E starting, whichever is first. Phase
+  two travels with 1b.
+
+Documentation only. Every changed path is `.md`.
