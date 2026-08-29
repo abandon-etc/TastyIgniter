@@ -5291,3 +5291,51 @@ service. Status: documentation. Nothing deployed, mapped, verified or changed.
   two travels with 1b.
 
 Documentation only. Every changed path is `.md`.
+
+## 2026-08-29 - Carte Key attach fails on a missing .env, not on a hostname mismatch
+
+Environment: Cloud Logging and vendor source, read-only. Status: diagnosis. No
+code, setting, revision or key was changed. **No key value is recorded here.**
+
+- **The exception.** `Illuminate\Contracts\Filesystem\FileNotFoundException:
+  File does not exist at path /var/www/html/.env`, thrown from
+  `SystemHelper::replaceInEnv()` (`SystemHelper.php:130`), reached through
+  `UpdateManager::setCarte()` (`:269`) from `UpdateManager::applyCarte()`
+  (`:246`) from `Updates->onApplyCarte()`.
+- **The hostname hypothesis is refuted, twice.** First, `applyCarte()` calls
+  `setCarte($key)` **before** `getSiteDetail()`, so the throw happens before any
+  request leaves the server - the remote validation never runs. Second, when hub
+  calls do happen, `HubManager::prepareHeaders()` sends
+  `X-Igniter-Host: gethostname()`, the container's own hostname, and never
+  `APP_URL` or the request host. Which admin the button was pressed in, and what
+  `APP_URL` holds, are both irrelevant to this failure. This is consistent with
+  the observation that "Check Updates" succeeds: that path makes its network call
+  without going through `setCarte()`.
+- **Why the file is absent, by design.** `.dockerignore` excludes `.env` and
+  `.env.*`, which is correct for Cloud Run, where configuration arrives as
+  environment variables. The vendor's attach flow assumes a writable `.env` and
+  has no fallback. It fails on any containerised deployment of this shape.
+- **Nothing was persisted.** `setCarte()` throws on its first statement, so the
+  `setting()->setPref(['carte_key' => ..., 'carte_info' => ...])` on the next line
+  never ran. There is no partial state in the settings store.
+- **Two fix shapes, neither applied.** (1) Setting `IGNITER_CARTE_KEY` as a Cloud
+  Run variable populates `config('igniter-system.carteKey')`, which
+  `HubManager::prepareHeaders()` does read - **but it is not sufficient**:
+  `hasValidCarte()` requires `params('carte_info')` as well, and
+  `ManagesUpdates.php` lines 43 and 81 `throw_unless(hasValidCarte(), ...)` on the
+  browse and install paths, which is exactly what a language pack needs. (2)
+  Making `/var/www/html/.env` merely *exist*, even empty, lets `replaceInEnv()`
+  no-op harmlessly - `preg_replace` finds no line to replace and writes the empty
+  content back - so execution continues to `setPref()`, which persists both
+  `carte_key` and `carte_info` to the shared settings database where `params()`
+  reads them. That restores the intended flow and is what unblocks the language
+  pack. It needs the application directory to be writable by php-fpm, which is
+  unverified.
+- **Two consequences worth stating.** The persisted key would land in the
+  **shared settings database**, visible to every revision including production -
+  inherent to the vendor design, not to the fix. And a 15-character prefix of the
+  key now sits in Cloud Logging inside the stack trace's argument list, under
+  platform retention; each retry of the button adds another. Retrying is
+  therefore not free.
+
+Documentation only. Every changed path is `.md`.
