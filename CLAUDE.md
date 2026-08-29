@@ -121,9 +121,11 @@ false means the storefront is Pickup-only whatever the stored Delivery settings
 say. All 24 business decisions in `DELIVERY_D3_BUSINESS_PARAMETER_PLAN.md` are
 confirmed.
 
-CI has never run in this repository. Both workflows report `active`, but the
-run history is empty, so an empty check list on a pull request means untested,
-not passing. `CLAUDE_HANDOFF.md` section 10 records this.
+CI is live since 2026-08-29 (PR #122): every push and pull request runs the
+suite on PHP 8.3/8.4/8.5 against a migrated throwaway MySQL 8.4. **A green
+check is the merge gate for every code PR**; a red or still-empty check
+list blocks. Docs-only PRs remain exempt. History and the enablement
+record are in `CLAUDE_HANDOFF.md` section 10.
 
 D3C is in progress. Its current state, acceptance table, deployed test
 revisions, and outstanding items live in `D3C_PROGRESS.md`. Do not restate any

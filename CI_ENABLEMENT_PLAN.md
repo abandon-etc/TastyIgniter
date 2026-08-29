@@ -1,9 +1,17 @@
 # CI Enablement Plan
 
 Date: 2026-08-28
-Status: plan only. **Enabling CI, editing any workflow file, and the first
-run are each separately approved.** Workflow files are explicitly outside
-the docs-only auto-merge authorization.
+Status: **executed and complete, 2026-08-29.** The path below was walked
+on the user's approvals: step 0 ran in the cloud (the local Docker engine
+was down) and produced two findings — the registry dist checksum failure
+and, after the migrate step was added, the fresh-install
+migration-ordering defect, fixed in PR #124; the two residual
+test-expectation failures were fixed in PR #126; the reworked workflow
+merged as PR #122; the first fully green run is 33223931822 and
+mainline's own first run 33224362271 is green. The merge gate is live:
+code PRs merge only on a green check (`AGENT_WORKFLOW.md` section 8,
+`CLAUDE_HANDOFF.md` section 10). Kept below as the record of the plan as
+approved.
 
 ## 1. Where CI stands today
 

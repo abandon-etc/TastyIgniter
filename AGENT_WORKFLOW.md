@@ -212,6 +212,13 @@ Merge policy:
 CI failure, merge conflict, a new review blocker, or scope expansion stops the
 merge. Never merge merely because checks are absent.
 
+Since 2026-08-29 the pipeline is live (checkout, extensions, throwaway
+MySQL 8.4 service, `igniter:up`, full suite, PHP 8.3/8.4/8.5): **a code PR
+merges only on a green check**, and checks that are red or have not
+finished block. Docs-only PRs remain exempt. The pre-2026-08-29 reading
+that an empty check list merely meant untested is retired with the era it
+described.
+
 ## 8a. Where a fact belongs
 
 One fact is maintained in one file. Anything that changes as work proceeds
