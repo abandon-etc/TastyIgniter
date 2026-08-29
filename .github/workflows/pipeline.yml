@@ -56,5 +56,14 @@ jobs:
       - name: Generate application key
         run: echo "APP_KEY=base64:$(openssl rand -base64 32)" >> "$GITHUB_ENV"
 
+      - name: Migrate the throwaway test database
+        # The suite asserts against a migrated schema and does not migrate
+        # by itself (run 2: 75 errors + 3 failures, all missing-table).
+        # igniter:up runs the system and extension migrations. This is also
+        # the first place the recorded fresh-install migration-ordering
+        # defect can reproduce; if it does, that is a finding, not a CI
+        # bug.
+        run: php artisan igniter:up
+
       - name: Run test suite
         run: vendor/bin/phpunit --no-coverage
