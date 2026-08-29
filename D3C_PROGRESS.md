@@ -761,20 +761,34 @@ coupling to remember.
 
 ### What each copy actually ran
 
-Code presence is the decisive test, not the date - a copy whose image predates
-#86 cannot apply the pin at all, and a copy that carries the code but sets no
-variable applies nothing, because `GeocoderChainOverride` returns early when the
-environment says nothing. #86 merged 2026-08-21 11:15 EDT as `1f8f0c75`.
+**Corrected 2026-08-29 after a coverage check.** The first version of this table
+listed seven entries, omitted three real revisions, and contained one row,
+`d3c-1f8f0c75`, **for a revision that does not exist** - that string is an
+Artifact Registry image tag, shared by the four `1f8f0c75` copies, and it was
+mistaken for a revision name. Its "no variables set" reading came from a
+`describe` whose error output had been suppressed, so a failure printed as a
+finding. Re-run against the service's actual revision list, with errors shown.
+Two of the omitted copies turn out **not** to be Chain copies at all.
 
-| Copy | override code in image | geocoder variables | What it ran |
+The verdict rule is simpler than the first version implied: **a revision with no
+geocoder variables runs the stored `chain` setting, whether or not the override
+code is in its image**, because `GeocoderChainOverride` returns early when the
+environment says nothing. Code presence only explains, it does not decide.
+
+All nine D3C copies plus the mail copy:
+
+| Revision | geocoder variables | What it ran | Serving state |
 | --- | --- | --- | --- |
-| `d3c-e9a4f7ca` | **absent** | none | **Chain - certain.** Pre-#86 image |
-| `d3c-25f9813b` | **absent** | none | **Chain - certain.** Pre-#86 image |
-| `d3c-1f8f0c75` | present | **none set** | **Chain - certain.** The override is in the image but no-ops when unset |
-| `d3c-g2-1f8f0c75` | present | `google` / `google` | Pinned to Google |
-| `d3c-pu2-1f8f0c75` | present | `chain` / **empty string** | **Special case**: chain over a deliberately *empty* provider list. Not Google, but not Nominatim either - it has no providers configured at all |
-| `d3c-fix-be6835a9` | present | `google` / `google` | Pinned to Google |
-| `d3c-min-9a4c1bc8` | present | `google` / `google` | Pinned to Google |
+| `d3c-a2ee559c` | none | **Chain** | Ready. Image digest is the same as main traffic's, i.e. commit `31821289` |
+| `d3c-25f9813b` | none | **Chain** | Ready |
+| `d3c-e9a4f7ca` | none | Chain, but moot | **Ready=False, `HealthCheckContainerError`** - it never served a request |
+| `d3c-g-1f8f0c75` | `google` / `google` | **Pinned to Google** | Ready. Same image and same pin as `g2`; being "superseded" did not make it a Chain copy |
+| `d3c-g2-1f8f0c75` | `google` / `google` | **Pinned to Google** | Ready |
+| `d3c-pu-1f8f0c75` | `chain` / **empty** | **Chain over an empty provider list** | Ready. Same construction as `pu2` |
+| `d3c-pu2-1f8f0c75` | `chain` / **empty** | **Chain over an empty provider list** | Ready |
+| `d3c-fix-be6835a9` | `google` / `google` | **Pinned to Google** | Ready |
+| `d3c-min-9a4c1bc8` | `google` / `google` | **Pinned to Google** | Ready |
+| `mail-3a603e53` | none | **Chain** | Ready. Mail-transport testing; no address work |
 
 ### Consequences for recorded evidence
 
@@ -810,13 +824,16 @@ accuracy**, so even under H2 nothing in the register would be overturned:
 - the exact boundary was already declared unreachable through the storefront and
   is recorded as Deferred, covered by the D3B runtime self-check.
 
-A second reason reinforces it, found in the copies table: **no area-sensitive
-reading was ever taken on a Chain-running copy.** `d3c-e9a4f7ca` never started,
-`d3c-25f9813b` was only an earlier log-redaction check, and `d3c-1f8f0c75` is not
-one of the evidence copies at all. Every address reading in the register came
-from one of the three Google-pinned copies or from `d3c-pu2-1f8f0c75`, which is
-deliberately provider-less. So the Chain tier of the triage contains no evidence
-to re-qualify.
+A second reason reinforces it, and it now rests on the corrected table above
+rather than on a partial one: **no area-sensitive reading was ever taken on a
+Chain-running copy.** The four Chain copies are `d3c-a2ee559c` (first D3C copy),
+`d3c-25f9813b` (an earlier log-redaction check), `d3c-e9a4f7ca` (never started -
+`HealthCheckContainerError`) and `mail-3a603e53` (mail transport). The copies
+table marks the first three "usable for multi-step flows: No", and the fourth
+did no address work. Every address reading in the register came from a
+Google-pinned copy or from the deliberately provider-less `pu`/`pu2` pair. So the
+Chain tier contains no evidence to re-qualify - which is now a statement about
+all ten copies, not about the seven the first table happened to list.
 
 **The two places where this stops being true, and both are live:**
 

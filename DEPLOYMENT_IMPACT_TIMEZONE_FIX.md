@@ -224,11 +224,12 @@ fall through to OpenStreetMap Nominatim today**.
 
 An earlier version of this section added that "the test copies are pinned to
 Google by revision", which was too broad and is corrected here. **Three copies
-are pinned** (`d3c-fix-be6835a9`, `d3c-g2-1f8f0c75`, `d3c-min-9a4c1bc8`: override
-code in the image and `DELIVERY_GEOCODER_DRIVER=google`). **Three ran Chain** -
-`d3c-e9a4f7ca` and `d3c-25f9813b` have no override code in their images, and
-`d3c-1f8f0c75` carries the code but sets no variable, so it no-ops. One,
-`d3c-pu2-1f8f0c75`, is pinned to chain over a deliberately empty provider list.
+are pinned** to Google - `d3c-fix-be6835a9`, `d3c-g2-1f8f0c75` and
+`d3c-min-9a4c1bc8` - and so is a fourth, `d3c-g-1f8f0c75`. **Two** are pinned to
+chain over a deliberately empty provider list, `d3c-pu-1f8f0c75` and
+`d3c-pu2-1f8f0c75`. **Three D3C copies plus the mail copy set no geocoder
+variable at all and therefore ran the stored Chain**: `d3c-a2ee559c`,
+`d3c-25f9813b`, `d3c-e9a4f7ca` (which never started) and `mail-3a603e53`.
 The per-copy table is in `D3C_PROGRESS.md`. None of this changes main traffic,
 which sets no variable and has no override code at all.
 

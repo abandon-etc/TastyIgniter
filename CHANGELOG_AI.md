@@ -5063,3 +5063,46 @@ revision, traffic split, image or code path changed.
   body read before deletion. The region holds none.
 
 Documentation only in this repository. Every changed path is `.md`.
+
+## 2026-08-29 - The per-copy geocoder table is corrected: it was incomplete and carried one invented row
+
+Environment: Cloud Run revision metadata. Status: documentation correction. No
+stored setting, revision, traffic split, image or code path changed.
+
+- **The correction.** The first version of the per-copy table listed seven
+  entries against ten real copies, and one of its rows, `d3c-1f8f0c75`, was for a
+  revision **that does not exist**: that string is an Artifact Registry image
+  tag, shared by the four `1f8f0c75` copies, and it was mistaken for a revision
+  name. Its "carries the code but sets no variable" row came from a `describe`
+  whose stderr had been suppressed, so a "Cannot find revision" failure was
+  printed as a finding. A second pass then wrongly reported `d3c-e9a4f7ca` as
+  non-existent, because the existence test matched the word ERROR inside that
+  revision's own status conditions - it is the copy that failed to start. Both
+  were settled by re-running against the service's revision list with errors
+  shown.
+- **Two omitted copies were not Chain copies.** `d3c-g-1f8f0c75` carries
+  `google`/`google`, the same pin as `g2`; `d3c-pu-1f8f0c75` carries
+  `chain`/empty, the same construction as `pu2`. Being marked "superseded" in the
+  copies table says nothing about the geocoder configuration, which the first
+  table had implicitly assumed.
+- **A simpler and more reliable rule replaces the code-presence reasoning:** a
+  revision with no geocoder variables runs the stored `chain` setting whether or
+  not the override is in its image, because `GeocoderChainOverride` returns early
+  when the environment says nothing. Code presence explains; it does not decide.
+- **The conclusion survives, and now on complete coverage.** The Chain copies are
+  `d3c-a2ee559c`, `d3c-25f9813b`, `d3c-e9a4f7ca` (Ready=False,
+  `HealthCheckContainerError` - it never served a request) and `mail-3a603e53`.
+  The copies table marks the first three unusable for multi-step flows and the
+  fourth did no address work, so no area-sensitive reading was taken on any of
+  them. "That tier holds no evidence to re-qualify" is now a statement about all
+  ten copies rather than about the seven the first table happened to list.
+- The summary of the split in `DEPLOYMENT_IMPACT_TIMEZONE_FIX.md` section 7
+  repeated the same bad grouping and is corrected with it.
+- **Tonight's cut-off reading moves to direct execution on the user's side**,
+  with a comparison leg at 20:45 before closing and the cut-off reading at 21:05,
+  including the clock pre-check. The 21:05 scheduled task is left armed and
+  unchanged: it only pushes a notification and starts nothing, so it serves as an
+  independent cross-check rather than a second runner. Results will be handed
+  back for recording.
+
+Documentation only. Every changed path is `.md`.
