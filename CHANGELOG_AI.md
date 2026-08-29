@@ -5328,9 +5328,15 @@ code, setting, revision or key was changed. **No key value is recorded here.**
   no-op harmlessly - `preg_replace` finds no line to replace and writes the empty
   content back - so execution continues to `setPref()`, which persists both
   `carte_key` and `carte_info` to the shared settings database where `params()`
-  reads them. That restores the intended flow and is what unblocks the language
-  pack. It needs the application directory to be writable by php-fpm, which is
-  unverified.
+  reads them. **Corrected 2026-08-29 the same day: that unblocks *seeing* the
+  catalogue, not installing.** `LanguageManager::installLanguagePack()` writes
+  into `App::langPath()`, i.e. `/var/www/html/lang/vendor/...`, which is
+  root-owned and, more fundamentally, per-instance and ephemeral - so installing
+  at runtime does not work under an immutable image and the `.env` fix does not
+  change that. Language packs do not go through composer at all. The application
+  root is confirmed not writable by php-fpm, so the fix must `chown` that single
+  `.env` file to www-data and must not open up the directory. Full plan in
+  `LOCALIZATION_WORKSTREAM_PLAN.md`.
 - **Two consequences worth stating.** The persisted key would land in the
   **shared settings database**, visible to every revision including production -
   inherent to the vendor design, not to the fix. And a 15-character prefix of the

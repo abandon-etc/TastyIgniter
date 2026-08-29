@@ -98,16 +98,95 @@
 
 #### 阻塞项:Carte Key 绑定在 Cloud Run 上必然失败(2026-08-29 定位)
 
-官方语言包导入依赖 Carte Key,而后台 "Attach Carté Key" 在本部署形态下**必定**
-返回 500。根因不是网络、也不是主机名不匹配:
-`UpdateManager::applyCarte()` 第一件事就是 `setCarte()`,而 `setCarte()` 第一行
-调用 `SystemHelper::replaceInEnv()` 去改写 `/var/www/html/.env` —— 该文件被
-`.dockerignore` 明确排除(Cloud Run 用环境变量而非 .env),于是抛
-`FileNotFoundException`,**在任何网络请求发出之前**。
+官方语言包依赖 Carte Key,而后台 "Attach Carté Key" 在本部署形态下**必定** 500。
+根因不是网络、也不是主机名不匹配:`UpdateManager::applyCarte()` 第一件事就是
+`setCarte()`,其第一行 `SystemHelper::replaceInEnv()` 要改写
+`/var/www/html/.env`,而该文件被 `.dockerignore` 明确排除(Cloud Run 用环境变量),
+于是抛 `FileNotFoundException`,**在任何网络请求发出之前**。
 
-对 W1 的影响:官方 `fr_CA` 包是否存在,在绑定成功之前无法确认。若最终确认官方
-只有 `fr_FR`,魁北克用词仍需人工过一遍——但这个判断现在取不到,不要按任一
-假设先行开工。详见 `CHANGELOG_AI.md` 2026-08-29 条目,内含两种修法及其代价。
+##### 必须分开的两件事,不要合称"解锁"
+
+**(a) 能不能【看到】官方目录里有没有 `fr_CA`。**
+远端目录走 `HubManager::listLanguages()`,而 `Languages` 控制器 `use ManagesUpdates`,
+其第 43、81 行 `throw_unless(hasValidCarte(), ...)` 把门。`hasValidCarte()` 需要
+carte_key **和** carte_info 同时非空,两者都由 `setCarte()` 的 `setPref()` 写入
+共享设置库。所以 `.env` 修好后 `setCarte()` 能走完,**(a) 成立**。
+
+**(b) 能不能【真的装上】。答案:不能,且与 `.env` 无关。**
+语言包**不走 composer**(那是扩展和主题的路),`LanguageManager::installLanguagePack()`
+直接落盘:
+
+    $filePath = $this->langPath.'/vendor/'.$langDirectory.'/'.$locale.'/'.$meta['file'];
+    File::makeDirectory(dirname($filePath), 0777, true, true);
+    File::put($filePath, "<?php
+
+return ".var_export($strings, true).";
+");
+
+`langPath` 是 `App::langPath()`,即 `/var/www/html/lang`。两重障碍,各自独立致命:
+其一,应用根目录属 root,php-fpm 以 www-data 运行,建目录与写文件都会
+Permission denied;其二,**即便放开权限也没有意义** —— 容器文件系统是每实例的,
+运行期写出的文件在实例被替换时消失,对并发的其他实例也不可见。
+
+**结论:装包在不可变镜像部署下不成立,修好 `.env` 不改变这一点。** 用户的判断
+成立,但理由比"它要写 composer.json"更准确——语言包这条路根本不碰 composer。
+
+##### 因此方法二的真实价值,请照此表述
+
+修好 `.env` 换来的是**"能看到官方有没有 `fr_CA` 包"**,不是"能装"。这仍然有价值——
+它正是 W1 当前的阻塞项——但**路没有通**,后来人不要据此以为可以直接装。
+
+真要拿到包,走**构建期**:在有可写文件系统的地方(本机或构建步骤)完成绑定与
+下载,把生成的 `lang/vendor/<包名>/<locale>/<文件>.php` **提交进仓库**、随镜像部署。
+仓库里现有的四个 `lang/vendor/*/en_CA/` 与 `fr_CA/` 覆盖目录正是这个形状,
+说明项目实际上一直在这么做。依赖项:本机 Docker 于 2026-08-28 记为暂不可用,
+这条路要先解决它。
+
+##### 方法二的完整改法(未实施)
+
+在 `docker/cloudrun/start.sh` 里,以 root 身份:
+
+1. 文件不存在才创建,**不要截断已存在的文件**:
+   `[ -f /var/www/html/.env ] || : > /var/www/html/.env`
+2. **只把这一个文件**授予 www-data,并收紧权限:
+   `chown www-data:www-data /var/www/html/.env` 与 `chmod 600` 之。
+3. **不要 chown 应用根目录。** 只放开这一个文件是够的:覆盖写一个已存在的文件
+   只需要该**文件**的写权限,目录写权限只在创建、删除、改名时才需要。
+   `replaceInEnv()` 做的正是覆盖写,所以窄授权足够,而根目录保持只读,
+   `composer.json`、`auth.json`、`lang/` 仍然写不进去——这是好事,见上文 (b)。
+
+Dockerfile.cloudrun 现只 chown 了 `storage`、`bootstrap/cache`、`public`,应用根目录
+仍属 root,这与用户看到的 `file_put_contents(/var/www/html/composer.json):
+Permission denied` 一致,也是上面第 3 条成立的前提。
+
+`.env` 内容保持为空即可:`replaceInEnv()` 的 `preg_replace` 找不到匹配行,原样写回
+空内容、不抛异常,执行继续走到 `setPref()`,真正的持久化发生在共享设置库。
+**不要在该文件里预置 `IGNITER_CARTE_KEY=` 行**——那样 Key 会被写进一个每实例
+独立且随实例消失的文件,徒增一处明文副本。
+
+##### 方法一为什么不够
+
+给修订设 `IGNITER_CARTE_KEY` 环境变量能填上
+`config('igniter-system.carteKey')`(`config/system.php:17`),`prepareHeaders()`
+确实读它。但 `hasValidCarte()` 还要 `carte_info`,而它只由 `setCarte()` 写入。
+所以浏览路径仍被 `throw_unless` 挡住,**(a) 也过不了**。
+
+##### Key 轮换:等走通之后,不是现在
+
+堆栈把 Key 前 15 个字符记进了 Cloud Logging,每点一次按钮多一条。40 位泄 15 位
+实际风险低,但轮换近乎零成本。**在绑定真正走通之后**,去 tastyigniter.com 重新
+生成一把并弃用当前这把。**现在不要换**——尚未走通就换,只会多出一把同样被日志
+沾过的 Key。同时:在走通之前不要再重试那个按钮,每次重试都只是多写一条。
+
+##### 性质与排期
+
+改 `start.sh` 属代码改动,随部署上线,可在 0% 副本上完整验证,与"法语工作流与
+部署耦合"的既定安排一致,不急。
+
+##### W1 状态(保持)
+
+官方有没有 `fr_CA` 包,在绑定走通前**无法确认**。不要按任一假设先行开工:若最终
+确认只有 `fr_FR`,魁北克用词仍须人工过一遍,但这个判断现在取不到。
 
 #### 改动约束(改法未定,约束先定)
 
