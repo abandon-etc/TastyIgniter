@@ -183,6 +183,93 @@ Permission denied` 一致,也是上面第 3 条成立的前提。
 改 `start.sh` 属代码改动,随部署上线,可在 0% 副本上完整验证,与"法语工作流与
 部署耦合"的既定安排一致,不急。
 
+##### 取包不需要可写的完整实例 —— 本机 Docker 不再是 W1 前置(2026-08-29 核实)
+
+`HubManager::requestRemoteData()` 就是一次带认证的 JSON POST:端点
+`https://api.tastyigniter.com/v2`(`config/system.php:178`),头部
+`Authorization: Bearer <carte key>`、`X-Igniter-Host: gethostname()`、
+`X-Igniter-User-Ip`、`X-Igniter-Platform: php:<版本>;version:<版本>;url:<APP_URL>`,
+体内附加 `client=tastyigniter` 与
+`server=base64(serialize(['php'=>…,'url'=>…,'version'=>…,'host'=>…]))`。
+
+**这些字段全部是可在实例之外复现的字符串。** 因此取包可以退化成一个独立脚本:
+`languages` 取目录 → `language/apply` 取条目与 hash → `language/download` 取
+`data.strings`,再按 `installLanguagePack()` 同样的 `var_export` 形状落盘。
+**不需要一个可写文件系统上的 TastyIgniter 实例,本机 Docker 可用与否与此无关;
+2026-08-28 那条阻塞项就 W1 而言撤销。**
+
+**边界要说清:** 以上只从客户端源码确认了请求形状,服务端是否另有校验(许可、
+站点 URL、频率)无法从这里断言。**一次带认证的真实请求即可证实或推翻**,那正是
+绑定走通后要做的第一件事。
+
+**由此浮出一条与最初怀疑同源、但这次真正成立的事实:**
+`SystemHelper::resolveUrl()` 就是 `config('app.url')`,即 **APP_URL**;它同时出现在
+`X-Igniter-Platform` 头和 `server` 载荷里。**hub 看到的站点 URL 就是该修订的
+APP_URL。** 这对那次 500 无关(异常发生在任何请求之前),但对**绑定本身**是活的:
+从副本绑定,发出去的是副本自己的 URL,而 tastyigniter.com 上登记的是正式站 URL。
+
+##### 覆盖风险:导入前必须先落实,否则会静默吃掉手写魁北克法语
+
+`installLanguagePack()` 写的路径是 `lang/vendor/<包>/<locale>/<文件>.php`,
+仓库现有的手写覆盖**正在这些路径上**。逐文件清点(2026-08-29):
+
+| 路径 | 键数 |
+| --- | --- |
+| `lang/vendor/igniter-cart/fr_CA/default.php` | 24 |
+| `lang/vendor/igniter-local/fr_CA/default.php` | 16 |
+| `lang/vendor/igniter-orange/fr_CA/default.php` | 21 |
+| `lang/vendor/igniter-reservation/fr_CA/default.php` | 30 |
+| 四个对应的 `en_CA/default.php` | 3 / 4 / 3 / 2 |
+
+**处在碰撞路径上的共 103 个键、8 个文件**(fr_CA 91,en_CA 12)。其余 177 个键位于
+`lang/fr_CA/`、`lang/en_CA/`、`lang/en/`,属项目自有命名空间,`installLanguagePack()`
+**不会**触碰——这条区分要保留,免得把风险面夸大成全部 280 个。
+
+落实三条,缺一不可:
+
+1. **手写键清单先行。** 把上述 8 个文件逐键记录成一份可机读的清单(键名 + 现值),
+   作为"这些是自有资产"的权威依据。没有它,任何一次刷新都无法判断哪些该保留。
+2. **叠加顺序:官方包为底,手写覆盖在上。** 注意 TastyIgniter 的加载器**不做分层**
+   ——一个路径一个文件。所以"叠加"必须在**生成期**完成
+   (`array_replace_recursive(官方, 手写)`),把合并结果落成那一个文件并提交,
+   不能指望运行时分层。
+3. **导入必须可比对,不得就地覆盖。** 先导入到临时位置,与现有文件逐键 diff,
+   确认要保留的手写键,再生成合并结果。由于这些文件是提交进仓库的,
+   **`git diff` 本身就是比对机制**:导入走分支、在 PR 里审 diff,任何静默覆盖
+   都会在 diff 里现形。
+
+**在这三条落实之前,不导入任何包。**
+
+##### 绑定是共享写入,按共享写入报批
+
+`setCarte()` 的 `setPref()` 把 `carte_key` 与 `carte_info` 写进**共享设置库**,所以
+无论从哪个副本绑定,**正式站也会随之进入"已绑定"状态**,其后台会出现市场相关
+界面。对顾客不可见,风险低,但它不是"只在 0% 副本上做的事"。按老规矩:
+
+- 单独审批,不并入其他批次;
+- 写前记原值 —— 两个 pref **预期为空,但要实读确认,不得假设**;
+- 写后读回两个 pref;
+- 回退方法:清空这两个 pref(`clearCarte()` 走的也是 `replaceInEnv()`,同样需要
+  `.env` 存在,所以回退能力依赖本次 `start.sh` 改动已上线);
+- FP-1 在主流量修订上前后各一次。
+
+##### 不碰生产的验证路径(建议按此排)
+
+把 `start.sh` 的改动构建成一个 **0% 流量副本**,在那里完成绑定,即可回答 W1 当前
+唯一的阻塞问题:官方到底有没有 `fr_CA` 包,还是只有 `fr_FR`。全程不碰主流量镜像,
+不切流量,也不必等 C 方案那次部署。
+
+**一个必须先决定的变量:** 该副本的 APP_URL 是它自己的 tagged URL,而登记在
+tastyigniter.com 的是正式站 URL,两者不一致(见上文)。两种处理:
+
+- 在该副本上把 `APP_URL` 设为**已登记的正式站 URL**,让 hub 看到登记站点。
+  副作用是该副本生成的链接会指向正式站——对"只用来绑定"的用途可以接受,
+  但要记住这台副本此后不宜再用于其他链接相关的验证;
+- 或者保持原样,接受 hub 可能因 URL 不匹配而拒绝或错误归属的风险。
+
+**独立脚本那条路根本没有这个问题**,因为 `url` 字段由脚本显式给定。这也是它现在
+比"从副本绑定"更优的理由。
+
 ##### W1 状态(保持)
 
 官方有没有 `fr_CA` 包,在绑定走通前**无法确认**。不要按任一假设先行开工:若最终

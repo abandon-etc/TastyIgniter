@@ -110,6 +110,31 @@ chmod -R ug+rw \
     "${STORAGE_PATH}/logs" \
     "${APP_ROOT}/bootstrap/cache" || true
 
+# TastyIgniter's Carte-key flow persists the key through
+# SystemHelper::replaceInEnv(), which reads and rewrites "${APP_ROOT}/.env" and
+# throws FileNotFoundException when that file does not exist. .env is excluded
+# from the image by .dockerignore, correctly, because configuration arrives here
+# as environment variables. Creating it empty makes that rewrite a harmless
+# no-op - the regex matches no line and the empty content is written back - so
+# the flow continues to its real persistence step, which stores the key in the
+# shared settings table.
+#
+# Only this one file is handed to www-data. Overwriting an existing file needs
+# write permission on the file, not on its directory, so the application root
+# stays root-owned and composer.json, auth.json and lang/ remain unwritable at
+# runtime. That is deliberate: language packs must be committed and baked into
+# the image, never written at runtime, because the container filesystem is
+# per-instance and does not survive the instance.
+#
+# The file is left empty on purpose. An IGNITER_CARTE_KEY= line here would put
+# the key in a per-instance file that disappears with the instance, for no gain.
+if [ ! -f "${APP_ROOT}/.env" ]; then
+    log "Creating empty ${APP_ROOT}/.env so the Carte-key rewrite does not fail"
+    : > "${APP_ROOT}/.env"
+fi
+chown www-data:www-data "${APP_ROOT}/.env" || true
+chmod 600 "${APP_ROOT}/.env" || true
+
 log "Rendering Nginx configuration for port ${PORT}"
 envsubst '$PORT' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf
 
