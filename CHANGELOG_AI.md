@@ -4746,5 +4746,33 @@ auto-merge.
 
 Documentation only in this entry.
 
+## 2026-08-29 - Mainline is green: #126 and #122 merged, the CI merge gate is live, the never-ran era retired
+
+Environment: repository and GitHub Actions. Status: both merges on the
+user's explicit, separate confirmations; this docs PR is Level 0,
+eligible for auto-merge.
+
+- Merged PR #126 (`7673cee4`, the two test-expectation fixes). Updated
+  PR #122's branch with mainline so its own checks ran the full
+  combination — green on all three rows (run 33224252490) — then merged
+  it (`491365b2`). The merge push triggered **mainline's own first CI
+  run, 33224362271: green.** 209 tests, 925 assertions, zero errors,
+  zero failures, on PHP 8.3, 8.4, and 8.5.
+- The documentation flip, standing on that fact: `CLAUDE.md` and
+  `CLAUDE_HANDOFF.md` section 10 now state CI is live and **a green check
+  is the merge gate for every code PR** (red or unfinished checks block;
+  docs-only PRs stay exempt); `AGENT_WORKFLOW.md` section 8 carries the
+  same gate; the "CI has never run / an empty check list means untested"
+  reading is retired as the description of an era that ended.
+  `CI_ENABLEMENT_PLAN.md` is marked executed and complete, with the run
+  ids. The handoff's fresh-install migration-ordering section records
+  the #124 fix and its wider root cause as closed.
+- With CI first-green achieved, the stated precondition for the payment
+  workstream's step D code work is met; D and F remain awaiting their own
+  approvals, and E awaits the Snappy conversation, per the standing
+  sequence.
+
+Documentation only in this entry; the merges are recorded above it.
+
 Deletions aside, no runtime state changed; the workflow edits live only on
 the draft-PR branch.

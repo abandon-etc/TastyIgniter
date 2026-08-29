@@ -324,11 +324,23 @@ real CI runs (draft PR #122):
 `2026_07_10_000000_add_birthday_booking_fields_to_reservations_table`
 fails with 42S02 because `php artisan igniter:up` runs it in the root
 migration pass before the Reservation extension has created
-`ti_reservations` — identically on PHP 8.3, 8.4, and 8.5. Consequence:
-every fresh install — including the CI pipeline's throwaway database — is
-blocked until the focused fix lands, so it is now the single gate in
-front of CI first-green. Already-initialized databases (staging, the
-payment test copy) are unaffected, as this section always said.
+`ti_reservations` — identically on PHP 8.3, 8.4, and 8.5.
+
+**Fixed on 2026-08-29 by PR #124**, and the root cause proved wider than
+this note: the installed core has no extension dependency ordering at
+all, and local extensions register — and migrate — before every vendor
+extension, so the Birthday group's own tables (foreign keys to customers
+and locations) were equally exposed on a fresh database. The fix moved
+the reservations alteration into the Birthday extension's own migrations
+(idempotent where already applied, loudly failing — never silently
+skipping — if the order regresses) and added
+`App\BirthdayBooking\BirthdayMigrationOrder`, which moves the
+`abandon.birthday` group to the end of the migration map at boot with the
+group key, and so the migrations ledger identity, unchanged; a contract
+test pins the mechanism against vendor change. Verified in CI: fresh
+`igniter:up` passes on all three PHP rows. Already-initialized databases
+(staging, the payment test copy) were never affected and re-run the moved
+migration as a recorded no-op.
 
 ### Pinning the geocoder chain for a deployment
 
@@ -686,69 +698,41 @@ Public Nominatim is not approved for production Delivery traffic for the
 identity, attribution, shared rate-limit, fallback fan-out, and autocomplete
 reasons documented above.
 
-### Continuous integration has never run
+### Continuous integration: live since 2026-08-29
 
-`.github/workflows/pipeline.yml` and `release.yml` are both reported `active`
-by `gh workflow list`, but `gh run list` returns zero runs for this repository.
-CI has never executed here, on any branch or pull request, including PRs #74,
-#75, and #76. The most likely cause is that Actions is disabled for this fork.
+The pipeline (PR #122) runs on every push and pull request: PHP 8.3, 8.4,
+and 8.5 in a matrix, extensions aligned to `Dockerfile.cloudrun`,
+tastyigniter/* installed from source (the registry dist checksums fail on
+fresh machines, below), a health-checked throwaway MySQL 8.4 service,
+`igniter:up`, then the full suite. The first fully green run was
+33223931822 (2026-08-29, 209 tests, 925 assertions, zero errors, zero
+failures on every row), reached through PR #124 (the fresh-install
+migration-ordering fix) and PR #126 (two test-expectation fixes).
+Mainline's own first run, 33224362271 on the #122 merge commit, is green.
 
-The practical consequence is a reading trap. An empty check list on a pull
-request page means **untested**, not **passing**. Section 15 already forbids
-merging merely because checks are absent, and this is the condition that rule
-exists for. The section 20 stop condition covering a blocking CI finding is
-inert for the same reason: CI produces no findings at all.
+**The merge gate: a code PR merges only on a green check.** A red run, or
+checks that have not finished, block the merge — the section 20 stop
+condition on blocking CI findings is now live. Docs-only PRs remain
+exempt, per section 15. The old reading — "CI has never run, an empty
+check list means untested" — is retired; it described 2026-08-28 and
+earlier, when the workflows reported `active` with zero runs ever and the
+committed pipeline contained no test step at all.
 
-This is a decision point, not a defect to fix quietly. After D3C, and before
-any substantive code work such as Birthday checkout, payment, webhooks, or
-authentication, decide explicitly whether to enable CI. Documentation-only
-changes can proceed without it; code changes should not, indefinitely.
+The road there is in `CHANGELOG_AI.md` (2026-08-20 through 2026-08-29)
+and `CI_ENABLEMENT_PLAN.md`: the 82 container-run errors of 2026-08-21
+decomposed into driver/environment noise, schema absence, and the
+migration-ordering defect, each solved in turn across five Actions runs.
 
-Expect enabling it to fail broadly at first. `vendor/` has never been installed
-in this working copy, the PHP suite's current state against the PHP 8.3, 8.4,
-and 8.5 matrix is unknown, and that matrix has never been exercised. Such a
-failure would be pre-existing state becoming visible, not a regression
-introduced by enabling CI. Budget a triage pass for it rather than treating the
-first red run as a blocker on whichever change happens to trigger it.
-
-The suite can be run in a container today, which changes the shape of this
-decision. On 2026-08-20 a container running PHP 8.3.32 and PHPUnit 11.5.56
-executed a project test file successfully, with no local PHP toolchain and no
-CI. Whether enabling CI would fail broadly is therefore measurable in advance
-rather than a bet: run the suite in a container, triage what it reports, then
-decide. What blocked verification was tooling, not the code.
-
-That measurement has now been taken, and it moderates the expectation above.
-The full suite run in a container on 2026-08-21 reported 187 tests, 301
-assertions, 82 errors and **zero failures**. Of those errors, 78 are
-`PDOException: could not find driver`: the `php:8.3-cli` image used for the
-run has no `pdo_mysql` extension. They are not assertion failures and not
-defects in the code; they are a missing extension in the runner. A CI image
-built with the extensions the application already declares, against a database,
-should be far greener than "expect broad failure" suggested. Confirm that
-before deciding, rather than carrying either expectation forward on faith.
-
-One more fact, found 2026-08-28 and worse than the empty-checks trap: **the
-committed pipeline runs no tests at all.** `pipeline.yml` ends after
-checkout, PHP setup, and `composer install` — enabling Actions as-is would
-produce a green check that tested nothing. The enablement plan, including
-the test step, service database, extension list, and the disposition of
-the 82 recorded errors, is `CI_ENABLEMENT_PLAN.md`; enabling, editing the
-workflow, and the first run are each separately approved.
-
-The zero-runs era ended on 2026-08-28: pushing the reworked workflow
-branch (draft PR #122) triggered the repository's first Actions runs, and
-the first one produced a durable finding before any test executed. **A
-fresh machine cannot install the locked dependencies from the
-tastyigniter.com registry's dists — the zips fail the lock file's checksum
-verification** (seen identically on all three PHP matrix rows for
-`ti-ext-local`, `ti-ext-user`, `ti-ext-reservation`, `ti-ext-payregister`,
-`ti-ext-socialite`, and others). `Dockerfile.cloudrun` has been masking
-exactly this for image builds with
-`composer config "preferred-install.tastyigniter/*" source`; any fresh
-environment — CI, a new workstation, a rebuild — needs the same setting
-until the registry and lock file agree again. The reworked workflow
-carries it.
+One durable finding from that road outlives it: **a fresh machine cannot
+install the locked dependencies from the tastyigniter.com registry's
+dists — the zips fail the lock file's checksum verification** (seen
+identically on all three PHP rows for `ti-ext-local`, `ti-ext-user`,
+`ti-ext-reservation`, `ti-ext-payregister`, `ti-ext-socialite`, and
+others). `Dockerfile.cloudrun` has been masking exactly this for image
+builds with `composer config "preferred-install.tastyigniter/*" source`,
+and the CI workflow now carries the same setting. Any other fresh
+environment — a new workstation, a rebuild — needs it too, until the
+registry and the lock file agree again.
 
 ### Log redaction does not reach inside a Throwable
 
