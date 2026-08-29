@@ -447,6 +447,68 @@ proposing it: anything else that rests on week boundaries, such as weekly
 reporting or period statistics, moves with it. Do not change it globally without
 that assessment.
 
+### The application timezone fails open to UTC, per container instance
+
+Found on 2026-08-29 while characterising a copy that reported the shop
+closed at 21:10 Friday. It is not a deployment mistake and not specific
+to one revision: it is a latent fail-open on the live path of every
+revision, including the one serving main traffic.
+
+The chain, each link read from source and confirmed by a read-only job:
+
+1. `config/app.php:72` is `'timezone' => 'UTC'` — **hardcoded, with no
+   `env()` call**. `APP_TIMEZONE=America/Toronto` is set on every
+   revision and is read by nothing in `app/`, `config/`, `bootstrap/`, or
+   `vendor/tastyigniter`: it is inert.
+2. The only thing that makes the application run on Montreal time is
+   `Igniter\System\ServiceProvider::updateTimezone()`, called on
+   `app.booted`:
+   `date_default_timezone_set(Settings::get('timezone', Config::get('app.timezone', 'UTC')))`.
+   The stored setting is correct — the `timezone` row reads
+   `America/Toronto`, one row, verified 2026-08-29.
+3. `Settings::getFieldValues()` returns `[]` when `Igniter::hasDatabase()`
+   is false, and `hasDatabase()` wraps its schema probe in
+   `catch (Exception) { $this->hasDatabase = false; }`. **Any database
+   hiccup at boot** — a cold start racing Cloud SQL, a connection limit,
+   a transient socket failure — therefore yields no settings at all.
+4. With no settings, the default applies: `config('app.timezone')` =
+   `UTC`. Both `hasDatabase` and `fieldValues` are memoised on singletons,
+   so the instance **stays on UTC for its entire life**, serving every
+   request four or five hours ahead.
+
+What that looks like: the storefront shows the shop closed while it is
+open (or open while closed), the opening panel names tomorrow's date, and
+the order-time check refuses adds — all with correct data and a correct
+stored setting. It is invisible in the afternoon, when UTC and Montreal
+fall on the same side of every boundary, and appears after 20:00 local,
+when UTC has crossed midnight.
+
+Evidence for the two states, same copies:
+
+| When | `d3c-min-9a4c1bc8` | `d3c-fix-be6835a9` |
+| --- | --- | --- |
+| 2026-08-28 21:10 EDT (01:10 UTC) | Closed, "Opening sam. 12:00 pm" — a UTC clock | "We are open" — a Montreal clock |
+| 2026-08-29 11:25 EDT (15:25 UTC) | Closed, "starts sam. 12:00 pm", server refused an add: "outside our Cueillette hours" — a Montreal clock | identical |
+
+The 11:25 pair is executed evidence, not rendering: a UTC instance would
+have been at 15:25, inside 12:00-22:00, and would have accepted the add.
+
+**Proposed fix, not yet applied** (Level 1, awaiting approval):
+
+1. `config/app.php` reads `env('APP_TIMEZONE', 'UTC')`, which makes the
+   variable already deployed on every revision the fallback, so a
+   settings-read failure lands on Montreal instead of UTC.
+2. `docker/render/php-production.ini` sets `date.timezone` as a second
+   line of defence for code that runs before the framework boots.
+3. A test pinning that `config('app.timezone')` follows `APP_TIMEZONE`,
+   so the hardcoded value cannot come back unnoticed.
+
+That removes the blast radius but not the mechanism: the settings read
+can still fail silently, and the app would then run on the env fallback
+rather than the stored setting. Making that visible — a logged warning
+when the settings-backed timezone is unavailable — is a separate,
+smaller change to consider with it.
+
 #### Hours live in two stores, and they use different day indexing
 
 Found on 2026-08-28 while applying the every-day Delivery hours. The vendor

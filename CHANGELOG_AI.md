@@ -4836,3 +4836,51 @@ docs PR is Level 0.
 
 What remains before either merges: the user's confirmation on each PR.
 Step E waits on the Snappy conversation, as before.
+
+## 2026-08-29 - The Friday clock anomaly characterised: the app timezone fails open to UTC per instance; Monday's conclusions stand
+
+Environment: read-only — revision environment read-back, source
+inspection, a read-only Cloud Run Job against the shared database, and two
+executed storefront readings. Status: Level 0 investigation and
+documentation; **no fix applied**, the proposal in `CLAUDE_HANDOFF.md`
+section 10 awaits approval. No setting, revision, or code changed.
+
+- The reported symptom — `d3c-min-9a4c1bc8` showing the whole site closed
+  and "Opening sam. 12:00 pm" at 21:10 EDT Friday, when pickup should run
+  to 22:00 — is consistent with that copy's clock being UTC (Saturday
+  01:10) and is now explained.
+- **It is not a deployment loss.** All three delivery copies carry
+  identical timezone environment (`APP_TIMEZONE=America/Toronto`,
+  `BIRTHDAY_BOOKING_TIMEZONE`, `RUN_CONFIG_CACHE`), read back field by
+  field. `APP_TIMEZONE` is read by nothing in the codebase:
+  `config/app.php` hardcodes `'timezone' => 'UTC'` with no `env()` call.
+- The application is Montreal-time only because
+  `System\ServiceProvider::updateTimezone()` reads the stored setting at
+  boot; the stored value is correct (`timezone = America/Toronto`, one
+  row, read 2026-08-29). But `Settings::getFieldValues()` returns nothing
+  when `Igniter::hasDatabase()` is false, and that method swallows every
+  exception, so any database hiccup at boot drops the instance to the
+  `config('app.timezone')` default of UTC — memoised, for the life of the
+  container. Recorded in the handoff as a live-path defect of every
+  revision, main traffic included, with a proposed three-part fix.
+- **Both copies are on Montreal time now, proven at the executed
+  standard**: at 11:25-11:27 EDT (15:25 UTC) both showed closed with
+  "starts sam. 12:00 pm", and `d3c-min` refused an add with "outside our
+  Cueillette hours" — a UTC instance would have been inside opening hours
+  and accepted it.
+- **Monday's conclusions on that copy stand, and the reasoning is
+  clock-independent.** The minimum-defect contrast and the new-parameter
+  verification are amount-driven: labels, fee rules and the minimum gate
+  take no time input. The only clock-dependent step was whether adds were
+  accepted at all, and both readings ran at 14:1x-14:3x EDT (18:1x-18:3x
+  UTC) on a Monday, inside 12:00-21:00 under **either** clock. Nothing
+  read that day depended on which timezone the instance held.
+- Method note, recorded because it nearly produced a false claim: an
+  attempt to prove "no request reached the copy at 21:10" from Cloud
+  Logging failed its own control — the same query shape found no trace of
+  requests known to have happened. `gcloud logging read` was silently
+  clipping the window. No absence claim was made from it.
+
+Next on this thread: the timezone fix awaits approval; the delivery
+evening cut-off anomaly on `d3c-fix-be6835a9` is a separate question and
+needs its own executed reading after 21:00 local.
