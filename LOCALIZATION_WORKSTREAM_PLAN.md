@@ -37,6 +37,67 @@
 
 ### W2(先行)——Q-002:让既有切换真正可用
 
+#### 源码核实结果(2026-08-29,只读,未改动任何东西)
+
+外部行为的诊断成立,但两处机制与推测不同,记在这里以免照错误的模型去改。
+
+**路由不是正则约束,是写死的白名单。** `/language/{locale}` 定义在**项目自己的**
+`routes/web.php:16`,不在 vendor:
+
+    abort_unless(in_array($locale, ['fr_CA', 'en_CA'], true), 404);
+
+所以 `/language/en` 返回 404 是因为 `en` 不在这个数组里,**不是**因为匹配不上
+`xx_YY` 形式。反过来,`en_CA` 已经在白名单里,**把语言记录的 code 改成
+`en_CA` 不需要动路由**。
+
+**静默回落的确切链条。** 路由放行后:
+
+1. `setSessionLocale('en_CA')` —— `Session::put()`,**完全不校验**,会话里就此存下
+   `en_CA`;
+2. `setLocale('en_CA')` —— `isValid()` 判断 `in_array($locale, supportedLocales())`,
+   失败则 **`return false` 并且不抛异常、不写日志**;
+3. 之后每个请求的 `getLocale()` 只在 `isValid()` 通过时才采用会话值,否则回落
+   `config('localization.locale')`,也就是默认的 `fr_CA`。
+
+**校验依据不是 `Language::code`,而是一个存储参数。**
+`System/ServiceProvider.php` 分两路取值:默认语言取
+`Language::getDefault()->code`,而**支持列表取 `params('supported_languages')`**。
+
+**由此得出一条对改法有决定性影响的约束:**
+`supported_languages` 只由 `Language::applySupportedLanguages()` 刷新,而它的调用
+点只有两个——`LanguageObserver::saved()`(模型保存)和后台 Languages 控制器。
+**因此直接 `UPDATE ti_languages SET code='en_CA'` 不会刷新这个参数**:参数里仍
+是 `en`,`isValid('en_CA')` 依旧失败,切换依旧静默回落,改动看起来毫无效果。
+**这一改必须走后台界面(或经模型保存),不能用裸 SQL。**
+
+#### 首页文案:是可翻译键,不是写死的法文
+
+`lang/fr_CA/delivery.php` 里有 `home_title_pickup` 与 `home_title_delivery`,标题
+走的是语言键。所以不存在"法语大标题 + 英文导航"的半成品风险,主题文案可翻译化
+**不构成本修复的前置条件**。
+
+#### 但"en_CA 那批文件全是死文件"需要修正
+
+`lang/en` **存在而且是当前生效的目录**(记录 code 就是 `en`),含 6 个文件:
+`auth`、`birthday_booking`、`delivery`、`pagination`、`passwords`、`validation`。
+`lang/en_CA` 只有 `delivery.php` 一个,且与 `lang/en/delivery.php` **键完全相同**
+(各 11 个键)。
+
+所以把 code 改成 `en_CA` 是一次**替换,不是激活**。净效果:
+
+- **真正被激活的**是 `lang/vendor/` 下四个 `en_CA` 覆盖目录
+  (igniter-cart / igniter-local / igniter-orange / igniter-reservation),它们没有
+  `en` 对应目录,今天确实是死的;
+- `lang/en_CA/delivery.php` 只是接替同内容的 `lang/en/delivery.php`,无得失;
+- **`lang/en` 的另外五个文件不会丢**:`config/app.php` 的
+  `fallback_locale` 是 `'en'`,Laravel 按键回落,缺失的键仍从 `lang/en/` 取到。
+
+**需要在验收里补一条**:那四个 vendor 覆盖目录会随本修复第一次真正上线,其内容
+从未被顾客看到过。它们不是回归风险(英文现在根本进不去),但属于未经验证即
+生效的内容,应纳入 W2 的验收范围。
+
+
+
 顺序放最前,因为切换不通,任何"英文侧"的验收都无法进行。
 
 1. 定位 `/language/en_CA` 不生效的机制:切换路由是否写 session
