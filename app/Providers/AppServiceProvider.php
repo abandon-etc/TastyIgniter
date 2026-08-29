@@ -17,6 +17,8 @@ use App\Delivery\WeekdayScheduleCorrection;
 use App\Livewire\BirthdayReservation;
 use App\Livewire\DeliveryLocalSearch;
 use App\Mail\MailTestRedirect;
+use App\Support\TimezoneIntegrity;
+use Igniter\System\Models\Settings;
 use Igniter\Cart\OrderTypes\Delivery as VendorDeliveryOrderType;
 use Igniter\Flame\Pagic\Router;
 use Igniter\Local\Events\WorkingScheduleCreatedEvent;
@@ -83,6 +85,17 @@ class AppServiceProvider extends ServiceProvider
 
         $this->app->booted(static function (): void {
             Livewire::component('igniter-orange::local-search', DeliveryLocalSearch::class);
+        });
+
+        // Registered after TastyIgniter's own booted callback, which is
+        // what sets the running timezone, so this observes the outcome
+        // rather than racing it. See App\Support\TimezoneIntegrity.
+        $this->app->booted(static function (): void {
+            TimezoneIntegrity::report(
+                Settings::get('timezone'),
+                date_default_timezone_get(),
+                (string) config('app.timezone'),
+            );
         });
 
         LocationModel::implement(LocationDeliveryAction::class);
