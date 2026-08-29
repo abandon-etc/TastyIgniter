@@ -1,7 +1,14 @@
 # Deployment impact: what reaches the live site if the main-traffic revision is redeployed
 
 Status: **assessment only, nothing executed.** Produced 2026-08-29 on the
-user's instruction, to be reviewed before any deployment decision.
+user's instruction.
+
+**Decision, 2026-08-29: Option C is adopted** - the timezone fix rides along
+with the single pre-launch deployment, and nothing is deployed now. Options A
+and B are retained as alternates, with the two conditions that reopen them
+stated in section 5. Sections 1 to 4 are the evidence behind that choice, and
+section 3 records a rating this document previously got wrong and has
+withdrawn.
 
 ## 1. The build point, established rather than assumed
 
@@ -35,38 +42,48 @@ variable and the impact comes back.
 | #82 `879ed5c7` — pin shell scripts to LF | **No** to a customer, but it changes how `start.sh` lands in the image. Build hygiene; if anything it removes a latent CRLF startup hazard |
 | #85 `70d65cc5`, #98 `f4ce8f93`, #126 `7673cee4` — tests only | **No** |
 | #86 `1f8f0c75` — `GeocoderChainOverride`, `config/delivery.php` | **No, conditionally** — `DELIVERY_GEOCODER_DRIVER`/`_PROVIDERS` are unset on main traffic, and null is documented as "use the stored configuration unchanged". Set those variables and it stops being neutral |
-| #90 `be6835a9` — `WeekdayScheduleCorrection` | **YES — see section 3. This is the one to worry about** |
+| #90 `be6835a9` — `WeekdayScheduleCorrection` | **No, under the configuration actually stored** — rating withdrawn on evidence, see section 3 |
 | #101 `de3f6dd3` — Delivery minimum read from the stored setting | **No** — delivery-gated |
 | #104 `f02f5e30` — `MailTestRedirect`, `config/mail.php` | **No** — `MAIL_TEST_REDIRECT_TO` is unset, and `MAIL_MAILER=log` sends nothing anyway. **Footgun:** setting that variable on a traffic-serving revision silently redirects every customer e-mail to one inbox. The config comment says to leave it unset; nothing enforces it |
 | #124 `443b250c` — Birthday migration relocation | **No** on deploy; a hazard only when migrations are run. See section 4 |
 | #122 `491365b2` — `.github/workflows/pipeline.yml` | **No** — CI, not in the image |
 | #135 `e8fe12c1` — timezone fix | **YES, and intentionally** — a drifted instance stops serving hours four or five hours off |
 
-## 3. The change that actually moves customer-visible behaviour
+## 3. The weekday correction: rating withdrawn on evidence
 
-`App\Delivery\WeekdayScheduleCorrection` (#90) is registered
-**unconditionally** in `AppServiceProvider` —
-`Event::listen(WorkingScheduleCreatedEvent::class, ...)`, with no delivery gate.
-It rebuilds **every** working schedule: delivery, collection/pickup, **and the
-general opening schedule**.
+`App\Delivery\WeekdayScheduleCorrection` (#90) is registered **unconditionally**
+in `AppServiceProvider`, with no delivery gate, and it rebuilds **every** working
+schedule: delivery, collection/pickup, and the general opening schedule. It fixes
+`WorkingHour::getDay()` resolving weekday indices through `Carbon::startOfWeek()`,
+which under this site's `fr_CA` locale starts on Sunday, so a stored Monday-Friday
+schedule is applied Sunday-Thursday.
 
-What it fixes: `WorkingHour::getDay()` resolves weekday indices through
-`Carbon::startOfWeek()`, which under this site's `fr_CA` locale starts on
-Sunday, so every stored day lands one day late — a schedule saved Monday to
-Friday is applied Sunday to Thursday.
+An earlier draft of this document called that the largest customer-visible risk of
+the deployment. **That rating is withdrawn.** It was reasoned from the code alone
+and never checked against the schedule actually stored.
 
-**Main traffic is running without this correction today.** Its opening and
-pickup schedules are therefore currently shifted by one day relative to what is
-stored. Deploying corrects them, which means **the days the shop appears open to
-a customer will change**. That is a fix, not a regression, but it is a visible
-change in live behaviour, and it is the single item that most deserves a
-before/after reading on the storefront rather than a code argument.
+The row store was then read directly from `ti_working_hours` (job
+`qa-toggle-20260829`, read-only), because the admin screen renders the JSON display
+store and the two could in principle disagree:
 
-Note the interaction with the 2026-08-28 stored-hours write: the delivery rows
-and the hours JSON were changed then, and opening and collection were
-deliberately left alone. After this deploy, opening and collection render on
-their stored days without the shift, so the reading has to be taken against the
-*stored* values, not against what the site shows today.
+| type | rows | rows with status=0 | distinct time windows | window |
+| --- | --- | --- | --- | --- |
+| collection | 7 | **0** | **1** | 12:00:00-22:00:00 |
+| delivery | 7 | **0** | **1** | 12:00:00-21:00:00 |
+| opening | 7 | **0** | **1** | 12:00:00-22:00:00 |
+
+All 21 rows are enabled, and within each type all seven days carry identical
+times. The row store agrees exactly with the admin. **Shifting the weekday
+mapping by one day therefore permutes seven identical elements, and no
+customer-visible behaviour can change.** The correction is still correct; it
+simply has nothing to correct here today.
+
+**The condition that brings the rating back**, and it is not hypothetical: the
+moment any single day is disabled or given different hours, the shift becomes
+visible again. The holiday plan of decision 6 is precisely to disable a day. So
+this stays a real consideration for any deploy that happens *after* the hours
+stop being uniform - it is just not a reason to hesitate over the deploy being
+weighed today.
 
 ## 4. Shared database, migrations, and what a rollback cannot undo
 
@@ -98,17 +115,17 @@ Two things still deserve stating plainly:
 Everything else in the range is code and configuration baked into the image, and
 is fully reverted by redeploying the previous image.
 
-## 5. Two ways to do it
+## 5. Three ways to do it
 
 ### Option A — deploy main HEAD
 
 One build, one revision, everything in one step. CI is green on exactly this
 tree, on 8.3, 8.4 and 8.5.
 
-- **Cost:** six weeks of change reach the live site at once, and the schedule
-  correction of section 3 changes customer-visible open and closed days in the
-  same event as the timezone fix. If the storefront then looks wrong, two
-  candidate causes landed simultaneously and separating them costs a second
+- **Cost:** six weeks of change reach the live site at once. With the weekday
+  rating withdrawn (section 3) the known customer-visible surface is now small,
+  but "small and known" is not "none": if the storefront misbehaves afterwards,
+  eight runtime changes landed together and separating them costs a second
   deploy.
 - **Risk concentration:** every "neutral because unset" item in section 2 stays
   neutral only while those variables stay unset.
@@ -135,17 +152,84 @@ The blast radius is the timezone and nothing else.
   green is on HEAD rather than on this ad-hoc branch, so it would need its own CI
   run. It is also work done twice, since HEAD gets deployed eventually anyway.
 
+### Option C — fold the timezone fix into the pre-launch deployment (ADOPTED)
+
+Do not deploy anything now. The timezone fix rides along with the single
+deployment already planned before launch.
+
+**Why this is now the default.** The question underneath the urgency was whether
+the live site is currently serving real customers badly. It has been answered
+with evidence rather than assumption: **no order has ever been placed on it.**
+All copies share one database, so the admin's order table *is* the live site's
+order table, and it shows Total Sales $0.00 with all nine rows in draft (status
+Incomplete, Customer Name empty). Order #4, dated 2026-07-18 and predating the
+local environment, is a draft too, with no customer information and a plain
+Windows Chrome/150 user agent, its IP still the proxy address 169.254.169.126,
+consistent with real visitor IPs never having been captured.
+
+**The honest boundary of that evidence:** it proves no order has ever been
+completed. It does not prove no customer was ever turned away - a drifted clock
+would have shown the shop closed, and someone who left would leave no row behind.
+
+So the defect is real but its demonstrated cost so far is zero, and a deployment
+carries its own risk. Waiting for the deployment that must happen anyway is the
+cheaper trade.
+
+**What overturns this and makes the fix urgent again:**
+
+- the live site begins taking real orders; or
+- the owner wants to accept orders publicly before a deployment window is
+  scheduled.
+
+Either condition should reopen Option A or B immediately.
+
 ### Recommendation
 
-**Option B first, Option A later as its own deliberate event.** The incident
-being fixed is the clock. Option B fixes exactly that and nothing else, so if
-the live site misbehaves afterwards there is only one candidate cause. Option A
-then happens on its own schedule, with section 3's before/after storefront
-reading planned in rather than discovered.
+**Option C, adopted 2026-08-29.** Options A and B are retained as alternates
+against the conditions above.
 
-If Option A is chosen instead, the minimum that should accompany it is a
-storefront open and closed reading against the stored hours, taken before and
-after, on the same day of the week.
+Between them, if the fix ever does need to ship on its own: **Option B**, with
+one risk recorded that its brevity hides. A two-line branch from `31821289` has
+never been built, and that build point has not been exercised by CI since - the
+CI pipeline only began genuinely running the suite on 2026-08-28 (#122), six
+weeks after that commit. So Option B's trial build is not a formality: it could
+fail, or worse, succeed into an image that no test run has ever covered. Budget
+for a build that needs debugging, and run the suite against that branch before
+deploying it. Option A at least has a green CI run on exactly its tree.
+
+If Option A is chosen, the minimum that should accompany it is a storefront open
+and closed reading against the stored hours, before and after, on the same day of
+the week.
+
+## 7. Geocoder on main traffic, checked 2026-08-29
+
+Separate from the deployment question, and live today.
+
+The shared setting is **Chain (Recommended)**, which the admin's own description
+says runs Google and OpenStreetMap together and takes the first valid result.
+`CLAUDE_HANDOFF.md` section 10 records that Nominatim must not be used in
+production.
+
+Two reads settle what main traffic actually does:
+
+- the main-traffic revision `d2fix-31821289` sets **no** geocoder environment
+  variable - neither `DELIVERY_GEOCODER_DRIVER` nor `DELIVERY_GEOCODER_PROVIDERS`;
+- `app/Delivery/GeocoderChainOverride.php` **does not exist at commit
+  `31821289`**. The pinning mechanism was added in #86 on 2026-08-21, five weeks
+  after the live image was built.
+
+So main traffic is not pinned to Google and cannot be: the code that would pin it
+is not in its image. It runs the stored Chain configuration, and **can therefore
+fall through to OpenStreetMap Nominatim today**. The test copies are pinned to
+Google by revision, which is why this was invisible from them.
+
+This is not fixable by setting an environment variable on the live revision - the
+variable has no reader there. It needs either the deployment (which brings #86)
+or a change to the shared stored setting. It is therefore reclassified from
+"handle before launch" to **an item needing its own schedule**, and it is one more
+thing the pre-launch deployment of Option C would resolve.
+
+Read-only. Nothing was changed.
 
 ## 6. Not decided here
 

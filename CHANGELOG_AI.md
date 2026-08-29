@@ -4931,3 +4931,39 @@ was deployed, built, scheduled, or written to any stored setting.
   to the 2026-08-28 recording, so nothing has drifted in its configuration.
 
 Documentation only. Every changed path is `.md`.
+
+## 2026-08-29 - Admin regression passes 10/10; a rating this project got wrong is withdrawn; deployment settles on Option C
+
+Environment: the repository, the `d3c-min` admin read-only, the shared database
+through disposable Job `qa-toggle-20260829`, and Cloud Run metadata. Status:
+documentation, plus one disposable read-only job resource created. No stored
+setting, schema, revision, traffic split, image, or code path was changed.
+
+- **Admin regression PASS 10/10**, executed on `d3c-min-9a4c1bc8` with the user
+  signing in themselves. Acceptance row marked PASS, evidence executed. Draft-row
+  baseline moves to 9 rows, highest #12.
+- **The weekday-correction risk rating is withdrawn.** An earlier version of
+  `DEPLOYMENT_IMPACT_TIMEZONE_FIX.md` called `WeekdayScheduleCorrection` the
+  largest customer-visible risk of a deployment. That was reasoned from code and
+  never checked against the stored schedule. The row store was then read: all 21
+  `ti_working_hours` rows enabled, one distinct window per type, every day
+  identical. Shifting the weekday mapping permutes identical elements, so nothing
+  a customer sees can change. The rating is withdrawn and the condition that
+  restores it is written down - any day disabled or given different hours, which
+  is exactly what decision 6's holiday plan does.
+- **Deployment settles on Option C**, folding the timezone fix into the pre-launch
+  deployment. The evidence that made it safe: the live site has never taken an
+  order. All copies share one database, so the admin order table is the live one -
+  Total Sales $0.00, nine rows all draft, and #4 from 2026-07-18 is a draft with
+  no customer information. Stated boundary: this proves no order was ever
+  completed, not that no customer was ever turned away. Options A and B are kept
+  as alternates against two named conditions, and Option B's unbuilt-branch risk
+  is now recorded - its build point has never been exercised by CI, which only
+  began running the suite six weeks later.
+- **Geocoder exposure found on main traffic** and reclassified from
+  handle-before-launch to needing its own schedule: no geocoder variable is set
+  there, and the override that would pin it to Google does not exist in that
+  image, so it runs the stored Chain setting and can fall through to Nominatim -
+  against the standing production boundary.
+
+Documentation only in this repository. Every changed path is `.md`.

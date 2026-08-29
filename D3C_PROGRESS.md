@@ -253,9 +253,9 @@ preserved, or reachable is not passed on *rendered* alone.
 | Keyboard: an item can be added to the basket | Passed | Executed by hand: the user, on a real keyboard. Tooling cannot deliver this keypress; see below |
 | Every control announces what it is | **Failed** | Executed: the add buttons have no name at all |
 | Nothing else broken: pickup, birthday, reservations, media, health | Passed | Executed: ten pages, all served |
-| Nothing else broken: admin | Checklist issued to the owner 2026-08-29; awaiting their results | The agent has no admin credentials and does not ask for any. The owner signs in and works the list below, pasting back what each step actually showed; the agent judges and records. Steps, each on the copy `d3c-min-9a4c1bc8` unless the owner prefers another: **(1) Sign-in** — the admin loads, sign-in succeeds, no error banner. **(2) Dashboard** — it renders with no red error box; note any "something went wrong" panel. **(3) Orders list** — opens. Write down the **row count** and the **highest order number**. Confirm every row is a draft: status 0 (never placed), with name, e-mail and telephone empty. Open the newest one and confirm it too is a draft with no customer information, and that the detail page renders with its totals. Copy the row count and the highest order number back verbatim. (No fixed figure is given on purpose: loading /checkout creates a draft order row, so any number written here would already be stale by the time the owner reaches this step — including from their own walk through this list. What they report becomes the current baseline for the pre-launch draft-row cleanup.) **(4) Reservations list** — opens (expected empty). **(5) Locations → the location → Delivery settings** — the minimum order amount reads **0.00** and the fee rules read **free above 50.00** then **5.00 below 50.00**, in that row order. **(6) Same screen, opening hours** — Delivery shows every day 12:00-21:00 and Collection every day 12:00-22:00. **(7) Menus list** — opens and shows the 12 items. **(8) Birthday packages and add-ons** — both lists open. **(9) System → Settings → the general/localisation screen** — the timezone field reads **America/Toronto**. **(10) Anywhere** — report any PHP error, stack trace, blank panel, or missing translation string that looks like a defect rather than untranslated text. For each step: what was shown, verbatim where it is a number or a message |
+| Nothing else broken: admin | **PASS - executed 2026-08-29, 10 of 10.** Full results and the five step-10 observations are in "Admin regression, executed 2026-08-29" below | The agent has no admin credentials and does not ask for any. The owner signs in and works the list below, pasting back what each step actually showed; the agent judges and records. Steps, each on the copy `d3c-min-9a4c1bc8` unless the owner prefers another: **(1) Sign-in** — the admin loads, sign-in succeeds, no error banner. **(2) Dashboard** — it renders with no red error box; note any "something went wrong" panel. **(3) Orders list** — opens. Write down the **row count** and the **highest order number**. Confirm every row is a draft: status 0 (never placed), with name, e-mail and telephone empty. Open the newest one and confirm it too is a draft with no customer information, and that the detail page renders with its totals. Copy the row count and the highest order number back verbatim. (No fixed figure is given on purpose: loading /checkout creates a draft order row, so any number written here would already be stale by the time the owner reaches this step — including from their own walk through this list. What they report becomes the current baseline for the pre-launch draft-row cleanup.) **(4) Reservations list** — opens (expected empty). **(5) Locations → the location → Delivery settings** — the minimum order amount reads **0.00** and the fee rules read **free above 50.00** then **5.00 below 50.00**, in that row order. **(6) Same screen, opening hours** — Delivery shows every day 12:00-21:00 and Collection every day 12:00-22:00. **(7) Menus list** — opens and shows the 12 items. **(8) Birthday packages and add-ons** — both lists open. **(9) System → Settings → the general/localisation screen** — the timezone field reads **America/Toronto**. **(10) Anywhere** — report any PHP error, stack trace, blank panel, or missing translation string that looks like a defect rather than untranslated text. For each step: what was shown, verbatim where it is a number or a message |
 | No real orders, customers, reservations, payments, or emails created | Holding | Nothing real created so far |
-| Test data cleaned up afterwards | Partly done | The two synthetic mail-test orders, #6 and #7, were deleted on 2026-08-23 with their child rows, read back before and after (total orders 6 to 4; #2 to #5 untouched). The cleanup job resource was deleted on 2026-08-23 on confirmation and read back absent. Still to remove, each on explicit confirmation: the test copies of the site, and the eight unplaced draft order rows (#2-#5, #8-#11 — classified 2026-08-28: status 0, guest, empty identity; two are the agent's own contrast-test checkout-page visits, the vendor creating a draft row on page load) |
+| Test data cleaned up afterwards | Partly done | The two synthetic mail-test orders, #6 and #7, were deleted on 2026-08-23 with their child rows, read back before and after (total orders 6 to 4; #2 to #5 untouched). The cleanup job resource was deleted on 2026-08-23 on confirmation and read back absent. Still to remove, each on explicit confirmation: the test copies of the site, and the **nine** unplaced draft order rows, highest **#12** (#2-#5, #8-#12; 6 and 7 were deleted 2026-08-23). Baseline re-read from the admin on 2026-08-29 and it supersedes the eight-row figure: every row status Incomplete with Customer Name empty. The count rises whenever /checkout is loaded, so it is re-read at cleanup time rather than trusted from here |
 
 ### A basket cannot be filled while the shop is closed
 
@@ -622,6 +622,79 @@ appear. Every search shows "No suggestions found", and a customer must type a
 complete, correctly formatted address for delivery to be offered at all, which
 is hardest on a phone. Enabling Places is a business decision: its pricing works
 differently from address lookup and needs costing first.
+
+## Admin regression, executed 2026-08-29
+
+PASS, 10 of 10, on copy `d3c-min-9a4c1bc8`. The user signed in themselves in the
+browser panel - no password passed through any agent - and the ten steps were
+then driven read-only: no form submitted, nothing saved. The agent holds no
+admin credentials and asked for none.
+
+| Step | Result |
+| --- | --- |
+| 1 Sign-in | PASS, no error banner |
+| 2 Dashboard | PASS, renders with no red error box. Total Cash Payments $0.00, Total Lost Sales $71.97, Total Sales $0.00 |
+| 3 Orders | **9 rows, highest #12** (12/11/10/9/8/5/4/3/2; 6 and 7 absent - the mail-test orders deleted 2026-08-23). Every row Customer Name empty, status Incomplete. #12 opened: status "--", Customer empty, totals render correctly (SCOTCH EGG $2.00 + Delivery $5.00 = $7.00), Date Added 29 aout 12:05, IP 169.254.169.126, User Agent carrying Claude/1.40609.0 |
+| 4 Reservations | PASS, 0 rows |
+| 5 Delivery settings | PASS. Minimum $0.00; rule order (1) $0.00 above $50.00, (2) $5.00 below $50.00 - free-above first, correct. Also read: Offer Delivery = Enabled, time slot 15, preparation 25, ASAP only, cancellation timeout 0 |
+| 6 Opening hours | PASS. All three tables in Daily mode: Opening seven days 12:00-22:00, Delivery seven days 12:00-21:00, Cueillette seven days 12:00-22:00 |
+| 7 Menus | PASS, 12 items, all Enabled |
+| 8 Birthday packages and add-ons | PASS, both lists open, 0 rows each |
+| 9 Timezone field | PASS, America/Toronto (UTC -04:00) |
+| 10 Anything else | Five observations, below |
+
+### Step 10 observations
+
+- **(a) The shared geocoder setting is Chain (Recommended), not Google.** Its own
+  description says Chain runs Google and OpenStreetMap together and takes the
+  first valid result, while `CLAUDE_HANDOFF.md` section 10 records that Nominatim
+  must not be used in production. Followed up under "Geocoder on main traffic".
+- **(b)** All 12 menu items have an empty Category column.
+- **(c)** Birthday packages and add-ons are both empty, so the birthday ordering
+  flow has no data to run against today.
+- **(d)** The admin mixes French and English on one screen: an order detail shows
+  Type de commande / Sous-total / Total de la commande beside Status / Assignee /
+  Payment Method / Date Added, and list headers are English under the French
+  title Reservations. Belongs to Q-001, and is the subject of question 4 of the
+  French-language consultation.
+- **(e)** The only payment channel offered is Cash On Delivery.
+
+Non-defect note, recorded so it is not rediscovered as one: guessing a wrong
+settings sub-path (`general-pickup` where the correct one is
+`general-collection`) returns a "Server Error" page rather than a 404. It is
+caused by the bad URL, and is not counted as a defect.
+
+## Row storage cross-check of the working hours, 2026-08-29
+
+Read directly from `ti_working_hours` through disposable Job
+`qa-toggle-20260829` (read-only execution `-9gmzw`), because the admin renders
+the JSON display store and the question was whether the row store agrees.
+
+| type | rows | rows with status=0 | distinct time windows | window |
+| --- | --- | --- | --- | --- |
+| collection | 7 | **0** | **1** | 12:00:00-22:00:00 |
+| delivery | 7 | **0** | **1** | 12:00:00-21:00:00 |
+| opening | 7 | **0** | **1** | 12:00:00-22:00:00 |
+
+All 21 rows carry status 1, and within each type every one of the seven days
+carries identical opening and closing times. The row store agrees exactly with
+what the admin showed. No row is disabled and no two days differ.
+
+**Consequence for the weekday correction.** Shifting the weekday mapping by one
+day permutes a set of seven identical elements, so no customer-visible behaviour
+can change under this configuration. The earlier rating of
+`WeekdayScheduleCorrection` as the largest customer-visible risk of the
+deployment does not survive this reading and is withdrawn; see
+`DEPLOYMENT_IMPACT_TIMEZONE_FIX.md`. The rating would return the moment any day
+is disabled or given different hours - which is a live possibility, since the
+holiday plan of decision 6 is precisely to disable a day.
+
+## Toggle baseline, 2026-08-29
+
+Cross-verified for the owner's-switch checks. Admin showed Offer Delivery =
+Enabled and Offer Pick-up = Enabled; the same job read `ti_location_settings`
+directly and returned, for location 2, `delivery.is_enabled = 1` and
+`collection.is_enabled = 1`. The two sources agree, so the baseline is trusted.
 
 ## Known problem carried over
 

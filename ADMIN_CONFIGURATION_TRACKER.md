@@ -2790,3 +2790,52 @@ execution remains separately gated.
 
 No change to any Cloud Run service, revision, traffic, secret, or stored
 setting, and none to the `tastyigniter_staging` database.
+
+## 2026-08-29 - Admin regression executed 10/10; row store cross-checked; geocoder on main traffic identified as live exposure
+
+Environment: the `d3c-min-9a4c1bc8` admin (read-only, user-driven sign-in), the
+shared database through disposable Job `qa-toggle-20260829`, and Cloud Run
+revision metadata. Status: recorded. Level 0/2 reads only. **No stored setting,
+schema, revision, traffic split, environment variable or secret was changed.**
+
+- **Admin regression: PASS, 10 of 10.** The user signed in themselves in the
+  browser panel; no password passed through any agent. All ten steps driven
+  read-only, no form submitted, nothing saved. Full per-step results and the five
+  step-10 observations are in `D3C_PROGRESS.md`. Acceptance row marked PASS,
+  evidence type executed.
+- **Draft-order baseline updated: 9 rows, highest #12** (#2-#5 and #8-#12; 6 and 7
+  were deleted 2026-08-23). Supersedes the eight-row / #11 figure. Every row is
+  status Incomplete with Customer Name empty; #12 renders its totals correctly
+  (SCOTCH EGG $2.00 + Delivery $5.00 = $7.00). The count rises whenever /checkout
+  is loaded, so it is re-read at cleanup time rather than trusted from a document.
+- **Disposable Job `qa-toggle-20260829` created** from the `d3c-min` image and
+  spec, same pattern as `qa-hours`. One execution so far, `-9gmzw`, **read-only -
+  the job body contains no write statement**. It awaits the user's named
+  confirmation for deletion. Note for future runs: `gcloud run jobs replace`
+  needs the Cloud Resource Manager API, which is disabled on this project and was
+  deliberately not enabled; `jobs create` with flags works. Under Git Bash the
+  `--command=/bin/sh` argument is silently rewritten to a Windows path by MSYS
+  path conversion, producing a container that fails to start; the job was created
+  from PowerShell instead.
+- **Toggle baseline cross-verified, two independent sources agree.** Admin showed
+  Offer Delivery = Enabled and Offer Pick-up = Enabled; the job read
+  `ti_location_settings` directly and returned, for location 2,
+  `delivery.is_enabled = 1` and `collection.is_enabled = 1`.
+- **Row store of the working hours agrees with the admin JSON display.**
+  `ti_working_hours`: collection, delivery and opening each 7 rows, **0 rows with
+  status 0**, **1 distinct time window each** - 12:00-22:00, 12:00-21:00,
+  12:00-22:00. No day disabled, no two days different.
+- **Geocoder on main traffic, read-only:** the main-traffic revision sets no
+  geocoder environment variable, and `app/Delivery/GeocoderChainOverride.php` does
+  not exist at its build commit `31821289` - the pinning mechanism arrived in #86,
+  five weeks later. Main traffic therefore runs the stored **Chain** setting and
+  can fall through to OpenStreetMap Nominatim today. It cannot be pinned by
+  environment variable there, because nothing in that image reads the variable.
+  This crosses the standing boundary that public Nominatim is not approved for
+  production Delivery traffic; recorded, not changed.
+- **Admin Save scope established from vendor source**, before any write:
+  `Igniter\Local\FormWidgets\SettingsEditor::onSaveRecord()` resolves
+  `LocationSettings::instance($location, $definition->code)` and saves that single
+  `item` row. `delivery` and `collection` are separate rows, so saving the
+  Delivery section cannot write the Pickup toggle. The before/after read-back of
+  both toggles is still performed as proof rather than relying on this.
