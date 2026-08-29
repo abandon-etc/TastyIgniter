@@ -855,6 +855,20 @@ production launch, separately approve and verify at least:
   implementation is project-owned; enabling tax changes live Pickup totals
   and is separately approved with owner-agreed timing; the restaurant
   WEB-SRM mandatory-billing question is open for the accountant.
+- **Timezone integrity on a cold-started production instance.** The
+  timezone fail-open recorded in section 10 affects the live path of
+  every revision, production included: an instance that cannot read the
+  stored setting at boot keeps the configured fallback for its whole
+  life, and the storefront then shows the shop closed while it is open,
+  or open while it is closed, with every stored value correct. The fix
+  makes the fallback correct and audible, but the check belongs on this
+  list because it is a property of a running instance, not of the code:
+  **after a forced cold start, read the storefront's open/closed state
+  against the wall clock**, at an hour where Montreal and UTC fall on
+  opposite sides of a boundary — before noon, or after 20:00 local — so
+  the two answers are distinguishable. Also confirm no
+  "Timezone setting unavailable at boot" warning is in the log for that
+  instance.
 - Payment, webhook, refund, authentication, email verification, and outbound
   notification architecture.
 - Real domain/DNS, TLS, production environment variables, backups, restore
