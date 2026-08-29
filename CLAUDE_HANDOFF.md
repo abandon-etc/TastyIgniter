@@ -319,6 +319,17 @@ extension creates `ti_reservations`. The already-initialized Canada staging
 database is not affected. Fix this in a separate focused PR; do not hide it
 inside Delivery or payment work.
 
+**Reproduced and named on 2026-08-28**, on a fresh database in the first
+real CI runs (draft PR #122):
+`2026_07_10_000000_add_birthday_booking_fields_to_reservations_table`
+fails with 42S02 because `php artisan igniter:up` runs it in the root
+migration pass before the Reservation extension has created
+`ti_reservations` — identically on PHP 8.3, 8.4, and 8.5. Consequence:
+every fresh install — including the CI pipeline's throwaway database — is
+blocked until the focused fix lands, so it is now the single gate in
+front of CI first-green. Already-initialized databases (staging, the
+payment test copy) are unaffected, as this section always said.
+
 ### Pinning the geocoder chain for a deployment
 
 TastyIgniter resolves the geocoder driver and the Google API key from the
@@ -724,6 +735,20 @@ produce a green check that tested nothing. The enablement plan, including
 the test step, service database, extension list, and the disposition of
 the 82 recorded errors, is `CI_ENABLEMENT_PLAN.md`; enabling, editing the
 workflow, and the first run are each separately approved.
+
+The zero-runs era ended on 2026-08-28: pushing the reworked workflow
+branch (draft PR #122) triggered the repository's first Actions runs, and
+the first one produced a durable finding before any test executed. **A
+fresh machine cannot install the locked dependencies from the
+tastyigniter.com registry's dists — the zips fail the lock file's checksum
+verification** (seen identically on all three PHP matrix rows for
+`ti-ext-local`, `ti-ext-user`, `ti-ext-reservation`, `ti-ext-payregister`,
+`ti-ext-socialite`, and others). `Dockerfile.cloudrun` has been masking
+exactly this for image builds with
+`composer config "preferred-install.tastyigniter/*" source`; any fresh
+environment — CI, a new workstation, a rebuild — needs the same setting
+until the registry and lock file agree again. The reworked workflow
+carries it.
 
 ### Log redaction does not reach inside a Throwable
 

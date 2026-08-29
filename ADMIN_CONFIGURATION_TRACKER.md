@@ -2650,6 +2650,100 @@ variable, secret, or stored setting of the application. New resources:
 one on-demand backup, one temporary SQL instance (pending deletion), one
 database on the shared instance, one disposable Job (pending deletion).
 
+## 2026-08-28 - Evening close: deletions confirmed and read back, draft orders classified, local Docker retired, first CI runs in the cloud
+
+Environment: Cloud SQL, Cloud Run Jobs, GitHub Actions, and the local
+workstation. Status: recorded. Deletions are Level 2 destructive on the
+user's explicit confirmations naming each resource; the orders read is the
+user-approved read-only investigation; the workflow branch is the Level 1
+draft PR #122 (no merge; outside every standing authorization).
+
+- **Temporary instance `qa-restore-20260828` deleted**: described RUNNABLE
+  before, deleted, describe answers 404 after, and the project's instance
+  list holds only `le-chateau-staging-mysql`. Unrecoverable as a resource;
+  it held only the rehearsal copy, whose verification is recorded above.
+- **Disposable Job `qa-payinfra-20260828` deleted**: described before with
+  execution count 4 — recon (`-sgmth`), paytest copy (`-6v848`),
+  restore verification (`-kpjm7`), and the orders read (`-gcqsw`); the
+  previous entry's "four executions" enumeration listed only three names
+  and is corrected by this list. Deleted, read back "Cannot find job";
+  the region again holds no jobs. Execution logs remain under platform
+  retention: configuration values, counts, and masked order fields only.
+- **The 8-row `ti_orders` drift is classified: all drafts, no real
+  customers, no staff tests.** Read-only execution with masked identity
+  fields (names/emails/phones truncated, IPs to two octets): every row has
+  status 0, empty processed flag, guest checkout, empty name, e-mail and
+  telephone, and a link-local `ip_address` (169.254.x.x). #9 and #10
+  (2026-08-24 14:11 and 14:22, delivery, CA$28.99, 2 items) are the
+  agent's own contrast-test visits to `/checkout` — the vendor creates a
+  draft Order row when the checkout page loads
+  (`BIRTHDAY_PAYMENT_ARCHITECTURE_DESIGN.md` §4 records the mechanism);
+  the 2026-08-24 statement "nothing was submitted" stands, now with the
+  draft-row nuance recorded. #8 and #11 are empty-cart drafts (0 items,
+  CA$0.00) from anonymous checkout-page hits; #2-#5 are the pre-existing
+  drafts the 2026-08-23 count already covered. Consequences: no missed
+  confirmation e-mails (nothing was ever placed); the eight draft rows
+  (#2-#5, #8-#11) join the pre-launch cleanup list, deletion on explicit
+  approval. Two side notes: `ip_address` records a link-local hop, not the
+  client address — worth knowing before launch; and the status-history
+  subquery in the probe used a wrong column name and did not run — the
+  verdict does not rest on it (status 0 on every row already shows no
+  staff interaction).
+- **Local Docker judged temporarily unusable, on the user's instruction,
+  after a bounded effort**: five Docker Desktop launches; renaming the
+  stale `run\` directory and the orphaned `docker-secrets-engine`
+  directory each cleared one startup blocker (both stale sockets dated
+  2026-08-20 09:48, kernel-held, undeletable until a reboot); the final
+  attempt with `EnableDockerAI=false` and `InferenceCanUseGPUVariant=false`
+  written directly to `settings-store.json` (backup in the session
+  scratchpad) still ended with the backend exiting. Verdict recorded as:
+  local convenience only, not on any critical path; no further local
+  fixes. The two renamed `.stale-20260828` directories can be removed
+  after a future reboot.
+- **CI step 0 moved to the cloud and produced its first finding before
+  the suite even ran.** Pushing the reworked workflow branch triggered the
+  repository's first-ever Actions runs (2026-08-28 23:57 UTC; the
+  zero-runs era ended empirically — Actions was enabled and public).
+  Run 1: all three matrix jobs failed identically at `composer install` —
+  the tastyigniter.com registry's dist zips fail the lock file's checksum
+  verification (`ti-ext-local`, `ti-ext-user`, `ti-ext-reservation`,
+  `ti-ext-payregister`, `ti-ext-socialite`, and others). **A fresh machine
+  cannot reproduce the dependency install from the lock file's dists** —
+  previously invisible because no fresh install had run since the drift;
+  `Dockerfile.cloudrun` already carries the workaround
+  (`preferred-install.tastyigniter/* = source`), which explains why image
+  builds kept working. The workflow now applies the same setting; the
+  second run's result is recorded below.
+- **Second run** (source installs): composer passed and **the suite
+  executed in CI for the first time** — 8.3 reported Tests 206, Assertions
+  412, Errors 75, Failures 3, and every one of them is schema absence
+  (`Base table or view not found` on ti_customers, ti_admin_users,
+  ti_birthday_* and the rest; the three failures are the migration-
+  verification tests asserting those tables exist). One root cause: the
+  suite asserts against a migrated schema and does not migrate by itself;
+  the workflow had no migrate step.
+- **Third run** (with `php artisan igniter:up` before phpunit): the
+  migrate step itself failed, and it failed on **exactly the fresh-install
+  migration-ordering defect recorded in `CLAUDE_HANDOFF.md` section 10**,
+  now named precisely:
+  `2026_07_10_000000_add_birthday_booking_fields_to_reservations_table`
+  runs in the root migration pass before the Reservation extension has
+  created `ti_reservations` (SQLSTATE 42S02 on the `alter table`).
+  Identical on all three PHP rows. Iteration stopped here on purpose: the
+  fix is the separate focused PR the handoff already prescribes, not a
+  workflow workaround that would mask the defect. **Step 0 is complete**:
+  the 82 recorded errors decompose into (a) driver/environment noise,
+  gone with extensions and a service database; (b) schema absence, gone
+  with a migrate step; (c) one real, known, now-reproduced blocker — the
+  migration ordering — which gates CI first-green and any fresh install.
+  Draft PR #122 carries the classification and stays draft: its merge
+  needs the ordering fix to land first, plus explicit confirmation.
+
+No Cloud Run service, revision, traffic, environment variable, secret, or
+stored application setting changed. Removed: one temporary SQL instance,
+one disposable Job. The `tastyigniter_paytest` database and the on-demand
+backup remain, as intended.
+
 Live-site effect: none on behaviour — the main-traffic revision keeps
 `DELIVERY_ENABLED=false`, which hides every Delivery surface including the
 panel's Delivery Areas and delivery schedule reachability; the FP-1 pair is

@@ -4626,3 +4626,50 @@ SQL instance (pending named deletion), one database on the shared
 instance, one disposable Job (pending named deletion). No application
 setting, schema object inside the live database, revision, or traffic
 changed.
+
+## 2026-08-28 - Evening close: deletions read back absent, the 8 orders are all drafts, local Docker retired, and CI's first cloud runs surface a dependency-install finding
+
+Environment: Cloud SQL, Cloud Run Jobs, GitHub Actions, the local
+workstation. Status: deletions Level 2 on named confirmations; orders read
+approved read-only; workflow branch is draft PR #122 (Level 1, no merge);
+this docs PR is Level 0, eligible for auto-merge. Full detail in
+`ADMIN_CONFIGURATION_TRACKER.md` same date.
+
+- `qa-restore-20260828` and `qa-payinfra-20260828` deleted and read back
+  absent (describe 404 / "Cannot find job"; one instance and zero jobs
+  remain).
+- The ti_orders drift (4 to 8) is fully explained: every row is an
+  unplaced draft (status 0, guest, empty identity, link-local IP). Two are
+  the agent's own 2026-08-24 contrast-test checkout visits — the vendor
+  creates a draft Order row when the checkout page loads; two are
+  empty-cart hits; four predate. **No real customers, no staff tests, no
+  missed e-mails.** Eight draft rows join the pre-launch cleanup list.
+  Side note recorded: `ip_address` captures a link-local hop, not the
+  client.
+- Local Docker: five launches, two orphaned-socket directory renames, and
+  a direct `EnableDockerAI=false` settings edit later, the backend still
+  exits — judged temporarily unusable on this machine per the user's
+  instruction; local convenience only, not on any critical path.
+- CI step 0 ran in the cloud instead: the repository's first-ever Actions
+  runs. Run 1 failed before the suite — the tastyigniter.com registry's
+  dist zips fail lock-file checksum verification on a fresh machine, a
+  previously invisible reproducibility gap that `Dockerfile.cloudrun`'s
+  `preferred-install source` workaround had been masking for image builds.
+  The workflow now applies the same workaround.
+- Run 2 (source installs): **the suite executed in CI for the first
+  time** — 206 tests, 412 assertions, 75 errors, 3 failures on 8.3, every
+  one schema absence: the suite does not migrate by itself and the
+  workflow had no migrate step.
+- Run 3 (with `igniter:up`): the migrate step failed on **exactly the
+  recorded fresh-install migration-ordering defect**, now named —
+  `2026_07_10_000000_add_birthday_booking_fields_to_reservations_table`
+  runs before the Reservation extension creates `ti_reservations`
+  (42S02), identical on all three PHP rows. Iteration stopped there:
+  the fix is the separate focused PR the handoff prescribes. **Step 0
+  complete** — the residue decomposes into driver/env noise (solved),
+  schema absence (solved), and one known real blocker that now gates CI
+  first-green. Draft PR #122 carries the classification; merge waits for
+  the ordering fix plus explicit confirmation.
+
+Deletions aside, no runtime state changed; the workflow edits live only on
+the draft-PR branch.
