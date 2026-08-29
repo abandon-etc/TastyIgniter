@@ -40,9 +40,14 @@ final class BirthdaySlotHoldMigrationTest extends TestCase
         $this->assertArrayHasKey('birthday_slot_holds_status_index', $indexes->all());
         $this->assertArrayHasKey('birthday_slot_holds_expires_index', $indexes->all());
 
+        // Schema::getForeignKeys reports physical table names, which carry
+        // the connection's table prefix — unlike Schema::hasTable above,
+        // which takes the logical name. First exposed when this test first
+        // ran against a real database (CI, 2026-08-29).
+        $prefix = Schema::getConnection()->getTablePrefix();
         $foreignKeys = collect(Schema::getForeignKeys('birthday_slot_holds'))->keyBy('name');
-        $this->assertSame('birthday_bookings', $foreignKeys->get('birthday_slot_holds_booking_foreign')['foreign_table']);
-        $this->assertSame('locations', $foreignKeys->get('birthday_slot_holds_location_foreign')['foreign_table']);
+        $this->assertSame($prefix.'birthday_bookings', $foreignKeys->get('birthday_slot_holds_booking_foreign')['foreign_table']);
+        $this->assertSame($prefix.'locations', $foreignKeys->get('birthday_slot_holds_location_foreign')['foreign_table']);
         $this->assertSame('restrict', strtolower($foreignKeys->get('birthday_slot_holds_booking_foreign')['on_delete']));
         $this->assertSame('restrict', strtolower($foreignKeys->get('birthday_slot_holds_location_foreign')['on_delete']));
     }
