@@ -2755,3 +2755,38 @@ Live-site effect: none. The main-traffic revision serves
 values are Delivery-only. The FP-1 pair above is the evidence the live path
 never moved. No schema, Order, Customer, Reservation, Birthday, payment,
 mail, secret, production, Render, or DigitalOcean change.
+
+## 2026-08-29 - Payment ledger migration rehearsed on the payment test database
+
+Environment: Cloud Build, and disposable Cloud Run Job `qa-paymig-20260829`
+against the `tastyigniter_paytest` database on the shared instance.
+Status: recorded. Level 2 on the user's 2026-08-29 approval of step D,
+which specified the rehearsal; the shared database was not touched and its
+execution remains separately gated.
+
+- Image `tastyigniter:paymig-b229b38a` built from
+  `feat/payments-shared-layer` at `b229b38a` (Cloud Build
+  `f165454f-22db-465e-9207-81ba0a5fd9ca`, 5m22s), i.e. the branch with the
+  independent review's fixes already applied.
+- The Job carried `DB_DATABASE=tastyigniter_paytest` as a plain
+  environment value with the other four credentials by secret reference,
+  so the target database is visible in the spec rather than inferred.
+- `migrate --pretend` first: the printed DDL is exactly the three tables,
+  with `collate 'utf8mb4_bin'` on `idempotency_key`,
+  `external_payment_id`, `external_event_id` and `external_refund_id`,
+  the two provider-scoped unique indexes, the payable index, and two
+  restrict foreign keys that reference `payment_transactions` only.
+- `migrate` then applied that one migration (300ms); nothing else was
+  pending in the copy. Read-back: `ti_payment_transactions`,
+  `ti_payment_events`, `ti_payment_refunds` sit beside the vendor's
+  `ti_payments`, `ti_payment_logs`, `ti_payment_profiles` with no name
+  collision, and the two identifier collations read back `utf8mb4_bin`.
+- **Rollback rehearsed, not assumed:** `migrate:rollback --step=1`
+  dropped exactly the three new tables (payment-table count back to the
+  vendor's three), and a re-apply restored all six.
+- The Job resource `qa-paymig-20260829` remains and awaits the user's
+  named confirmation for deletion; its logs carry DDL and table names
+  only.
+
+No change to any Cloud Run service, revision, traffic, secret, or stored
+setting, and none to the `tastyigniter_staging` database.

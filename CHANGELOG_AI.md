@@ -4776,3 +4776,63 @@ Documentation only in this entry; the merges are recorded above it.
 
 Deletions aside, no runtime state changed; the workflow edits live only on
 the draft-PR branch.
+
+## 2026-08-29 - Payment steps D and F written, independently reviewed, and CI-green; the ledger migration rehearsed on the test database
+
+Environment: repository code on two branches, GitHub Actions, Cloud Build,
+and one disposable Job against the payment test database. Status: PR #129
+(step D) and PR #130 (step F) are open at Ready, each stopping for its own
+merge confirmation; the rehearsal is the Level 2 runtime action step D's
+approval specified, recorded in `ADMIN_CONFIGURATION_TRACKER.md`. This
+docs PR is Level 0.
+
+- **Step D — shared transaction layer (PR #129).** Three additive ledger
+  tables whose only foreign keys point at `payment_transactions` itself,
+  so the root migration pass stays free of extension tables; `Payable`
+  and `PaymentGateway` contracts with no adapter and no live call;
+  idempotency, transaction, event-ledger and refund services; models that
+  accept writes only through the services and never delete. Integer minor
+  units throughout.
+- **Step D review.** Ten finder angles, per-candidate verification against
+  vendor sources, and a gap sweep produced **15 findings (14 confirmed,
+  1 plausible), all fixed** before the merge request: the three
+  hand-rolled unique-race handlers became `createOrFirst` with the narrow
+  `UniqueConstraintViolationException` (a deadlock is no longer mistaken
+  for a lost race); refund recording locks the transaction and counts
+  pending intents against the cap; provider-refund dedup verifies
+  transaction and amount; the event ledger refuses unverified deliveries
+  (their attacker-controlled ids would shadow genuine events), marks under
+  lock with transition rules, and checks the linked transaction's gateway;
+  creating hooks validate raw attributes so a float amount or a zero
+  payable id cannot pass; `refund_pending` with recorded money returns to
+  `partially_refunded`, never plain `succeeded`; every stored instant is
+  UTC through a `freshTimestamp()` override (the casting alternative was
+  refuted during verification and the reason recorded); identifier columns
+  collate `utf8mb4_bin`; a dead Carbon branch became a loud,
+  column-naming failure.
+- **Step F — registration and verification gate (PR #130).**
+  `PaymentAccessGate` is the server-side authority: no payment flow
+  without a logged-in, enabled customer and, while
+  `payments.require_verified_email` is on, a verified e-mail.
+  `CheckoutStateStore` keeps the pre-authentication selection in the
+  server session so the flow restores after login. Zero migration.
+- **Step F review.** Five findings, all fixed: the gate now reads
+  `Auth::customer()` itself instead of trusting a `Customer` the caller
+  passes (a confused deputy at the one enforcement point); the checkout
+  draft records its owner, is discarded when another customer reads it,
+  and is cleared by a `Logout` listener, since `Auth::logout()` leaves the
+  session alive; production refuses to boot with the verification switch
+  off, the fail-closed shape `MailTestRedirect` set, so the handoff §7
+  rule cannot be downgraded by a deployment; `peek()` honours its own
+  return contract; an unread timestamp field is gone.
+- **CI, the live merge gate, is green on both branches** (8.3/8.4/8.5).
+  Step D's branch reports 247 tests and 1050 assertions.
+- **Rehearsal (step D's condition).** The migration ran on
+  `tastyigniter_paytest` from an image built off the reviewed branch:
+  `--pretend` DDL recorded, one migration applied, tables and collations
+  read back beside the vendor's payment tables with no collision, and the
+  rollback path executed and re-applied. The shared database is untouched
+  and its execution stays separately gated.
+
+What remains before either merges: the user's confirmation on each PR.
+Step E waits on the Snappy conversation, as before.
