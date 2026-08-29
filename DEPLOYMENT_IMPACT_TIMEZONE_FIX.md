@@ -175,6 +175,22 @@ So the defect is real but its demonstrated cost so far is zero, and a deployment
 carries its own risk. Waiting for the deployment that must happen anyway is the
 cheaper trade.
 
+**The comparison baseline this plan depends on.** `d3c-a2ee559c` runs the
+**same image digest as the main-traffic revision** and differs from it in exactly
+one environment variable (`DELIVERY_ENABLED`, `false` live and `true` there);
+all 30 others match. On deployment day it is the reference the new tagged
+revision is read against, which is what separates "this deployment changed it"
+from "it already did that" without using the live site as the comparator. It is
+also a preview of main traffic once Delivery is switched on, and therefore the
+place where the Nominatim production gate can be observed rather than argued.
+
+**This couples the deployment plan to the cleanup plan.** `d3c-a2ee559c` is on
+the test-copy cleanup list, and it **must not be deleted before the deployment
+rehearsal**. Cleaning up on its own schedule would destroy this plan's only
+baseline; scheduling the deployment while assuming the baseline exists fails if
+cleanup ran first. Neither side may pass this copy without checking the other.
+It shares the live database, so it is a read-only comparator.
+
 **What overturns this and makes the fix urgent again:**
 
 - the live site begins taking real orders; or
@@ -234,7 +250,10 @@ The per-copy table is in `D3C_PROGRESS.md`. None of this changes main traffic,
 which sets no variable and has no override code at all.
 
 This is not fixable by setting an environment variable on the live revision - the
-variable has no reader there. It needs either the deployment (which brings #86)
+variable has no reader there. It can, however, be **observed** before launch:
+`d3c-a2ee559c` is the same image with `DELIVERY_ENABLED=true` and no geocoder
+variable, so it shows what main traffic will do the moment Delivery opens. That
+is another reason it must survive until the deployment rehearsal. It needs either the deployment (which brings #86)
 or a change to the shared stored setting. It is therefore reclassified from
 "handle before launch" to **an item needing its own schedule**, and it is one more
 thing the pre-launch deployment of Option C would resolve.

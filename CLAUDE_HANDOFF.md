@@ -772,6 +772,14 @@ configuration flip. Delivery being closed today is what keeps the exposure
 latent rather than live. Detail in `DEPLOYMENT_IMPACT_TIMEZONE_FIX.md`
 section 7, and the per-copy picture in `D3C_PROGRESS.md`.
 
+**Where this can be observed before launch.** `d3c-a2ee559c` runs the same image
+digest as main traffic and differs from it in exactly one variable -
+`DELIVERY_ENABLED=true` against `false` - with no geocoder variable on either. It
+is therefore main traffic with Delivery already open, and the gate's condition
+can be watched there on 0% traffic instead of being reasoned about. It shares the
+live database, so read-only. That copy is held out of the test-copy cleanup until
+the deployment rehearsal; see "The main-traffic twin" in `D3C_PROGRESS.md`.
+
 ### Continuous integration: live since 2026-08-29
 
 The pipeline (PR #122) runs on every push and pull request: PHP 8.3, 8.4,

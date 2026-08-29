@@ -255,7 +255,7 @@ preserved, or reachable is not passed on *rendered* alone.
 | Nothing else broken: pickup, birthday, reservations, media, health | Passed | Executed: ten pages, all served |
 | Nothing else broken: admin | **PASS - executed 2026-08-29, 10 of 10.** Full results and the five step-10 observations are in "Admin regression, executed 2026-08-29" below | The agent has no admin credentials and does not ask for any. The owner signs in and works the list below, pasting back what each step actually showed; the agent judges and records. Steps, each on the copy `d3c-min-9a4c1bc8` unless the owner prefers another: **(1) Sign-in** — the admin loads, sign-in succeeds, no error banner. **(2) Dashboard** — it renders with no red error box; note any "something went wrong" panel. **(3) Orders list** — opens. Write down the **row count** and the **highest order number**. Confirm every row is a draft: status 0 (never placed), with name, e-mail and telephone empty. Open the newest one and confirm it too is a draft with no customer information, and that the detail page renders with its totals. Copy the row count and the highest order number back verbatim. (No fixed figure is given on purpose: loading /checkout creates a draft order row, so any number written here would already be stale by the time the owner reaches this step — including from their own walk through this list. What they report becomes the current baseline for the pre-launch draft-row cleanup.) **(4) Reservations list** — opens (expected empty). **(5) Locations → the location → Delivery settings** — the minimum order amount reads **0.00** and the fee rules read **free above 50.00** then **5.00 below 50.00**, in that row order. **(6) Same screen, opening hours** — Delivery shows every day 12:00-21:00 and Collection every day 12:00-22:00. **(7) Menus list** — opens and shows the 12 items. **(8) Birthday packages and add-ons** — both lists open. **(9) System → Settings → the general/localisation screen** — the timezone field reads **America/Toronto**. **(10) Anywhere** — report any PHP error, stack trace, blank panel, or missing translation string that looks like a defect rather than untranslated text. For each step: what was shown, verbatim where it is a number or a message |
 | No real orders, customers, reservations, payments, or emails created | Holding | Nothing real created so far |
-| Test data cleaned up afterwards | Partly done | The two synthetic mail-test orders, #6 and #7, were deleted on 2026-08-23 with their child rows, read back before and after (total orders 6 to 4; #2 to #5 untouched). The cleanup job resource was deleted on 2026-08-23 on confirmation and read back absent. Still to remove, each on explicit confirmation: the test copies of the site, and the **nine** unplaced draft order rows, highest **#12** (#2-#5, #8-#12; 6 and 7 were deleted 2026-08-23). Baseline re-read from the admin on 2026-08-29 and it supersedes the eight-row figure: every row status Incomplete with Customer Name empty. The count rises whenever /checkout is loaded, so it is re-read at cleanup time rather than trusted from here |
+| Test data cleaned up afterwards | Partly done | The two synthetic mail-test orders, #6 and #7, were deleted on 2026-08-23 with their child rows, read back before and after (total orders 6 to 4; #2 to #5 untouched). The cleanup job resource was deleted on 2026-08-23 on confirmation and read back absent. Still to remove, each on explicit confirmation: the test copies of the site - **except `d3c-a2ee559c`, which must not be deleted before the deployment rehearsal; see "The main-traffic twin" below** - and the **nine** unplaced draft order rows, highest **#12** (#2-#5, #8-#12; 6 and 7 were deleted 2026-08-23). Baseline re-read from the admin on 2026-08-29 and it supersedes the eight-row figure: every row status Incomplete with Customer Name empty. The count rises whenever /checkout is loaded, so it is re-read at cleanup time rather than trusted from here |
 
 ### A basket cannot be filled while the shop is closed
 
@@ -628,7 +628,7 @@ All receive 0% of visitors.
 | `d3c-g-1f8f0c75` | Superseded by `g2` | No |
 | `d3c-pu-1f8f0c75` | Superseded by `pu2` | No |
 | `d3c-25f9813b` | Earlier check of log redaction | No |
-| `d3c-a2ee559c` | First D3C copy | No |
+| `d3c-a2ee559c` | First D3C copy. **Also the main-traffic twin: bit-identical image, one environment variable apart. Hold for the deployment rehearsal - do not delete.** See "The main-traffic twin" | No |
 | `d3c-e9a4f7ca` | Failed to start. Delete first when cleaning up | No |
 | `mail-3a603e53` | Mail test: pickup-only, real SMTP transport, every message redirected to the test inbox. Not a D3C copy; listed so that cleanup sees it | Yes |
 
@@ -848,6 +848,55 @@ all ten copies, not about the seven the first table happened to list.
    one. This is a launch-gate item, not a D3C item: see the Nominatim production
    gate in `CLAUDE_HANDOFF.md` section 10 and
    `DEPLOYMENT_IMPACT_TIMEZONE_FIX.md` section 7.
+
+## The main-traffic twin: `d3c-a2ee559c`
+
+Found 2026-08-29 while checking the geocoder configuration, and recorded here
+because it is an asset rather than a leftover.
+
+`d3c-a2ee559c` runs image digest
+`sha256:72371b610a2dff66d29dcee09a2095c72c2f6bb0d932d33744db3444c3689102` - **the
+same digest the main-traffic revision runs**, i.e. commit `31821289`. It is
+Ready and serves 0% of traffic.
+
+Its environment was compared key by key with the main-traffic revision. **Both
+carry the same 30 variables with the same values, with exactly one exception:**
+
+| Variable | main traffic `d2fix-31821289` | twin `d3c-a2ee559c` |
+| --- | --- | --- |
+| `DELIVERY_ENABLED` | `false` | **`true`** |
+
+Everything else - including `APP_TIMEZONE`, `RUN_CONFIG_CACHE`, the absence of
+any geocoder variable, and every secret reference - is identical.
+
+### What it is good for
+
+1. **The comparison baseline for the Option C deployment.** On deployment day the
+   new image goes to a tagged revision, and reading it side by side against this
+   twin separates "what this deployment changed" from "what the site already
+   did". Without it the only available comparator is the live site itself.
+2. **A reproduction site for the timezone fail-open.** The live image contains no
+   fix, and this one is the same image, so the cold-start path can be studied
+   without touching customer traffic.
+3. **A preview of main traffic with Delivery switched on**, which is stronger
+   than the first two and follows from the single difference above. This twin is
+   what the live revision *becomes* when the launch flips `DELIVERY_ENABLED`. In
+   particular it is the one place where the **Nominatim production gate** can be
+   observed rather than argued: it sets no geocoder variable and its image
+   predates `GeocoderChainOverride`, so it runs the stored Chain with Delivery
+   open, exactly as main traffic would.
+
+### The constraint this creates
+
+**It shares the one database with the live site**, so it is fit for read-only
+behavioural comparison and nothing else. No write taken on it is isolated.
+
+**And it must not be deleted before the deployment rehearsal.** The test-copy
+cleanup list and the deployment plan are coupled at this single point: cleaning
+up on its own schedule destroys the deployment's only baseline, and planning a
+deployment that assumes the baseline exists will fail if cleanup ran first.
+Neither side may proceed past this copy without the other. Recorded in the
+cleanup row above and in `DEPLOYMENT_IMPACT_TIMEZONE_FIX.md`.
 
 ## Known problem carried over
 

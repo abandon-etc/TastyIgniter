@@ -5106,3 +5106,35 @@ stored setting, revision, traffic split, image or code path changed.
   back for recording.
 
 Documentation only. Every changed path is `.md`.
+
+## 2026-08-29 - The main-traffic twin is recorded as an asset, and it couples the cleanup plan to the deployment plan
+
+Environment: Cloud Run revision metadata. Status: documentation. Nothing
+deployed, deleted or changed.
+
+- **`d3c-a2ee559c` runs the same image digest as the main-traffic revision** -
+  `sha256:72371b61...689102`, commit `31821289` - is Ready, and serves 0% of
+  traffic. A key-by-key environment comparison against main traffic returns **30
+  variables identical and exactly one difference**: `DELIVERY_ENABLED`, `false`
+  live and `true` there. `APP_TIMEZONE`, `RUN_CONFIG_CACHE`, the absence of any
+  geocoder variable and every secret reference all match. It had been mentioned
+  only in passing as background; it is an asset and now has its own section.
+- **Three uses recorded**: the comparison baseline for the Option C deployment,
+  so that day's readings separate what the deployment changed from what the site
+  already did without using the live site as comparator; a reproduction site for
+  the timezone fail-open, the live image containing no fix and this being that
+  image; and - following from the single variable difference - **a preview of
+  main traffic with Delivery switched on**, which makes it the one place the
+  Nominatim production gate can be observed rather than argued.
+- **A scheduling constraint is written into both plans.** `d3c-a2ee559c` is on
+  the test-copy cleanup list and **must not be deleted before the deployment
+  rehearsal**. Cleanup on its own schedule would destroy the deployment's only
+  baseline; a deployment scheduled on the assumption that the baseline exists
+  fails if cleanup ran first. Recorded in the cleanup row and the copies table in
+  `D3C_PROGRESS.md`, in Option C and section 7 of
+  `DEPLOYMENT_IMPACT_TIMEZONE_FIX.md`, and in the Nominatim production gate in
+  `CLAUDE_HANDOFF.md`.
+- It shares the one live database, so it is fit for read-only behavioural
+  comparison only. No write on it would be isolated.
+
+Documentation only. Every changed path is `.md`.
