@@ -255,7 +255,7 @@ preserved, or reachable is not passed on *rendered* alone.
 | Nothing else broken: pickup, birthday, reservations, media, health | Passed | Executed: ten pages, all served |
 | Nothing else broken: admin | Not started | No admin access |
 | No real orders, customers, reservations, payments, or emails created | Holding | Nothing real created so far |
-| Test data cleaned up afterwards | Partly done | The two synthetic mail-test orders, #6 and #7, were deleted on 2026-08-23 with their child rows, read back before and after (total orders 6 to 4; #2 to #5 untouched). The cleanup job resource was deleted on 2026-08-23 on confirmation and read back absent. The test copies of the site are still to be removed, each on explicit confirmation |
+| Test data cleaned up afterwards | Partly done | The two synthetic mail-test orders, #6 and #7, were deleted on 2026-08-23 with their child rows, read back before and after (total orders 6 to 4; #2 to #5 untouched). The cleanup job resource was deleted on 2026-08-23 on confirmation and read back absent. Still to remove, each on explicit confirmation: the test copies of the site, and the eight unplaced draft order rows (#2-#5, #8-#11 — classified 2026-08-28: status 0, guest, empty identity; two are the agent's own contrast-test checkout-page visits, the vendor creating a draft row on page load) |
 
 ### A basket cannot be filled while the shop is closed
 

@@ -4626,3 +4626,125 @@ SQL instance (pending named deletion), one database on the shared
 instance, one disposable Job (pending named deletion). No application
 setting, schema object inside the live database, revision, or traffic
 changed.
+
+## 2026-08-28 - Evening close: deletions read back absent, the 8 orders are all drafts, local Docker retired, and CI's first cloud runs surface a dependency-install finding
+
+Environment: Cloud SQL, Cloud Run Jobs, GitHub Actions, the local
+workstation. Status: deletions Level 2 on named confirmations; orders read
+approved read-only; workflow branch is draft PR #122 (Level 1, no merge);
+this docs PR is Level 0, eligible for auto-merge. Full detail in
+`ADMIN_CONFIGURATION_TRACKER.md` same date.
+
+- `qa-restore-20260828` and `qa-payinfra-20260828` deleted and read back
+  absent (describe 404 / "Cannot find job"; one instance and zero jobs
+  remain).
+- The ti_orders drift (4 to 8) is fully explained: every row is an
+  unplaced draft (status 0, guest, empty identity, link-local IP). Two are
+  the agent's own 2026-08-24 contrast-test checkout visits — the vendor
+  creates a draft Order row when the checkout page loads; two are
+  empty-cart hits; four predate. **No real customers, no staff tests, no
+  missed e-mails.** Eight draft rows join the pre-launch cleanup list.
+  Side note recorded: `ip_address` captures a link-local hop, not the
+  client.
+- Local Docker: five launches, two orphaned-socket directory renames, and
+  a direct `EnableDockerAI=false` settings edit later, the backend still
+  exits — judged temporarily unusable on this machine per the user's
+  instruction; local convenience only, not on any critical path.
+- CI step 0 ran in the cloud instead: the repository's first-ever Actions
+  runs. Run 1 failed before the suite — the tastyigniter.com registry's
+  dist zips fail lock-file checksum verification on a fresh machine, a
+  previously invisible reproducibility gap that `Dockerfile.cloudrun`'s
+  `preferred-install source` workaround had been masking for image builds.
+  The workflow now applies the same workaround.
+- Run 2 (source installs): **the suite executed in CI for the first
+  time** — 206 tests, 412 assertions, 75 errors, 3 failures on 8.3, every
+  one schema absence: the suite does not migrate by itself and the
+  workflow had no migrate step.
+- Run 3 (with `igniter:up`): the migrate step failed on **exactly the
+  recorded fresh-install migration-ordering defect**, now named —
+  `2026_07_10_000000_add_birthday_booking_fields_to_reservations_table`
+  runs before the Reservation extension creates `ti_reservations`
+  (42S02), identical on all three PHP rows. Iteration stopped there:
+  the fix is the separate focused PR the handoff prescribes. **Step 0
+  complete** — the residue decomposes into driver/env noise (solved),
+  schema absence (solved), and one known real blocker that now gates CI
+  first-green. Draft PR #122 carries the classification; merge waits for
+  the ordering fix plus explicit confirmation.
+
+## 2026-08-29 - The migration-ordering fix is written and CI-verified: migrate passes on all rows; two test-expectation residues named
+
+Environment: repository code on branch `fix/migration-ordering` (PR #124,
+Level 1, Ready for the user's merge confirmation, executed on the user's
+2026-08-28 approval), and one throwaway CI verification branch, deleted
+after its run. Status: no merge yet; nothing ran against any project
+database — the verification used the workflow's own throwaway MySQL.
+
+- The defect proved **wider than the recorded note**: the installed core
+  has no extension dependency ordering at all — local extensions register
+  and migrate before every vendor extension — so beyond the root-pass
+  migration, the Birthday group's own tables (foreign keys to customers
+  and locations) were equally exposed on a fresh database.
+- The fix, from the three approved options (dependency declaration:
+  consumed nowhere in this core; timestamps: cannot cross the
+  root-before-extensions boundary; chosen: ownership + ordering +
+  guards): the reservations alteration moved into the Birthday
+  extension's own migrations with idempotent apply and a loud — never
+  silent — failure if the order regresses;
+  `App\BirthdayBooking\BirthdayMigrationOrder` moves the
+  `abandon.birthday` group to the end of the migration map at boot with
+  the group key (and so the ledger identity) unchanged; a contract test
+  pins the reorder against vendor change.
+- **Verification (Actions run 33223317077, throwaway combination branch):
+  `igniter:up` passed on PHP 8.3, 8.4 and 8.5 — the approved acceptance —
+  and the suite then ran in full against a real database for the first
+  time: 209 tests, 922 assertions, 0 errors, 2 failures, identical on all
+  three rows** (previous best: 75 errors + 3 failures).
+- The two residues are named and are test-expectation bugs, kept out of
+  the fix PR by scope: `BirthdaySlotHoldMigrationTest:44` asserts the
+  foreign key's referenced table as `birthday_bookings` where
+  information_schema reports the physical `ti_birthday_bookings` (the
+  key itself is correct; the test had never executed against a database
+  before), and the stock Laravel `ExampleTest` expects `GET /` to answer
+  200 where the site answers 302. Both go to a follow-up
+  fix-or-quarantine per `CI_ENABLEMENT_PLAN.md` §3; CI is expected green
+  after it.
+- Sequence standing: PR #124 merge on explicit confirmation; then draft
+  PR #122 flips to Ready; the two reviewed independently. D and F wait
+  for CI first-green; E waits on the Snappy conversation.
+
+Documentation only in this entry; the code lives in PR #124.
+
+## 2026-08-29 - First fully green suite run; #124 merged, #122 Ready, #126 open with the green evidence
+
+Environment: repository and GitHub Actions. Status: PR #124 merged at
+`443b250c` on the user's explicit confirmation (its branch was MERGEABLE
+with no changelog conflict — the scope discipline paid off); PR #122
+flipped from draft to Ready on the same instruction, independent review;
+PR #126 (the two test-expectation fixes, both chosen as fixes rather than
+quarantines with the rationale in the PR) created and stopped at Ready
+for its own confirmation. This docs PR is Level 0, eligible for
+auto-merge.
+
+- **The repository's first fully green suite run**: Actions run
+  33223931822 on the throwaway combination branch (the #122 workflow +
+  mainline including #124 + the #126 fixes; branch deleted after the
+  run). All three PHP rows SUCCESS — **209 tests, 925 assertions, 0
+  errors, 0 failures on 8.3, 8.4, and 8.5.** The journey in one line:
+  82 environment errors (2026-08-21, container) → 75 errors + 3 failures
+  (run 2, no migrations) → migrate blocked (run 3, ordering defect) →
+  2 failures (run 4, fix verified) → **green** (run 5).
+- The old workflow's red check on PR #124 was the known registry-checksum
+  failure of the unreworked pipeline, recorded and unrelated to the
+  change; the user confirmed the merge with the real verification in
+  hand.
+- Remaining to reach green **on mainline**: merge #126 and #122, each on
+  its own confirmation; then update this PR's branch-verification note in
+  `CLAUDE_HANDOFF.md` section 10 and the merge-gate reading in
+  `AGENT_WORKFLOW.md` (the "CI has never run / empty means untested" era
+  ends only when the mainline check itself is green — that documentation
+  flip belongs to those merges, not to this entry).
+
+Documentation only in this entry.
+
+Deletions aside, no runtime state changed; the workflow edits live only on
+the draft-PR branch.
