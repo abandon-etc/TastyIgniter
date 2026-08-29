@@ -30,7 +30,7 @@ final class PaymentAccessGateTest extends TestCase
 
     public function test_a_disabled_customer_may_not_enter_payment(): void
     {
-        $customer = Customer::factory()->create(['status' => false, 'is_activated' => true]);
+        $customer = Customer::factory()->create(['password' => 'test-only-password', 'status' => false, 'is_activated' => true]);
 
         try {
             $this->gate()->assertMayEnterPayment($customer);
@@ -43,7 +43,7 @@ final class PaymentAccessGateTest extends TestCase
     public function test_an_unverified_customer_is_refused_while_verification_is_required(): void
     {
         config()->set('payments.require_verified_email', true);
-        $customer = Customer::factory()->create(['status' => true, 'is_activated' => false]);
+        $customer = Customer::factory()->create(['password' => 'test-only-password', 'status' => true, 'is_activated' => false]);
 
         try {
             $this->gate()->assertMayEnterPayment($customer);
@@ -56,7 +56,7 @@ final class PaymentAccessGateTest extends TestCase
     public function test_a_verified_enabled_customer_passes(): void
     {
         config()->set('payments.require_verified_email', true);
-        $customer = Customer::factory()->create(['status' => true, 'is_activated' => true]);
+        $customer = Customer::factory()->create(['password' => 'test-only-password', 'status' => true, 'is_activated' => true]);
 
         $this->gate()->assertMayEnterPayment($customer);
         $this->assertTrue($this->gate()->mayEnterPayment($customer));
@@ -66,7 +66,7 @@ final class PaymentAccessGateTest extends TestCase
     {
         config()->set('payments.require_verified_email', false);
 
-        $unverified = Customer::factory()->create(['status' => true, 'is_activated' => false]);
+        $unverified = Customer::factory()->create(['password' => 'test-only-password', 'status' => true, 'is_activated' => false]);
         $this->assertTrue($this->gate()->mayEnterPayment($unverified));
 
         $this->assertFalse($this->gate()->mayEnterPayment(null));
