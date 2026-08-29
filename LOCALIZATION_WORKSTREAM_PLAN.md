@@ -183,6 +183,237 @@ Permission denied` 一致,也是上面第 3 条成立的前提。
 改 `start.sh` 属代码改动,随部署上线,可在 0% 副本上完整验证,与"法语工作流与
 部署耦合"的既定安排一致,不急。
 
+##### 取包不需要可写的完整实例 —— 本机 Docker 不再是 W1 前置(2026-08-29 核实)
+
+`HubManager::requestRemoteData()` 就是一次带认证的 JSON POST:端点
+`https://api.tastyigniter.com/v2`(`config/system.php:178`),头部
+`Authorization: Bearer <carte key>`、`X-Igniter-Host: gethostname()`、
+`X-Igniter-User-Ip`、`X-Igniter-Platform: php:<版本>;version:<版本>;url:<APP_URL>`,
+体内附加 `client=tastyigniter` 与
+`server=base64(serialize(['php'=>…,'url'=>…,'version'=>…,'host'=>…]))`。
+
+**这些字段全部是可在实例之外复现的字符串。** 因此取包可以退化成一个独立脚本:
+`languages` 取目录 → `language/apply` 取条目与 hash → `language/download` 取
+`data.strings`,再按 `installLanguagePack()` 同样的 `var_export` 形状落盘。
+**不需要一个可写文件系统上的 TastyIgniter 实例,本机 Docker 可用与否与此无关;
+2026-08-28 那条阻塞项就 W1 而言撤销。**
+
+**边界要说清:** 以上只从客户端源码确认了请求形状,服务端是否另有校验(许可、
+站点 URL、频率)无法从这里断言。
+
+**2026-08-29 实测,这条边界真的被撞上了。** 一次不带认证的 `languages` 调用返回
+**HTTP 403 / Cloudflare Error 1010 `browser_signature_banned`** —— "站点所有者已
+根据你的浏览器签名封禁访问",响应明写 "Do not retry"。**请求没有到达 API 自己的
+鉴权层**,所以这既不是 401 也不是"没有 fr_CA",**语言目录问题仍未回答**。
+
+含义有两层:
+
+1. `api.tastyigniter.com` 前面有 WAF,按客户端签名拦截通用脚本 UA。**"取包退化成
+   一个独立脚本"这个结论要加限定**:脚本除了 carte key,还需要一个 WAF 接受的
+   客户端签名。源码看不到这一层,这正是上面那句"服务端可能另有校验"的兑现。
+2. **未更换 UA 重试。** 用另一个 UA 绕过一条针对 UA 的封禁属于规避访问控制,
+   且响应明确要求不要重试。是否以官方客户端签名(Guzzle)重试,属于与供应商
+   关系的判断,**须由用户决定,不由代理自行决定**。
+
+**成本最低的替代:直接在 tastyigniter.com 登录后查看语言目录页面。** 若网站本身
+列出可用语言包,"有没有 `fr_CA`" 当场就有答案,零次 API 调用、零次密钥使用、
+零次日志沾染。建议先走这条。
+
+**由此浮出一条与最初怀疑同源、但这次真正成立的事实:**
+`SystemHelper::resolveUrl()` 就是 `config('app.url')`,即 **APP_URL**;它同时出现在
+`X-Igniter-Platform` 头和 `server` 载荷里。**hub 看到的站点 URL 就是该修订的
+APP_URL。** 这对那次 500 无关(异常发生在任何请求之前),但对**绑定本身**是活的:
+从副本绑定,发出去的是副本自己的 URL,而 tastyigniter.com 上登记的是正式站 URL。
+
+##### 覆盖风险:导入前必须先落实,否则会静默吃掉手写魁北克法语
+
+`installLanguagePack()` 写的路径是 `lang/vendor/<包>/<locale>/<文件>.php`,
+仓库现有的手写覆盖**正在这些路径上**。逐文件清点(2026-08-29):
+
+| 路径 | 键数 |
+| --- | --- |
+| `lang/vendor/igniter-cart/fr_CA/default.php` | 24 |
+| `lang/vendor/igniter-local/fr_CA/default.php` | 16 |
+| `lang/vendor/igniter-orange/fr_CA/default.php` | 21 |
+| `lang/vendor/igniter-reservation/fr_CA/default.php` | 30 |
+| 四个对应的 `en_CA/default.php` | 3 / 4 / 3 / 2 |
+
+**处在碰撞路径上的共 103 个键、8 个文件**(fr_CA 91,en_CA 12)。其余 177 个键位于
+`lang/fr_CA/`、`lang/en_CA/`、`lang/en/`,属项目自有命名空间,`installLanguagePack()`
+**不会**触碰——这条区分要保留,免得把风险面夸大成全部 280 个。
+
+**手写译文必须成为构建输入,而不是一份文档清单。** 仅有"手写键清单"不够:第一次
+合并之后,产出文件里官方键与手写键混在一起,下次官方包更新时无法再分辨哪些是
+自有的,合并会退化成一次性考古。所以结构改成:
+
+1. **手写译文留在自己的源文件里**,例如 `lang/_overrides/<包>/<locale>.php`。
+   这是唯一的手工编辑入口,也是"自有资产"的权威所在;
+2. **提交进仓库的 `lang/vendor/...` 是产物**,由"官方包 + 覆盖源"生成。产物仍要
+   提交,因为运行期不可写、加载器也不分层(一个路径一个文件),合并只能在生成期
+   用 `array_replace_recursive(官方, 覆盖)` 完成;
+3. **生成步骤可重复、可在 CI 里跑。** 官方包更新时重跑即可,覆盖源不受影响,
+   自有译文不会被吃掉——这一点从纪律变成机制;
+4. **生成脚本输出 diff 供 PR 审阅。** 产物是提交文件,所以 `git diff` 天然就是
+   比对面;脚本另外打印"本次哪些键来自官方、哪些被覆盖源盖住",让审阅者不必
+   靠肉眼比对两棵树。
+
+首次迁移的一次性工作:把现有 8 个文件、103 个手写键(fr_CA 91 / en_CA 12)拆到
+覆盖源里,并确认重新生成的产物与当前提交内容一致——**那次 diff 应当为空**,
+这就是迁移正确性的验收。
+
+**在这套生成机制落地之前,不导入任何包。**
+
+##### 绑定是共享写入,按共享写入报批
+
+`setCarte()` 的 `setPref()` 把 `carte_key` 与 `carte_info` 写进**共享设置库**,所以
+无论从哪个副本绑定,**正式站也会随之进入"已绑定"状态**,其后台会出现市场相关
+界面。对顾客不可见,风险低,但它不是"只在 0% 副本上做的事"。按老规矩:
+
+- 单独审批,不并入其他批次;
+- 写前记原值 —— 两个 pref **预期为空,但要实读确认,不得假设**;
+- 写后读回两个 pref;
+- 回退方法:清空这两个 pref(`clearCarte()` 走的也是 `replaceInEnv()`,同样需要
+  `.env` 存在,所以回退能力依赖本次 `start.sh` 改动已上线);
+- FP-1 在主流量修订上前后各一次。
+
+##### 不碰生产的验证路径(建议按此排)
+
+把 `start.sh` 的改动构建成一个 **0% 流量副本**,在那里完成绑定,即可回答 W1 当前
+唯一的阻塞问题:官方到底有没有 `fr_CA` 包,还是只有 `fr_FR`。全程不碰主流量镜像,
+不切流量,也不必等 C 方案那次部署。
+
+**一个必须先决定的变量:** 该副本的 APP_URL 是它自己的 tagged URL,而登记在
+tastyigniter.com 的是正式站 URL,两者不一致(见上文)。两种处理:
+
+- 在该副本上把 `APP_URL` 设为**已登记的正式站 URL**,让 hub 看到登记站点。
+  副作用是该副本生成的链接会指向正式站——对"只用来绑定"的用途可以接受,
+  但要记住这台副本此后不宜再用于其他链接相关的验证;
+- 或者保持原样,接受 hub 可能因 URL 不匹配而拒绝或错误归属的风险。
+
+**独立脚本那条路根本没有这个问题**,因为 `url` 字段由脚本显式给定。这也是它现在
+比"从副本绑定"更优的理由。
+
+##### Cloudflare 1010 的正当后续:联系 TastyIgniter 支持
+
+不换 UA 重试。正当路径是**向 TastyIgniter 支持询问该来源为何被 Cloudflare 1010
+拦截** —— 很可能是云端出口 IP 或通用 UA 触发的误判,而本站持有有效 Carte。
+这是首选后续,排在任何技术性绕行之前。
+
+##### igniter-translate 评估(2026-08-29,只读,未安装)
+
+包名 `tastyigniter/ti-ext-translate`,仓库 `github.com/tastyigniter/ti-ext-translate`。
+
+**一、v4 兼容性:真实,不只是市场页面的声明。** Packagist 元数据:最新
+**v4.0.13,发布于 2026-08-22**(一周前,活跃维护),`require` 为
+`{"tastyigniter/core": "^v4.0"}`,类型 `tastyigniter-package`。本站 core 为
+**v4.3.1**,满足该约束。共 15 个版本。
+
+**二、迁移与共享库影响:只增一张表,不动任何既有表。**
+全仓库只有一个迁移 `2020_06_04_000300_create_attributes_table.php`,内容是
+`Schema::create('igniter_translate_attributes')`(带前缀即
+`ti_igniter_translate_attributes`),字段 `id` / `locale`(索引) /
+`translatable_id`(索引) / `translatable_type`(索引) / `attribute`(mediumText)。
+`down()` 只 `dropIfExists` 这张表。
+
+**它不 ALTER 任何既有表,也不改任何既有行。** 因此审批规格是"在共享库新增一张
+独立表",而不是"改动既有 schema":仍需审批,但爆炸半径是一张新表,且可干净回退。
+
+**三、存储模型与继承 —— 用户现在录的法语不会白录。**
+非默认语言的译文以"每(locale, 模型)一条 JSON"存进上述表。**默认语言走模型自己的
+列**,两处源码各自坐实:
+
+- 写:`performSetTranslatableAttribute()` 中
+  `if (activeLocale === defaultLocale && !is_array($value)) return $value;`
+  —— 默认语言的值原样落回普通列,不进译文表;
+- 读:`getAttributeTranslatedValue()` 中
+  `elseif ($locale == $translatableDefaultLocale || $translatableUseFallback)`
+  取 `$this->model->getAttributes()`,且 `$translatableUseFallback` 默认为 `true`。
+
+`translatableDefaultLocale` 取自 `$localization->getDefaultLocale()`,即
+`Language::getDefault()->code`,**当前是 fr_CA**。
+
+**结论:现在录进 `ti_menus` 等列里的法语,会成为默认语言内容,并且同时是任何
+缺译语言的回退值。装扩展不会让它作废。**
+
+**一条随之而来的不变量,已做成可执行检查:** 以上成立的前提是**法语始终是默认
+语言记录**。若日后把默认语言改成英语,所有既有列的含义会整体翻转。"法语是默认
+语言"从此是承重设定,不是偏好。
+
+这条不再只写在文档里。`App\Support\DefaultLocaleIntegrity` 在 boot 时把
+`Language::getDefault()->code` 与常量 `EXPECTED` 比对并在不符时告警,
+`tests/Feature/DefaultLocaleIntegrityTest.php` 在 CI 里钉住那个常量,失败信息直接
+说明后果。
+
+**一个必须说明的边界:** 原本设想的 CI 断言
+`Language::getDefault()->code === 'fr_CA'` **在 CI 里无法成立**——CI 用
+`igniter:up` 迁移一个全新的一次性数据库,没有生产数据,`getDefault()` 在那里是
+null,该断言会永久失败。这条不变量是关于**线上共享数据**的,CI 结构上就看不到它。
+所以可执行形式拆成两半:**期望值与守卫行为由 CI 钉住**,**实际比对由运行期守卫
+在 boot 时做**——与 `TimezoneIntegrity` 同形,也继承它同一个已知弱点(日志无人
+订阅),由部署后那条日志告警策略一并覆盖。
+
+覆盖的模型(`EventRegistry::bootTranslatableModels()`):`Menu`
+(`menu_name`, `menu_description`)、`Category`、`Ingredient`、`MenuOption`、
+`MenuOptionValue`、`Mealtime`、`Location`、`MailTemplate`、`Page`、
+`StaticPageMenu`、`StaticPageMenuItem`。菜品名与描述确在其中。
+
+**四、locale 选择器:源码与市场页面的说法不一致。**
+`Extension.php` 只注册了**后台表单控件**(`TRLText`/`TRLTextarea`/`TRLRichEditor`/
+`TRLMarkdownEditor`/`TRLRepeater`)与模型引导。**没有任何路由、没有前台组件、
+没有前台 locale 选择器。** 市场页面所称的"选择器"实为后台表单里的逐字段语言页签。
+
+由此两条:
+
+- **不与现有 `Français|English` 切换器冲突** —— 它不注册竞争路由或组件;
+- **不解决 W2。** `en` 与 `en_CA` 的代码不匹配在本项目自己的 `routes/web.php`
+  白名单与语言记录里,该扩展不碰。
+
+**但它依赖 W2 被修好:** `initTranslatableLocale()` 用的是
+`$localization->getLocale()` —— 正是那个校验失败时静默回落的函数。**W2 未修之前,
+顾客切到英文会静默回落 fr_CA,该扩展也就跟着供给 fr_CA 内容。** 所以 W2 是这个
+扩展对英文顾客产生价值的前置条件,不是被它取代。
+
+##### 执行顺序(2026-08-29 决定)
+
+**录菜单(法语)→ 修 W2 → 再决定装不装扩展。**
+
+扩展不在关键路径。**W2 在**:它既是切换器本身的修复,也是那个扩展对英文顾客
+产生价值的前置(见上文 `initTranslatableLocale()` 那条)。先修 W2,收益独立于
+任何关于扩展的决定。
+
+##### 内容翻译与界面字符串是两件事,不要合并
+
+该扩展解决的是**内容**(菜品、分类、页面)。**W1 的 2992 条界面字符串不在其内。**
+
+界面字符串从哪来仍**未知**:市场没有语言分类,而代码里确有
+`HubManager::listLanguages()`。那个端点背后是否还有活着的服务,**从这里无法判定**
+—— 唯一一次探测在到达 API 之前就被 Cloudflare 1010 挡住。在支持答复或一次成功
+调用之前,这一项保持"未知",不要按任一假设推进。
+
+##### 结论:暂不安装 igniter-translate
+
+**不是"待安排",是"现在不装"。** 它的全部价值在于日后增加英文*内容*,而英文内容
+没有人承诺要做、96 号法案不要求,且 **W2 未修之前英文顾客根本到不了英文那一半**。
+为一个当前无人使用的能力去共享库跑迁移,不划算。
+
+重新评估的触发条件:有人确实决定要做英文内容,且 W2 已修好。
+
+##### 硬性时序约束:装它会改变店主正在用的录入界面
+
+装上之后,菜品后台表单里的普通文本框会被换成带语言页签的字段
+(`TRLText` / `TRLTextarea` / `TRLRichEditor` / `TRLMarkdownEditor` / `TRLRepeater`)。
+店主正要开始录几十道菜,**表单形态在录入中途改变会直接打断他**。
+
+所以:**要么在录入开始之前装,要么等录完再装,绝不在中间。** 店主已经开始,
+因此是**等录完**。这条与"装不装"是两个独立判断——即使日后决定装,这个时序约束
+依然成立。
+
+##### 给店主的行动建议(不是阻塞项)
+
+**继续录菜单,只写法语。** 理由已由上文第三点坐实:法语会成为默认语言内容并兼作
+回退值,任何情况下都是必需的那一份,先录不会白费。装扩展要在共享库跑迁移、需要
+审批,且扩展尚未验证——但这些都**不构成停下来的理由**,店主不必等待。
+
 ##### W1 状态(保持)
 
 官方有没有 `fr_CA` 包,在绑定走通前**无法确认**。不要按任一假设先行开工:若最终

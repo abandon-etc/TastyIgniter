@@ -496,3 +496,27 @@ Record only non-sensitive state such as `configured`, `not configured`,
 - Do not run `migrate:fresh`, `migrate:refresh`, or `db:seed` without an
   explicitly approved, verified disposable environment—and never on staging or
   production as routine troubleshooting.
+
+
+## 方法教训:供应商的功能描述不是事实依据
+
+记于 2026-08-29,当日三例。
+
+**规则:供应商的产品页、市场条目、官方文档所述的功能,不作为事实依据。以源码,
+或一次实测,为准。** 在两者之一到手之前,基于宣称的功能所做的排期与设计都是待定的。
+
+当日三例:
+
+1. **市场页面**称 igniter-translate 自带"前台与后台 locale 选择器"。源码里
+   `Extension.php` 只注册了后台表单控件,**没有任何路由、没有前台组件**。若照页面
+   描述排期,会以为它顺带解决了切换器问题。
+2. **Carte Key 文档**回避了绑定流程要写 `.env` 这件事,于是在容器化部署上必然
+   失败,而失败信息只有一句 `{"message":"Server Error"}`。
+3. **本方自己**把"composer.json 里没有这类扩展"升级成了"系统装不了一道菜两个
+   语言"。**没装不等于装不了。**
+
+三例同型:**把观察或宣称当成了结论。** 第三例尤其要记住,因为它说明这条规则不只
+约束外部信息源——同一个跳跃在自己身上同样会犯。
+
+对照当日几次奏效的做法:先 grep 再决定要不要跑探针;先读镜像标签再谈构建点;
+先拿一次带对照的日志查询再谈根因。**代价最低的取证先做,结论后下。**
