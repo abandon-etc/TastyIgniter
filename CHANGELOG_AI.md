@@ -5001,3 +5001,30 @@ Status: recorded. Level 2 write on explicit approval, restored and read back.
   has been corrected in the same commit.
 
 Documentation only in this repository. Every changed path is `.md`.
+
+## 2026-08-29 - The geocoder contradiction dissolves on a source reading; per-copy triage replaces a blanket doubt
+
+Environment: repository source, Cloud Run revision metadata, Cloud Run Jobs.
+Status: documentation, plus one disposable job deleted on explicit named
+confirmation. No stored setting, revision, traffic split or code path changed.
+
+- **Resolved without the probe.** The component property that reported `chain` is
+  filled from `setting('default_geocoder')` at mount and never reads the config
+  key the override writes, so it says `chain` on every copy regardless. The two
+  observations were never measuring the same quantity. The instruction to read
+  the code before spending a job was the right call and cost one grep.
+- **The blanket doubt is replaced by a per-copy triage** keyed on whether the
+  override code is in the image and whether the variables are set, which is
+  stronger than keying on the merge date of #86. Three copies are pinned to
+  Google; three certainly ran Chain, one of them because it carries the code but
+  sets no variable and therefore no-ops; one is pinned to chain over an
+  empty provider list. Area-sensitive readings taken on the three Chain copies
+  are Chain-sourced and need no probe to say so.
+- **A previous claim in `DEPLOYMENT_IMPACT_TIMEZONE_FIX.md`** that "the test
+  copies are pinned to Google by revision" was too broad and is corrected to the
+  per-copy split.
+- **Job `qa-toggle-20260829` deleted** on named confirmation, described before
+  and read back absent afterwards. Two other disposable-shaped jobs were found in
+  the region and are flagged rather than touched.
+
+Documentation only in this repository. Every changed path is `.md`.

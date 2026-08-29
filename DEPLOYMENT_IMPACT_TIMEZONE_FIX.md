@@ -222,14 +222,15 @@ So main traffic is not pinned to Google and cannot be: the code that would pin i
 is not in its image. It runs the stored Chain configuration, and **can therefore
 fall through to OpenStreetMap Nominatim today**.
 
-An earlier version of this section added that the test copies are pinned to
-Google by revision, "which is why this was invisible from them". **That half is
-now itself in question** and should not be relied on: a storefront reading on
-`d3c-min` reported `geocoder: "chain"`, and whether the pin takes effect on the
-copies is an open question recorded in `D3C_PROGRESS.md`. The copies do set both
-variables and do carry the override code; what is unverified is the effect. It
-does not change anything about main traffic, which sets no variable and has no
-override code at all.
+An earlier version of this section added that "the test copies are pinned to
+Google by revision", which was too broad and is corrected here. **Three copies
+are pinned** (`d3c-fix-be6835a9`, `d3c-g2-1f8f0c75`, `d3c-min-9a4c1bc8`: override
+code in the image and `DELIVERY_GEOCODER_DRIVER=google`). **Three ran Chain** -
+`d3c-e9a4f7ca` and `d3c-25f9813b` have no override code in their images, and
+`d3c-1f8f0c75` carries the code but sets no variable, so it no-ops. One,
+`d3c-pu2-1f8f0c75`, is pinned to chain over a deliberately empty provider list.
+The per-copy table is in `D3C_PROGRESS.md`. None of this changes main traffic,
+which sets no variable and has no override code at all.
 
 This is not fixable by setting an environment variable on the live revision - the
 variable has no reader there. It needs either the deployment (which brings #86)

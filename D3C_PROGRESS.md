@@ -729,68 +729,73 @@ Enabled and Offer Pick-up = Enabled; the same job read `ti_location_settings`
 directly and returned, for location 2, `delivery.is_enabled = 1` and
 `collection.is_enabled = 1`. The two sources agree, so the baseline is trusted.
 
-## Open question: which geocoder actually answered on the copies
+## Which geocoder answered on the copies - resolved 2026-08-29
 
-Raised 2026-08-29 by a storefront reading on `d3c-min-9a4c1bc8` in which the
-local-search component reported `geocoder: "chain"`, against a record that says
-this copy is pinned to Google. **Unresolved. It is not a cosmetic discrepancy:
-if the pin never took effect, every area-sensitive address reading taken on the
-copies has unknown coordinate provenance.**
+Raised by a storefront reading on `d3c-min-9a4c1bc8` in which the local-search
+component reported `geocoder: "chain"` against a record saying that copy is
+pinned to Google. **Resolved by source reading. The observation is fully
+explained and carries no information about the pin.**
 
-What was established, all of it consistent with the pin working:
+`Igniter\Orange\Livewire\Concerns\SearchesNearby` declares `public string
+$geocoder` and fills it in `mountSearchesNearby()` (line 76) with
 
-- the revision does set `DELIVERY_GEOCODER_DRIVER=google` and
-  `DELIVERY_GEOCODER_PROVIDERS=google`;
-- `app/Delivery/GeocoderChainOverride.php` **is** present at the build commit
-  `9a4c1bc8`, so the code is in that image;
-- the override is registered as `afterResolving('geocoder')`, and TastyIgniter
-  sets `igniter-geocoder.default` from the stored `default_geocoder` setting
-  inside a `resolving('geocoder')` callback
-  (`vendor/tastyigniter/core/src/System/ServiceProvider.php:192`). The container
-  runs every `resolving` callback before any `afterResolving` one, so ours
-  should win;
-- `GeocoderChainOverrideChannelTest` pins that registration, including that it
-  is *not* registered as `resolving`.
+    $this->geocoder = setting('default_geocoder', 'nominatim');
 
-What was **not** established, and why the argument above is not enough: the test
-file says so itself. Its docblock records that resolving the geocoder for real is
-deliberately not attempted, because it needs a database the test environment
-lacks, and that "the resolve-and-apply path is verified on a deployed revision by
-reading back which provider answered, not asserted here on faith." **The reading
-that was supposed to be that verification is the one now reporting `chain`.**
+That is the **stored setting, read directly**. It never consults
+`config('igniter-geocoder.default')`, which is the key
+`GeocoderChainOverride` writes, and it never touches a resolved geocoder. The
+property therefore reads `chain` on every copy whether the pin works or not: it
+is structurally incapable of reflecting the override. The value was read from the
+component's server-side snapshot, where `placesSuggestions` was `[]` in the same
+reading, confirming this was not the `updateDeliveryLocationMap` event, whose
+`geocoder` field is the provider that actually answered.
 
-Two hypotheses remain open, and they have very different consequences:
+The contradiction is dissolved rather than adjudicated: the two things were never
+measuring the same quantity.
 
-- **H1 - the override ran.** Effective driver `google`, provider list narrowed to
-  Google alone. The string `chain` then comes from something reporting the
-  *stored* setting rather than the effective driver, and every recorded reading
-  stands.
-- **H2 - the override did not take effect.** Effective driver `chain` over the
-  full provider list, so **Nominatim was reachable** and any address could have
-  been placed by it.
+Worth knowing as a side effect: the same stored value chooses the front-end map
+library (line 79 loads Leaflet when the stored setting is `nominatim`, Google
+Maps JS otherwise). So the map assets follow the stored setting rather than the
+effective geocoder. Harmless while the stored value is `chain`, but it is a
+coupling to remember.
 
-There is no independent safety net between them: the driver pin and the provider
-narrowing are both done by the same `GeocoderChainOverride::apply()` call, so if
-one did not run, neither did. It is not valid to argue "even if the driver is
-chain, the chain only contains Google."
+### What each copy actually ran
 
-**How to settle it, and nothing weaker:** a read-only runtime probe on the
-`d3c-min` image with that revision's exact environment, resolving the geocoder
-and printing `config('igniter-geocoder.default')`, the keys of
-`config('igniter-geocoder.providers')`, and the concrete class of
-`Geocoder::driver()`. That separates H1 from H2 in one execution and changes
-nothing. It needs its own approval: the existing job carries neither the
-application key nor the geocoder variables.
+Code presence is the decisive test, not the date - a copy whose image predates
+#86 cannot apply the pin at all, and a copy that carries the code but sets no
+variable applies nothing, because `GeocoderChainOverride` returns early when the
+environment says nothing. #86 merged 2026-08-21 11:15 EDT as `1f8f0c75`.
 
-**Scope of the doubt, stated so it is neither inflated nor minimised.** Verdicts
-that do not depend on which provider resolved the coordinate are unaffected -
-the owner's-switch checks, the stale-session normalisation, totals, tamper
-resistance, API policy, and the schedule readings. The readings genuinely at
-risk are the area-sensitive ones - outside-area, boundary, unrecognised and
-incomplete addresses - because, as `GeocoderChainOverride`'s own docblock notes,
-Google and Nominatim can place the same address tens of metres apart while
-Delivery Area boundaries are decided at that scale. Main traffic is not
-implicated: Delivery is closed there, so no customer reaches the lookup.
+| Copy | override code in image | geocoder variables | What it ran |
+| --- | --- | --- | --- |
+| `d3c-e9a4f7ca` | **absent** | none | **Chain - certain.** Pre-#86 image |
+| `d3c-25f9813b` | **absent** | none | **Chain - certain.** Pre-#86 image |
+| `d3c-1f8f0c75` | present | **none set** | **Chain - certain.** The override is in the image but no-ops when unset |
+| `d3c-g2-1f8f0c75` | present | `google` / `google` | Pinned to Google |
+| `d3c-pu2-1f8f0c75` | present | `chain` / **empty string** | **Special case**: chain over a deliberately *empty* provider list. Not Google, but not Nominatim either - it has no providers configured at all |
+| `d3c-fix-be6835a9` | present | `google` / `google` | Pinned to Google |
+| `d3c-min-9a4c1bc8` | present | `google` / `google` | Pinned to Google |
+
+### Consequences for recorded evidence
+
+- **Readings on `d3c-e9a4f7ca`, `d3c-25f9813b` and `d3c-1f8f0c75` went through
+  Chain**, and Nominatim could have supplied any coordinate. This needs no probe
+  and is not affected by the resolution above: it follows from the image and the
+  environment alone. Any area-sensitive conclusion resting on those copies -
+  outside-area, boundary, unrecognised or incomplete addresses - should be read
+  as Chain-sourced.
+- **Readings on the three Google-pinned copies** are now unopposed: the only
+  evidence that had been against the pin turned out to measure something else.
+  Confirmation by runtime probe remains **optional**, and if run should cover
+  each pinned copy separately rather than letting one stand for the others.
+- **`d3c-pu2-1f8f0c75` has its own status** and should not be folded into either
+  group.
+- **Coordinate-independent findings are untouched**: the owner's-switch checks,
+  stale-session normalisation, totals, tamper resistance, API policy and every
+  schedule reading. None of them depends on which provider resolved an address.
+- **Main traffic is not implicated** at all: Delivery is closed there, so no
+  customer reaches the lookup. Its separate exposure is in
+  `DEPLOYMENT_IMPACT_TIMEZONE_FIX.md` section 7.
 
 ## Known problem carried over
 

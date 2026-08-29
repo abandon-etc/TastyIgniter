@@ -2884,3 +2884,39 @@ FP-1. Status: recorded. Level 2 shared-settings write on the user's explicit
   geocoder as `chain` on a copy recorded as pinned to Google. Recorded in
   `D3C_PROGRESS.md` with the two hypotheses and the read-only runtime probe that
   would settle it. Nothing was changed.
+
+## 2026-08-29 - Geocoder contradiction resolved by source reading; qa-toggle job deleted; two other jobs found undeleted
+
+Environment: repository source, Cloud Run revision metadata and Cloud Run Jobs.
+Status: recorded. Level 2 destructive deletion on the user's explicit
+confirmation naming the job. Nothing else changed.
+
+- **The `geocoder: "chain"` observation is explained and carries no information
+  about the pin.** `Igniter\Orange\Livewire\Concerns\SearchesNearby` fills its
+  public `$geocoder` property in `mountSearchesNearby()` from
+  `setting('default_geocoder', 'nominatim')` - the stored setting, read directly.
+  It never reads `config('igniter-geocoder.default')`, the key
+  `GeocoderChainOverride` writes, so it reports `chain` whether or not the pin
+  works. The reading also had `placesSuggestions = []`, confirming it was not the
+  `updateDeliveryLocationMap` event. No probe was needed to reach this.
+- **Per-copy triage recorded** in `D3C_PROGRESS.md`, using code presence rather
+  than date as the test. Pinned to Google: `d3c-fix-be6835a9`,
+  `d3c-g2-1f8f0c75`, `d3c-min-9a4c1bc8`. Ran Chain with certainty:
+  `d3c-e9a4f7ca` and `d3c-25f9813b` (no override code in image) and
+  `d3c-1f8f0c75` (code present, no variables set, so the override no-ops).
+  `d3c-pu2-1f8f0c75` is its own case: `DELIVERY_GEOCODER_DRIVER=chain` with an
+  empty `DELIVERY_GEOCODER_PROVIDERS`, i.e. a chain over a deliberately empty
+  provider list.
+- **Disposable Job `qa-toggle-20260829` deleted** on the user's confirmation
+  naming it. Described before: created 2026-08-29T17:54:55Z, execution count 3
+  (one failed container start caused by Git Bash rewriting `/bin/sh`, then two
+  successful read-only executions `-9gmzw` and `-9s4bv`). Deleted, then read
+  back: describe answers "Cannot find job". Recoverability: the resource is
+  gone; its execution logs remain under platform retention and hold stored
+  toggle and schedule values only - no address, credential or geometry.
+- **Noted, not acted on: the region holds two other jobs**, `qa-paymig-20260829`
+  (created 13:12 UTC) and `qa-tzread-20260829` (created 15:32 UTC), neither
+  created in this session. The 2026-08-28 record says the region then held no
+  jobs, so both are from today's other work. They are disposable-job shaped and
+  are flagged for the user rather than touched: no job is deleted without being
+  named.
