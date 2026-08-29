@@ -24,8 +24,11 @@ return new class extends Migration
             $table->string('payable_type', 32);
             $table->unsignedBigInteger('payable_id');
             $table->string('gateway_code', 64);
-            $table->string('external_payment_id', 191)->nullable();
-            $table->string('idempotency_key', 191);
+            // Identifier columns compare byte-exact: providers treat ids
+            // as case-sensitive, and the connection default collation is
+            // case-insensitive.
+            $table->string('external_payment_id', 191)->nullable()->collation('utf8mb4_bin');
+            $table->string('idempotency_key', 191)->collation('utf8mb4_bin');
             $table->unsignedBigInteger('amount_minor');
             $table->char('currency', 3);
             $table->string('status', 32);
@@ -47,7 +50,7 @@ return new class extends Migration
         Schema::create('payment_events', function (Blueprint $table): void {
             $table->bigIncrements('payment_event_id');
             $table->string('gateway_code', 64);
-            $table->string('external_event_id', 191);
+            $table->string('external_event_id', 191)->collation('utf8mb4_bin');
             $table->unsignedBigInteger('payment_transaction_id')->nullable();
             $table->string('event_type', 64);
             $table->boolean('signature_valid');
@@ -68,7 +71,7 @@ return new class extends Migration
             $table->bigIncrements('payment_refund_id');
             $table->unsignedBigInteger('payment_transaction_id');
             $table->string('gateway_code', 64);
-            $table->string('external_refund_id', 191)->nullable();
+            $table->string('external_refund_id', 191)->nullable()->collation('utf8mb4_bin');
             $table->unsignedBigInteger('amount_minor');
             $table->char('currency', 3);
             $table->string('status', 32);

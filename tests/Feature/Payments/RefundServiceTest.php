@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Payments;
 
-use App\Payments\Contracts\Payable;
 use App\Payments\Exceptions\RefundExecutionPending;
 use App\Payments\Models\PaymentRefund;
 use App\Payments\PaymentStatus;
@@ -31,7 +30,7 @@ final class RefundServiceTest extends TestCase
 
     public function test_a_pending_transaction_is_not_refundable(): void
     {
-        $transaction = $this->transactions()->createPending($this->payable(), 'fake', 'key-r2');
+        $transaction = $this->transactions()->createPending(new FakePayable(), 'fake', 'key-r2');
 
         $this->expectException(ValidationException::class);
         $this->refunds()->record($transaction, 1500);
@@ -58,6 +57,31 @@ final class RefundServiceTest extends TestCase
         $this->assertSame(1, PaymentRefund::query()->where('external_refund_id', 're_1')->count());
     }
 
+    public function test_pending_intents_are_counted_against_the_cap(): void
+    {
+        $transaction = $this->succeededTransaction('key-r6');
+
+        $this->refunds()->record($transaction, 20000);
+
+        $this->expectException(ValidationException::class);
+        $this->refunds()->record($transaction, 11501);
+    }
+
+    public function test_a_provider_refund_id_reused_for_a_different_operation_fails_loudly(): void
+    {
+        $transaction = $this->succeededTransaction('key-r7');
+        $this->refunds()->record($transaction, 1000, null, 're_mismatch');
+
+        $this->expectException(ValidationException::class);
+        $this->refunds()->record($transaction, 2000, null, 're_mismatch');
+    }
+
+    public function test_an_empty_provider_refund_id_is_refused(): void
+    {
+        $this->expectException(ValidationException::class);
+        $this->refunds()->record($this->succeededTransaction('key-r8'), 1000, null, '');
+    }
+
     public function test_execute_refuses_until_step_i(): void
     {
         $refund = $this->refunds()->record($this->succeededTransaction('key-r5'), 1000);
@@ -69,7 +93,7 @@ final class RefundServiceTest extends TestCase
     private function succeededTransaction(string $key)
     {
         $service = $this->transactions();
-        $transaction = $service->createPending($this->payable(), 'fake', $key);
+        $transaction = $service->createPending(new FakePayable(), 'fake', $key);
 
         return $service->transition($transaction, PaymentStatus::SUCCEEDED);
     }
@@ -82,36 +106,5 @@ final class RefundServiceTest extends TestCase
     private function refunds(): RefundService
     {
         return $this->app->make(RefundService::class);
-    }
-
-    private function payable(): Payable
-    {
-        return new class implements Payable
-        {
-            public function getPayableType(): string
-            {
-                return 'birthday_bookings';
-            }
-
-            public function getPayableId(): int
-            {
-                return 424242;
-            }
-
-            public function getAmountMinor(): int
-            {
-                return 31500;
-            }
-
-            public function getCurrency(): string
-            {
-                return 'CAD';
-            }
-
-            public function getPaymentDescription(): string
-            {
-                return 'Test booking';
-            }
-        };
     }
 }

@@ -6,6 +6,7 @@ namespace App\Payments\Models;
 
 use App\Payments\Casts\UtcDateTime;
 use App\Payments\Models\Concerns\ServiceWrites;
+use App\Payments\Models\Concerns\UtcTimestamps;
 use App\Payments\PaymentStatus;
 use Igniter\Flame\Database\Model;
 use Igniter\Flame\Database\Relations\HasMany;
@@ -15,6 +16,7 @@ use Illuminate\Validation\ValidationException;
 class PaymentTransaction extends Model
 {
     use ServiceWrites;
+    use UtcTimestamps;
 
     protected $table = 'payment_transactions';
 
@@ -46,17 +48,22 @@ class PaymentTransaction extends Model
         static::creating(function (self $transaction): void {
             $transaction->public_id ??= (string) Str::uuid();
 
-            if (!PaymentStatus::isValid($transaction->status)
-                || $transaction->status !== PaymentStatus::PENDING
-                || !is_int($transaction->amount_minor)
-                || $transaction->amount_minor <= 0
-                || strlen((string) $transaction->currency) !== 3
+            // Validate the RAW attributes: the integer get-cast would let
+            // a float pass is_int while the raw float reaches the driver.
+            $raw = $transaction->getAttributes();
+
+            if ($transaction->status !== PaymentStatus::PENDING
+                || !is_int($raw['amount_minor'] ?? null)
+                || $raw['amount_minor'] <= 0
+                || !is_int($raw['payable_id'] ?? null)
+                || $raw['payable_id'] <= 0
+                || !preg_match('/\A[A-Z]{3}\z/', (string) ($raw['currency'] ?? ''))
                 || trim((string) $transaction->idempotency_key) === ''
                 || trim((string) $transaction->gateway_code) === ''
                 || trim((string) $transaction->payable_type) === ''
             ) {
                 throw ValidationException::withMessages([
-                    'payment_transaction' => 'A payment transaction is created pending, with a positive integer minor amount, an ISO currency, a gateway code, a payable type, and an idempotency key.',
+                    'payment_transaction' => 'A payment transaction is created pending, with a positive integer minor amount, a positive payable id, an ISO 4217 currency, a gateway code, a payable type, and an idempotency key.',
                 ]);
             }
         });

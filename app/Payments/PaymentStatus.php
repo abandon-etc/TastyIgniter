@@ -34,8 +34,11 @@ final class PaymentStatus
         self::PENDING => [self::REQUIRES_ACTION, self::AUTHORIZED, self::SUCCEEDED, self::FAILED, self::CANCELLED],
         self::REQUIRES_ACTION => [self::AUTHORIZED, self::SUCCEEDED, self::FAILED, self::CANCELLED],
         self::AUTHORIZED => [self::SUCCEEDED, self::FAILED, self::CANCELLED],
-        // A refund that fails moves the transaction back to succeeded; the
-        // refund row keeps its own failed record.
+        // A refund that fails returns the transaction to succeeded — or to
+        // partially_refunded when refunded money is already recorded;
+        // PaymentTransactionService::transition() enforces that choice
+        // against refunded_amount_minor. The refund row keeps its own
+        // failed record either way.
         self::SUCCEEDED => [self::REFUND_PENDING, self::PARTIALLY_REFUNDED, self::REFUNDED],
         self::REFUND_PENDING => [self::SUCCEEDED, self::PARTIALLY_REFUNDED, self::REFUNDED],
         self::PARTIALLY_REFUNDED => [self::REFUND_PENDING, self::REFUNDED],
@@ -43,6 +46,9 @@ final class PaymentStatus
         self::CANCELLED => [],
         self::REFUNDED => [],
     ];
+
+    /** The states refund money may be recorded against. */
+    private const array REFUNDABLE = [self::SUCCEEDED, self::REFUND_PENDING, self::PARTIALLY_REFUNDED];
 
     /** @return array<int, string> */
     public static function all(): array
@@ -63,5 +69,10 @@ final class PaymentStatus
     public static function isTerminal(string $status): bool
     {
         return self::isValid($status) && self::TRANSITIONS[$status] === [];
+    }
+
+    public static function isRefundable(string $status): bool
+    {
+        return in_array($status, self::REFUNDABLE, true);
     }
 }

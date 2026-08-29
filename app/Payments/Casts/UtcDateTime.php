@@ -6,6 +6,7 @@ namespace App\Payments\Casts;
 
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
+use Carbon\Exceptions\InvalidFormatException;
 use Illuminate\Contracts\Database\Eloquent\CastsAttributes;
 use Illuminate\Database\Eloquent\Model;
 use InvalidArgumentException;
@@ -28,9 +29,18 @@ final class UtcDateTime implements CastsAttributes
             return CarbonImmutable::instance($value)->setTimezone('UTC');
         }
 
-        $date = CarbonImmutable::createFromFormat('!Y-m-d H:i:s', (string) $value, 'UTC');
+        // Carbon 3 throws InvalidFormatException in strict mode (the
+        // default) and returns null with strict mode off — it never
+        // returns false. Both failure shapes become the same loud,
+        // column-naming exception so corrupt ledger instants cannot pass
+        // silently.
+        try {
+            $date = CarbonImmutable::createFromFormat('!Y-m-d H:i:s', (string) $value, 'UTC');
+        } catch (InvalidFormatException $e) {
+            throw new InvalidArgumentException("Invalid UTC datetime stored in [{$key}].", 0, $e);
+        }
 
-        if ($date === false) {
+        if ($date === null) {
             throw new InvalidArgumentException("Invalid UTC datetime stored in [{$key}].");
         }
 

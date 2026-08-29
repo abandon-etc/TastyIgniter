@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace App\Payments;
 
 use App\Payments\Models\PaymentTransaction;
-use Closure;
-use Illuminate\Database\QueryException;
 
 /**
  * Durable business idempotency (design §13): one idempotency key resolves
@@ -16,28 +14,21 @@ use Illuminate\Database\QueryException;
 class PaymentIdempotencyService
 {
     /**
-     * Return the transaction already holding $key, or create it via
-     * $create. A concurrent creator losing the unique-constraint race
-     * re-reads the winner's row instead of failing.
-     *
-     * @param Closure(): PaymentTransaction $create
+     * Return the transaction already holding $key, or create it with
+     * $attributes. Uses Eloquent's createOrFirst: insert-first, a lost
+     * unique race is caught narrowly (UniqueConstraintViolationException,
+     * MySQL 1062 only) and the winner's row is returned — deadlocks and
+     * every other database failure propagate instead of being mistaken
+     * for a lost race. Inside an enclosing REPEATABLE READ transaction
+     * the winner re-read carries the framework's documented stale-snapshot
+     * caveat; the payment services call this outside such wrappers.
      */
-    public function resolve(string $key, Closure $create): PaymentTransaction
+    public function resolve(string $key, array $attributes): PaymentTransaction
     {
-        $existing = PaymentTransaction::query()->where('idempotency_key', $key)->first();
-        if ($existing !== null) {
-            return $existing;
-        }
-
-        try {
-            return $create();
-        } catch (QueryException $e) {
-            $winner = PaymentTransaction::query()->where('idempotency_key', $key)->first();
-            if ($winner !== null) {
-                return $winner;
-            }
-
-            throw $e;
-        }
+        /** @var PaymentTransaction */
+        return PaymentTransaction::query()->createOrFirst(
+            ['idempotency_key' => $key],
+            $attributes,
+        );
     }
 }

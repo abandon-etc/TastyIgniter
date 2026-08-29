@@ -62,4 +62,13 @@ final class PaymentStatusTest extends TestCase
         $this->assertFalse(PaymentStatus::canTransition('paid', 'succeeded'));
         $this->assertFalse(PaymentStatus::isTerminal('paid'));
     }
+
+    public function test_refundable_states_are_exactly_the_succeeded_family(): void
+    {
+        $refundable = array_values(array_filter(PaymentStatus::all(), PaymentStatus::isRefundable(...)));
+
+        $this->assertSame(['succeeded', 'refund_pending', 'partially_refunded'], $refundable);
+        $this->assertFalse(PaymentStatus::isRefundable('pending'));
+        $this->assertFalse(PaymentStatus::isRefundable('paid'));
+    }
 }

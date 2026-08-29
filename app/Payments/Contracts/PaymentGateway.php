@@ -19,8 +19,11 @@ interface PaymentGateway
 
     /**
      * Begin a provider payment for an already-created local pending
-     * transaction, returning the provider reference to store as
-     * external_payment_id. Must be idempotent per transaction.
+     * transaction, returning the provider reference. The caller stores it
+     * through PaymentTransactionService::attachExternalReference() — the
+     * only sanctioned write path for external_payment_id, which also
+     * handles the provider-scoped uniqueness race. Must be idempotent per
+     * transaction.
      */
     public function createPayment(PaymentTransaction $transaction): string;
 
@@ -28,6 +31,11 @@ interface PaymentGateway
      * Verify a webhook's raw body and signature. Implementations must
      * verify before parsing, and must never log or store the raw body,
      * signature, or any credential.
+     *
+     * @param array<string, string> $headers Header names lowercased,
+     *     each value the header's first (and for signatures only)
+     *     string value. Callers normalize before passing; adapters must
+     *     look up lowercase names only.
      */
     public function verifyWebhookSignature(string $rawBody, array $headers): bool;
 }

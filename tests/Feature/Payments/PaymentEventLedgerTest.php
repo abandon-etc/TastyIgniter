@@ -8,6 +8,7 @@ use App\Payments\EventProcessingStatus;
 use App\Payments\Models\PaymentEvent;
 use App\Payments\PaymentEventLedger;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 final class PaymentEventLedgerTest extends TestCase
@@ -67,6 +68,41 @@ final class PaymentEventLedgerTest extends TestCase
         $this->assertSame(EventProcessingStatus::FAILED, $failed->processing_status);
         $this->assertSame('transaction_not_found', $failed->safe_error);
         $this->assertSame(1, $failed->attempts);
+    }
+
+    public function test_an_unverified_delivery_is_never_recorded(): void
+    {
+        $this->expectException(ValidationException::class);
+        $this->ledger()->recordOnce('fake', 'evt_forged', 'payment.succeeded', false);
+    }
+
+    public function test_a_handled_event_cannot_be_regressed(): void
+    {
+        $ledger = $this->ledger();
+        $event = $ledger->markProcessed($ledger->recordOnce('fake', 'evt_done', 'payment.succeeded', true));
+
+        $this->expectException(ValidationException::class);
+        $ledger->markFailed($event, 'late_worker');
+    }
+
+    public function test_a_failed_event_can_be_retried_to_processed_clearing_the_error(): void
+    {
+        $ledger = $this->ledger();
+        $event = $ledger->recordOnce('fake', 'evt_retry', 'payment.succeeded', true);
+
+        $event = $ledger->markFailed($event, 'transaction_not_found');
+        $this->assertSame(1, $event->attempts);
+
+        $event = $ledger->markProcessed($event);
+        $this->assertSame(EventProcessingStatus::PROCESSED, $event->processing_status);
+        $this->assertSame(2, $event->attempts);
+        $this->assertNull($event->safe_error);
+    }
+
+    public function test_a_linked_transaction_must_exist_and_share_the_gateway(): void
+    {
+        $this->expectException(ValidationException::class);
+        $this->ledger()->recordOnce('fake', 'evt_badlink', 'payment.succeeded', true, 999999999);
     }
 
     private function ledger(): PaymentEventLedger

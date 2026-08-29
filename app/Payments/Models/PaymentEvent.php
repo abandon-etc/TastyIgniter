@@ -7,6 +7,7 @@ namespace App\Payments\Models;
 use App\Payments\Casts\UtcDateTime;
 use App\Payments\EventProcessingStatus;
 use App\Payments\Models\Concerns\ServiceWrites;
+use App\Payments\Models\Concerns\UtcTimestamps;
 use Igniter\Flame\Database\Model;
 use Igniter\Flame\Database\Relations\BelongsTo;
 use Illuminate\Validation\ValidationException;
@@ -14,6 +15,7 @@ use Illuminate\Validation\ValidationException;
 class PaymentEvent extends Model
 {
     use ServiceWrites;
+    use UtcTimestamps;
 
     protected $table = 'payment_events';
 
@@ -39,13 +41,17 @@ class PaymentEvent extends Model
     protected static function booted(): void
     {
         static::creating(function (self $event): void {
-            if (!EventProcessingStatus::isValid($event->processing_status)
+            // Events are born received with zero attempts; every later
+            // state is stamped by the ledger's marks under lock.
+            if ($event->processing_status !== EventProcessingStatus::RECEIVED
+                || (int) $event->attempts !== 0
+                || $event->processed_at !== null
                 || trim((string) $event->gateway_code) === ''
                 || trim((string) $event->external_event_id) === ''
                 || trim((string) $event->event_type) === ''
             ) {
                 throw ValidationException::withMessages([
-                    'payment_event' => 'A payment event carries a gateway code, a provider event id, an event type, and a valid processing status.',
+                    'payment_event' => 'A payment event is born received with zero attempts, and carries a gateway code, a provider event id, and an event type.',
                 ]);
             }
         });

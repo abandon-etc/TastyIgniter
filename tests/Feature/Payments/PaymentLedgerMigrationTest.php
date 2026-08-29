@@ -67,6 +67,28 @@ final class PaymentLedgerMigrationTest extends TestCase
         $this->assertTrue($refundIndexes->get('payment_refunds_provider_refund_unique')['unique']);
     }
 
+    public function test_identifier_columns_compare_byte_exact(): void
+    {
+        $connection = Schema::getConnection();
+        $prefix = $connection->getTablePrefix();
+
+        foreach ([
+            ['payment_transactions', 'idempotency_key'],
+            ['payment_transactions', 'external_payment_id'],
+            ['payment_events', 'external_event_id'],
+            ['payment_refunds', 'external_refund_id'],
+        ] as [$table, $column]) {
+            $collation = $connection->selectOne(
+                'SELECT COLLATION_NAME AS collation_name FROM information_schema.COLUMNS'
+                .' WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?',
+                [$prefix.$table, $column],
+            )->collation_name;
+
+            $this->assertSame('utf8mb4_bin', $collation,
+                "$table.$column must compare byte-exact; providers treat identifiers as case-sensitive.");
+        }
+    }
+
     public function test_migration_only_creates_the_three_ledger_tables(): void
     {
         $migration = file_get_contents(base_path(

@@ -7,7 +7,8 @@ namespace App\Payments;
 use App\Payments\Exceptions\RefundExecutionPending;
 use App\Payments\Models\PaymentRefund;
 use App\Payments\Models\PaymentTransaction;
-use Illuminate\Database\QueryException;
+use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -19,9 +20,13 @@ use Illuminate\Validation\ValidationException;
 class RefundService
 {
     /**
-     * Record a refund intent against a refundable transaction. Retrying
-     * with the same provider refund id returns the original row (a
-     * provider refund is one refund however often it is reported).
+     * Record a refund intent against a refundable transaction. The
+     * transaction row is locked for the duration, and the cap counts
+     * BOTH applied refund money and every already-pending intent, so
+     * intents can never cumulatively exceed the transaction amount.
+     * Retrying with the same provider refund id returns the original row
+     * only when it belongs to the same transaction with the same amount;
+     * any other reuse of a provider refund id fails loudly.
      */
     public function record(
         PaymentTransaction $transaction,
@@ -29,49 +34,66 @@ class RefundService
         ?string $safeReason = null,
         ?string $externalRefundId = null,
     ): PaymentRefund {
-        if (!in_array($transaction->status, [
-            PaymentStatus::SUCCEEDED,
-            PaymentStatus::REFUND_PENDING,
-            PaymentStatus::PARTIALLY_REFUNDED,
-        ], true)) {
+        if ($externalRefundId !== null && trim($externalRefundId) === '') {
             throw ValidationException::withMessages([
-                'payment_refund' => sprintf('A %s transaction is not refundable.', $transaction->status),
+                'payment_refund' => 'A provider refund id cannot be empty; pass null when the provider gave none.',
             ]);
-        }
-
-        if ($amountMinor <= 0
-            || $transaction->refunded_amount_minor + $amountMinor > $transaction->amount_minor) {
-            throw ValidationException::withMessages([
-                'payment_refund' => 'A refund is a positive amount, and cumulative refunds cannot exceed the transaction amount.',
-            ]);
-        }
-
-        if ($externalRefundId !== null) {
-            $existing = $this->findProviderRefund($transaction->gateway_code, $externalRefundId);
-            if ($existing !== null) {
-                return $existing;
-            }
         }
 
         try {
-            return PaymentRefund::query()->create([
-                'payment_transaction_id' => $transaction->getKey(),
-                'gateway_code' => $transaction->gateway_code,
-                'external_refund_id' => $externalRefundId,
-                'amount_minor' => $amountMinor,
-                'currency' => $transaction->currency,
-                'status' => RefundStatus::PENDING,
-                'safe_reason' => $safeReason,
-            ]);
-        } catch (QueryException $e) {
-            if ($externalRefundId !== null) {
-                $winner = $this->findProviderRefund($transaction->gateway_code, $externalRefundId);
-                if ($winner !== null) {
-                    return $winner;
+            return DB::transaction(function () use ($transaction, $amountMinor, $safeReason, $externalRefundId): PaymentRefund {
+                /** @var PaymentTransaction $fresh */
+                $fresh = PaymentTransaction::query()->lockForUpdate()->findOrFail($transaction->getKey());
+
+                if (!PaymentStatus::isRefundable($fresh->status)) {
+                    throw ValidationException::withMessages([
+                        'payment_refund' => sprintf('A %s transaction is not refundable.', $fresh->status),
+                    ]);
                 }
+
+                if ($externalRefundId !== null) {
+                    $existing = $this->findProviderRefund($fresh->gateway_code, $externalRefundId);
+                    if ($existing !== null) {
+                        return $this->assertSameRefund($existing, $fresh, $amountMinor);
+                    }
+                }
+
+                $pendingMinor = (int) PaymentRefund::query()
+                    ->where('payment_transaction_id', $fresh->getKey())
+                    ->where('status', RefundStatus::PENDING)
+                    ->sum('amount_minor');
+
+                $committed = $fresh->refunded_amount_minor + $pendingMinor + $amountMinor;
+                if ($amountMinor <= 0 || !is_int($committed) || $committed > $fresh->amount_minor) {
+                    throw ValidationException::withMessages([
+                        'payment_refund' => 'A refund is a positive amount, and applied plus pending refunds cannot exceed the transaction amount.',
+                    ]);
+                }
+
+                return PaymentRefund::query()->create([
+                    'payment_transaction_id' => $fresh->getKey(),
+                    'gateway_code' => $fresh->gateway_code,
+                    'external_refund_id' => $externalRefundId,
+                    'amount_minor' => $amountMinor,
+                    'currency' => $fresh->currency,
+                    'status' => RefundStatus::PENDING,
+                    'safe_reason' => $safeReason,
+                ]);
+            });
+        } catch (UniqueConstraintViolationException) {
+            // A racer inserted the same provider refund id between our
+            // check and insert; hold it to the same identity rules.
+            $winner = $externalRefundId !== null
+                ? $this->findProviderRefund($transaction->gateway_code, $externalRefundId)
+                : null;
+
+            if ($winner !== null) {
+                return $this->assertSameRefund($winner, $transaction, $amountMinor);
             }
 
-            throw $e;
+            throw ValidationException::withMessages([
+                'payment_refund' => 'This provider refund id is already recorded.',
+            ]);
         }
     }
 
@@ -82,6 +104,18 @@ class RefundService
     public function execute(PaymentRefund $refund): never
     {
         throw RefundExecutionPending::make();
+    }
+
+    private function assertSameRefund(PaymentRefund $existing, PaymentTransaction $transaction, int $amountMinor): PaymentRefund
+    {
+        if ($existing->payment_transaction_id !== (int) $transaction->getKey()
+            || $existing->amount_minor !== $amountMinor) {
+            throw ValidationException::withMessages([
+                'payment_refund' => 'This provider refund id already belongs to a different refund operation.',
+            ]);
+        }
+
+        return $existing;
     }
 
     private function findProviderRefund(string $gatewayCode, string $externalRefundId): ?PaymentRefund
