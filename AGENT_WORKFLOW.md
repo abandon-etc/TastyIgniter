@@ -290,7 +290,16 @@ real keyboard settled it in a minute: it works.
 Before recording a negative result, confirm the stimulus actually arrived —
 an event probe, a log line, a network trace. "The page did not react" is
 evidence only once it is established that the page was given something to
-react to. Both browser-automation toolsets available here share the keypress
+react to.
+
+The same rule caught a third case on 2026-08-29, and this one had already
+produced a wrong entry. A script set a debounced Livewire field and
+submitted immediately, so the server received the *previous* value and
+answered with a genuine-looking "we couldn't locate that address"; a
+retry then succeeded because the value had synchronised by then. It had
+been recorded as a transient provider failure. When driving a bound
+field, read the component's own state back and confirm it holds the value
+before submitting — the input's DOM value is not the thing being sent. Both browser-automation toolsets available here share the keypress
 limitation, so keyboard-activation checks are settled by a person or recorded
 as not run.
 
