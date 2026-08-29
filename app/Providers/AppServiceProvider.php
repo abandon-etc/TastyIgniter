@@ -17,7 +17,9 @@ use App\Delivery\WeekdayScheduleCorrection;
 use App\Livewire\BirthdayReservation;
 use App\Livewire\DeliveryLocalSearch;
 use App\Mail\MailTestRedirect;
+use App\Support\DefaultLocaleIntegrity;
 use App\Support\TimezoneIntegrity;
+use Igniter\System\Models\Language;
 use Igniter\System\Models\Settings;
 use Igniter\Cart\OrderTypes\Delivery as VendorDeliveryOrderType;
 use Igniter\Flame\Pagic\Router;
@@ -96,6 +98,11 @@ class AppServiceProvider extends ServiceProvider
                 date_default_timezone_get(),
                 (string) config('app.timezone'),
             );
+
+            // The default language is what gives untagged model columns
+            // their meaning, so changing it reinterprets existing menu
+            // content instead of failing. See App\Support\DefaultLocaleIntegrity.
+            DefaultLocaleIntegrity::report(Language::getDefault()?->code);
         });
 
         LocationModel::implement(LocationDeliveryAction::class);
