@@ -244,7 +244,7 @@ preserved, or reachable is not passed on *rendered* alone.
 | Free delivery at the decision threshold (CA$50.00), at the edges | Passed | Executed 2026-08-24 at the new values: below (48.00) pays 5.00; exactly 50.00 free; above (62.00) free; total equals subtotal on the free legs. The at-or-above boundary is inclusive, as recorded for D3B |
 | Delivery minimum shown and enforced as the stored value | Passed, with one leg on tests | Executed 2026-08-24, the contrast test: under stored 20.00 the unfixed copy showed and enforced a computed 80.00 (label, disabled button, served `/checkout` refusal); the copy carrying PR #101 showed 20.00 and let the same CA$23.99 basket through to checkout. After the batch write the stored minimum is 0 and no label renders, which is correct. Refusal below a stored positive minimum was never exercised deployed (the minimum moved to 0 right after the reading); it stands on `DeliveryOrderTypeMinimumTest` (fails at 19, passes at 20) and is recorded in the section above |
 | Money reads and compares correctly in Canadian French | Comparison passed; display recorded as wrong for the locale, not fixed here | Executed 2026-08-29 on `d3c-min-9a4c1bc8`. **Comparison is correct**: the fee applies below CA$50.00 and not at or above it, verified against real baskets at 23.99, 48.00, 50.00 and 62.00 (2026-08-24). **Display is not Canadian French**: every amount renders as `$12.00` — symbol first, period decimal — on a page whose `<html lang>` is `fr_CA`, where the local convention is `12,00 $`. Cause already traced in `CLAUDE_HANDOFF.md` section 10: the currency formatter is null, so `number_format()` uses the separators on the currency record and the locale-aware formatter never runs. Recorded only; the fix belongs to the localization workstream (`LOCALIZATION_WORKSTREAM_PLAN.md` W4), which considers it together with the tax lines at checkout |
-| Unrecognised, incomplete, out-of-area addresses; changing an address | Not started | |
+| Unrecognised, incomplete, out-of-area addresses; changing an address | Out-of-area and unrecognised passed; incomplete open; address change not started | Executed 2026-08-29 on `d3c-min-9a4c1bc8`, each with the submitted value verified in the component before submitting (see the debounce note below). **Out-of-area** (a downtown address, well outside the polygon): delivery refused, the page stayed put with "We do not have any local restaurant near you.", no URL, provider text, geometry or internal id in the message, and the pickup entry point remained on the page. **Unrecognised** ("zzqx nonexistent street 99999 Nowhereville"): the generic "We couldn't locate the entered address or postcode, please enter a valid address or postcode.", no technical detail. Both messages are English on a French page — Q-001, not a new defect. **Incomplete** (a street name with no number): the widget **accepted** it and opened a delivery basket. That does not yet contradict the decision, which places the street-number requirement at checkout; the checkout leg is the open part of this row and needs the ordering window |
 | Switching between pickup and delivery, both ways | Not started | |
 | Old sessions cleared, totals correct, resistant to tampering, API rules enforced | Not started | |
 | Mobile at 390px: no sideways scrolling, no broken images | Passed | Executed |
@@ -330,6 +330,22 @@ weight.
 
 The refusal message is English on a French site, like the pickup one: it
 merges into Q-001, with "Delivery" in place of "Cueillette".
+
+### The "transient" first address lookup was the driver, not the provider
+
+Recorded 2026-08-29, and it corrects an earlier reading. The home-page
+address field is bound with `wire:model.live.debounce.500ms`, so a script
+that sets the field and submits in the same breath sends the **previous**
+query — usually empty — and the server answers "We couldn't locate the
+entered address or postcode", exactly the message a real failure gives.
+Retrying then "works", because by the second attempt the value has
+synchronised.
+
+That is what the 2026-08-24 note called a transient provider failure
+that succeeded on retry. There is no evidence a provider call failed at
+all. Every address reading from now on verifies the component's bound
+value before submitting, and the readings recorded for 2026-08-29 were
+taken that way.
 
 **The address suggestion feature is broken, and it fails loudly.** Typing into
 the delivery address field calls the provider's suggestion service, which
