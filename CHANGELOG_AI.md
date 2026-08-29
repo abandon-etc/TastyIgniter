@@ -4884,3 +4884,50 @@ section 10 awaits approval. No setting, revision, or code changed.
 Next on this thread: the timezone fix awaits approval; the delivery
 evening cut-off anomaly on `d3c-fix-be6835a9` is a separate question and
 needs its own executed reading after 21:00 local.
+
+## 2026-08-29 - Deployment impact assessed before any deploy; the admin checklist stops quoting a figure that drifts
+
+Environment: the repository, Cloud Run and Artifact Registry in
+`le-chateau-canada-staging`. Status: assessment and documentation only. Nothing
+was deployed, built, scheduled, or written to any stored setting.
+
+- **The live build point was established, not assumed.** The 100%-traffic
+  revision `d2fix-31821289` was created 2026-07-19 and runs digest
+  `sha256:72371b61...689102`, which carries the Artifact Registry tag
+  `31821289df9ae4a162cabd0cac7a3ac6fb04cd0c` - commit `31821289`. Revision name,
+  image tag and commit agree.
+- **The gap is six weeks, not two.** 71 first-parent commits to `e8fe12c1`; 15
+  touch anything outside `.md`; 8 change runtime behaviour. Recorded in
+  `DEPLOYMENT_IMPACT_TIMEZONE_FIX.md` with a per-change customer-impact verdict.
+- **The item that moves live behaviour is not the timezone fix.**
+  `WeekdayScheduleCorrection` (#90) is registered unconditionally and rebuilds
+  every working schedule, opening and pickup included - not only delivery. Main
+  traffic runs without it today, so its opening and pickup days are currently
+  shifted one day from what is stored, and deploying changes which days the shop
+  appears open. A fix, but a visible one, and it would land in the same event as
+  the timezone fix.
+- **A deploy is schema-neutral.** `start.sh` runs `package:discover`,
+  `config:cache`, `route:cache`, `view:cache` and no migration. The relocated
+  Birthday migration (#124) is guarded and no-ops on an initialized database.
+  Two residues recorded: the ledger row written under `abandon.birthday` when
+  migrations are next run survives an image rollback, and the relocated `down()`
+  is now a data-loss path against real reservation columns that did not exist
+  before.
+- **Two options compared, neither executed.** Deploy HEAD, or build a two-line
+  timezone-only branch from `31821289` that drops `TimezoneIntegrity` because
+  cherry-picking #135 whole would conflict in `AppServiceProvider`. The minimal
+  build is recommended first, so that a misbehaving storefront afterwards has one
+  candidate cause instead of six weeks of them.
+- **Admin checklist step 3 no longer quotes a row count.** It had said "8 rows,
+  newest #11". Loading `/checkout` creates a draft order row, so any figure
+  written there is stale by the time the owner reaches the step - including from
+  their own walk through the list. Step 3 now asks the owner to report the count
+  and the highest order number and to confirm every row is a draft, which also
+  makes their answer the current baseline for the pre-launch draft-row cleanup.
+  No order table read was performed: the user declined both a disposable Job and
+  the use of an admin account for it.
+- **FP-1 on the main-traffic revision:**
+  `2127efd6d63de53e6d9fbc5388f9db3fee72d0575eec25a09b9f99e9ad8565d3`, identical
+  to the 2026-08-28 recording, so nothing has drifted in its configuration.
+
+Documentation only. Every changed path is `.md`.
