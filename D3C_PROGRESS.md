@@ -234,7 +234,7 @@ preserved, or reachable is not passed on *rendered* alone.
 | Address provider unavailable: logs stay clean | Passed | Executed |
 | Address provider unavailable: pickup still offered **and reachable** | Passed | Executed: followed through from the basket to a working pickup checkout |
 | Address provider unavailable: basket kept | Passed | Executed: the item survived a failed address lookup, with no delivery fee added |
-| Delivery closed before 12:00 and after 21:00, every day | Partly passed | Executed for Saturday, closed all day: a delivery order was attempted on both copies on 2026-08-22 in the afternoon and refused at the moment of adding, basket kept empty. The before-12:00 and after-21:00 legs on open days still need their windows |
+| Delivery closed before 12:00 and after 21:00, every day | Partly passed | **Before-12:00 leg done 2026-08-29 11:37 EDT on `d3c-min-9a4c1bc8`, executed**: delivery selected with an in-area address on a now-open day (Saturday), the add was refused by the server with "outside our Delivery hours", basket empty, checkout CLOSED. The 2026-08-22 all-day-closed Saturday reading is kept. The **after-21:00 leg still needs its window** and is the subject of the separate evening-cut-off question below |
 | Delivery open during its hours | Passed | Executed. Friday 2026-08-21 reading kept as history (taken under the setting "None"). Sunday 2026-08-23, both copies: unfixed accepts on a closed day, fixed refuses — the weekday correction confirmed deployed. Monday 2026-08-24 14:1x, the positive leg: delivery adds accepted on the weekday-fixed copies during the 12:00-21:00 window |
 | Address lookup works with one provider pinned | Passed | Executed: the home-page widget geocodes the typed address server-side and it works on both copies |
 | Address autocomplete on the Google-pinned copies | **Failed** | Executed: the suggestion call is refused by the provider, and the raw technical error is shown to the customer. See below |
@@ -243,7 +243,7 @@ preserved, or reachable is not passed on *rendered* alone.
 | Delivery fee of CA$5.00 below the free threshold | Passed | Executed 2026-08-24 against real baskets on `d3c-min-9a4c1bc8`: CA$23.99 and CA$48.00 both carried the CA$5.00 fee in the served totals |
 | Free delivery at the decision threshold (CA$50.00), at the edges | Passed | Executed 2026-08-24 at the new values: below (48.00) pays 5.00; exactly 50.00 free; above (62.00) free; total equals subtotal on the free legs. The at-or-above boundary is inclusive, as recorded for D3B |
 | Delivery minimum shown and enforced as the stored value | Passed, with one leg on tests | Executed 2026-08-24, the contrast test: under stored 20.00 the unfixed copy showed and enforced a computed 80.00 (label, disabled button, served `/checkout` refusal); the copy carrying PR #101 showed 20.00 and let the same CA$23.99 basket through to checkout. After the batch write the stored minimum is 0 and no label renders, which is correct. Refusal below a stored positive minimum was never exercised deployed (the minimum moved to 0 right after the reading); it stands on `DeliveryOrderTypeMinimumTest` (fails at 19, passes at 20) and is recorded in the section above |
-| Money reads and compares correctly in Canadian French | Not started | Decimal separator differs; the three amounts above are compared numerically |
+| Money reads and compares correctly in Canadian French | Comparison passed; display recorded as wrong for the locale, not fixed here | Executed 2026-08-29 on `d3c-min-9a4c1bc8`. **Comparison is correct**: the fee applies below CA$50.00 and not at or above it, verified against real baskets at 23.99, 48.00, 50.00 and 62.00 (2026-08-24). **Display is not Canadian French**: every amount renders as `$12.00` — symbol first, period decimal — on a page whose `<html lang>` is `fr_CA`, where the local convention is `12,00 $`. Cause already traced in `CLAUDE_HANDOFF.md` section 10: the currency formatter is null, so `number_format()` uses the separators on the currency record and the locale-aware formatter never runs. Recorded only; the fix belongs to the localization workstream (`LOCALIZATION_WORKSTREAM_PLAN.md` W4), which considers it together with the tax lines at checkout |
 | Unrecognised, incomplete, out-of-area addresses; changing an address | Not started | |
 | Switching between pickup and delivery, both ways | Not started | |
 | Old sessions cleared, totals correct, resistant to tampering, API rules enforced | Not started | |
@@ -627,11 +627,25 @@ improvement, not part of this phase.
 
 ## Next action
 
-The 2026-08-23 batch is complete: A, B, C, and D were all executed on
-2026-08-24 with the user present, in the fixed order (the Tuesday scheduled
-task is cancelled so it does not re-run). Open items now: the hours change
-(every day 12:00-21:00) waits separately for the user's approval; the remaining D3C
-acceptance rows (boundary/out-of-area, address-change, pickup/delivery
-transitions, session/totals/spoof/API, evening cut-offs, admin regression)
-continue on `d3c-min-9a4c1bc8` under the applied no-minimum/50 values; and
-the 板块二 and tax implementations start only on their own approvals.
+The acceptance sweep is running on `d3c-min-9a4c1bc8` under the applied
+no-minimum / CA$50.00 values, one row at a time, each to the executed
+standard.
+
+**Before each session of readings, verify the copy's clock.** The
+timezone fails open to UTC per container instance
+(`CLAUDE_HANDOFF.md` section 10), so a reading taken on a drifted
+instance would be wrong about every window while looking normal. The
+cheap check: outside 12:00-22:00 local the storefront must say closed
+and name the next opening, and inside those hours it must offer the
+order type. Both copies were verified on Montreal time at 11:25 EDT on
+2026-08-29.
+
+Still to take: delivery's after-21:00 cut-off (which is also the open
+question about the copy that reported delivery open at 21:10 on
+2026-08-28); out-of-area and boundary addresses; unrecognised,
+incomplete and changed addresses; pickup/delivery transitions in both
+directions; stale sessions, totals, spoof resistance and API policy; and
+the admin regression. The owner's delivery on/off switch stays out of the
+sweep: it writes a shared setting and needs approval first. The timezone
+fix, the 板块二 work and the tax implementation each wait on their own
+approvals.
