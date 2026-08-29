@@ -5214,3 +5214,38 @@ deployed or executed.
   except the image.
 
 Documentation only. Every changed path is `.md`.
+
+## 2026-08-29 - Domain onboarding, phase one: current state read, nothing changed
+
+Environment: Google Cloud domain verification and Cloud Run domain mappings,
+plus read-only HTTP against the live service. Status: read-only investigation.
+**No service configuration was changed and no revision was produced.**
+
+- **The domain is not verified with Google.** `gcloud domains list-user-verified`
+  returns `[]` with exit status 0 - checked explicitly rather than inferred from
+  empty output. The Brevo TXT record added on 2026-08-23 is Brevo's own and has
+  no bearing on Google ownership verification; they are separate systems.
+- **No domain mapping exists.** The `beta` command group is not installed and
+  installing it needs administrator rights on the SDK directory, so the Cloud Run
+  Admin API was queried directly instead:
+  `GET .../apis/domains.cloudrun.com/v1/namespaces/.../domainmappings` returns
+  HTTP 200 with no `items`. Zero mappings in `northamerica-northeast1`.
+- **The verification token cannot be fetched from here.** The Site Verification
+  API answers HTTP 403 `ACCESS_TOKEN_SCOPE_INSUFFICIENT` to the gcloud access
+  token, which carries the cloud-platform scope and not the site-verification
+  one. The token is issued per Google account through the browser flow, so
+  producing it is the user's step, not the agent's.
+- **Nothing prevents indexing today.** The live service returns no
+  `X-Robots-Tag` header and its home page carries no robots `<meta>`;
+  `public/robots.txt` is a two-line file in the repository disallowing only
+  `/admin/`. The storefront is crawlable. A plan was written and **not applied**.
+- Side note, checked so it is not mistaken for a defect later: a `HEAD` on the
+  home page reports `content-type: application/octet-stream` while a `GET`
+  correctly reports `text/html; charset=utf-8`. A HEAD-request quirk, not a
+  content-type bug.
+- Two structural facts about domain mappings were written into
+  `CLAUDE_HANDOFF.md`: a mapping points at a service rather than a revision tag,
+  so the staging name resolves to the live 100%-traffic revision; and a subdomain
+  is not an isolated environment, because every mapping shares the one database.
+
+Documentation only. Every changed path is `.md`.

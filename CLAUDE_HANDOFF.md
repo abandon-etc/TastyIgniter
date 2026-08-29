@@ -115,6 +115,26 @@ The latest Ready revision is the retained 0%-traffic Q-011 revision. It is not
 the active/main-traffic revision. Traffic allocation, not latest-Ready order,
 defines the live staging runtime.
 
+### Custom domain: two things that are easy to get wrong
+
+Recorded 2026-08-29 as the domain work begins, because both are the kind of
+assumption that only surfaces after something is already pointed at the wrong
+place.
+
+1. **A Cloud Run domain mapping points at a *service*, not at a revision or a
+   revision tag.** Mapping `staging.lechateaudesenfants.ca` therefore sends that
+   name to whatever revision holds 100% of traffic - which is the live site
+   itself, not a test copy. It is a second name for production, not a route to a
+   tagged revision. Sending a hostname to a specific tag needs an external HTTP(S)
+   load balancer with a serverless NEG, which is a different mechanism and a
+   separate piece of work.
+2. **A subdomain is not a separate environment.** Every copy and every mapping
+   share the one database, so a new hostname renames the same site. It is
+   genuinely useful for verifying the things that are *about* the name - TLS
+   certificates, absolute links, redirects, third-party callbacks and webhooks -
+   and it isolates no data whatever. Anything written through the staging name is
+   written to the live data.
+
 That fingerprint is **void**. The freeze described it as a SHA-256 of
 normalized, redacted service metadata but never recorded the normalized field
 list or the algorithm, and neither can be reconstructed from anything still
