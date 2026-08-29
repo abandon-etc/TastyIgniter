@@ -4671,5 +4671,48 @@ this docs PR is Level 0, eligible for auto-merge. Full detail in
   first-green. Draft PR #122 carries the classification; merge waits for
   the ordering fix plus explicit confirmation.
 
+## 2026-08-29 - The migration-ordering fix is written and CI-verified: migrate passes on all rows; two test-expectation residues named
+
+Environment: repository code on branch `fix/migration-ordering` (PR #124,
+Level 1, Ready for the user's merge confirmation, executed on the user's
+2026-08-28 approval), and one throwaway CI verification branch, deleted
+after its run. Status: no merge yet; nothing ran against any project
+database — the verification used the workflow's own throwaway MySQL.
+
+- The defect proved **wider than the recorded note**: the installed core
+  has no extension dependency ordering at all — local extensions register
+  and migrate before every vendor extension — so beyond the root-pass
+  migration, the Birthday group's own tables (foreign keys to customers
+  and locations) were equally exposed on a fresh database.
+- The fix, from the three approved options (dependency declaration:
+  consumed nowhere in this core; timestamps: cannot cross the
+  root-before-extensions boundary; chosen: ownership + ordering +
+  guards): the reservations alteration moved into the Birthday
+  extension's own migrations with idempotent apply and a loud — never
+  silent — failure if the order regresses;
+  `App\BirthdayBooking\BirthdayMigrationOrder` moves the
+  `abandon.birthday` group to the end of the migration map at boot with
+  the group key (and so the ledger identity) unchanged; a contract test
+  pins the reorder against vendor change.
+- **Verification (Actions run 33223317077, throwaway combination branch):
+  `igniter:up` passed on PHP 8.3, 8.4 and 8.5 — the approved acceptance —
+  and the suite then ran in full against a real database for the first
+  time: 209 tests, 922 assertions, 0 errors, 2 failures, identical on all
+  three rows** (previous best: 75 errors + 3 failures).
+- The two residues are named and are test-expectation bugs, kept out of
+  the fix PR by scope: `BirthdaySlotHoldMigrationTest:44` asserts the
+  foreign key's referenced table as `birthday_bookings` where
+  information_schema reports the physical `ti_birthday_bookings` (the
+  key itself is correct; the test had never executed against a database
+  before), and the stock Laravel `ExampleTest` expects `GET /` to answer
+  200 where the site answers 302. Both go to a follow-up
+  fix-or-quarantine per `CI_ENABLEMENT_PLAN.md` §3; CI is expected green
+  after it.
+- Sequence standing: PR #124 merge on explicit confirmation; then draft
+  PR #122 flips to Ready; the two reviewed independently. D and F wait
+  for CI first-green; E waits on the Snappy conversation.
+
+Documentation only in this entry; the code lives in PR #124.
+
 Deletions aside, no runtime state changed; the workflow edits live only on
 the draft-PR branch.
