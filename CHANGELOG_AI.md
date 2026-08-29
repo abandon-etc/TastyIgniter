@@ -5177,3 +5177,40 @@ written to any setting, or executed.
   deploying.
 
 Documentation only. Every changed path is `.md`.
+
+## 2026-08-29 - Deployment checklist ordering corrected: immutable revisions would have forced two cutovers and an unpinned window
+
+Environment: repository documentation. Status: documentation correction. Nothing
+deployed or executed.
+
+- **The ordering error.** The checklist written earlier today placed "set the
+  geocoder variables on the production revision" *after* the traffic cutover.
+  **Cloud Run revisions are immutable**: setting an environment variable produces
+  a new revision and cannot be applied to a serving one. That order therefore
+  meant deploy revision A, cut traffic to A, deploy revision B (same image plus
+  variables), cut traffic again - two cutovers, with a window in between during
+  which the live site ran the new image **unpinned**, on the stored `chain`, with
+  Delivery open. Exactly the state the gate exists to prevent.
+- **Corrected**: the variables now ride with the image in the deploy step, so
+  there is one cutover and no unpinned window. The visibility they had been split
+  out for is kept as a separate numbered check, 2b, which reads the two variables
+  back off the new revision and is explicitly excluded from the deploy step's
+  completion test - a successful image deploy is not evidence that the variables
+  are set. The same correction is applied to the two-step statement in the
+  Nominatim production gate.
+- **An expected-difference list was added ahead of the side-by-side read, and it
+  has three entries rather than two.** Against the *new* revision the twin
+  `d3c-a2ee559c` is no longer one variable away: image, geocoder variables, and
+  `DELIVERY_ENABLED`. The third is pre-existing - the twin has always run with
+  Delivery open - and if the new revision is set to `false` to match production
+  then the home page Livraison block and the three-part heading will differ
+  between them. That is the flag, not a regression, and today's owner's-switch
+  checks recorded precisely what that difference looks like.
+- **This also bounds what the twin is a baseline for**, which the earlier
+  write-up did not state: it is like-for-like for old-image behaviour and is the
+  right place to watch delivery-open behaviour and the Nominatim gate, but it is
+  **not** like-for-like for the pickup-only surface production actually serves.
+  For that surface the live site before cutover is the comparator on everything
+  except the image.
+
+Documentation only. Every changed path is `.md`.

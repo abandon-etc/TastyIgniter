@@ -191,24 +191,48 @@ baseline; scheduling the deployment while assuming the baseline exists fails if
 cleanup ran first. Neither side may pass this copy without checking the other.
 It shares the live database, so it is a read-only comparator.
 
-**Deployment-day checklist.** Each line is its own step, deliberately: folding
-any of them into "deploy" is how they get lost.
+**Deployment-day checklist.** Corrected 2026-08-29 after an ordering error: an
+earlier draft put "set the geocoder variables" *after* the traffic cutover.
+**Cloud Run revisions are immutable** - setting an environment variable creates a
+new revision, it cannot be added to a serving one - so that order would have
+meant deploying revision A, cutting traffic to A, deploying revision B (same
+image plus variables), and cutting traffic a second time, with a window in
+between where the live site ran the new image **unpinned**. The variables
+therefore ride with the image in step 2, and the visibility they were split out
+for is preserved by the separate check at 2b.
 
 1. Record FP-1 on the main-traffic revision before anything.
-2. Build and deploy the new image to a **tagged 0%-traffic revision**.
-3. Read the tagged revision side by side against `d3c-a2ee559c` (see the
-   baseline note above), not against the live site.
+2. Build and deploy the new image to a **tagged 0%-traffic revision**, setting
+   `DELIVERY_GEOCODER_DRIVER` and `DELIVERY_GEOCODER_PROVIDERS` **in the same
+   deploy command** - unless the stored-setting path in section 7 is taken
+   instead.
+2b. **Read those two variables back off the new revision and confirm they are
+   set.** This line is not part of step 2's completion test: a successful image
+   deploy is not evidence that the variables are set. Miss it and the site runs
+   the stored `chain`, reaching Nominatim, with Delivery open.
+3. Read the tagged revision side by side against `d3c-a2ee559c`, not against the
+   live site - **against the expected-difference list below**.
 4. Cut traffic over, under its own gate.
-5. **Set `DELIVERY_GEOCODER_DRIVER` and `DELIVERY_GEOCODER_PROVIDERS` on the
-   production revision** - *unless* the stored-setting path in section 7 was
-   taken instead. **This is not part of step 2 and is not completed by it.** The
-   deployed image only gains the *ability* to pin the chain;
-   `GeocoderChainOverride` does nothing while the variables are unset, and the
-   production revision has never had them. Skipping this leaves the site on the
-   stored `chain`, reaching Nominatim, with Delivery open.
-6. Verify the storefront open/closed state against Montreal time on a
+5. Verify the storefront open/closed state against Montreal time on a
    cold-started instance.
-7. Record FP-1 again.
+6. Record FP-1 again.
+
+**Expected differences for step 3, so none of them is read as a regression.**
+The twin was a one-variable copy of main traffic; against the *new* revision it
+is no longer one difference but three, and all three are intended:
+
+| # | Difference | Why it is expected |
+| --- | --- | --- |
+| 1 | **Image**: `31821289` on the twin, HEAD on the new revision | The point of the deployment |
+| 2 | **Geocoder variables**: absent on the twin, `google`/`google` on the new revision | Deliberately introduced at step 2 |
+| 3 | **`DELIVERY_ENABLED`**: `true` on the twin, whatever the new revision is given | Pre-existing. The twin has always differed from main traffic here. If the new revision is set to `false` to match production, the home page's Livraison block and the three-part heading will differ between the two - that is the flag, not a regression, and today's owner's-switch checks recorded exactly what that difference looks like |
+
+Difference 3 also bounds what the twin is a baseline *for*. It is a like-for-like
+comparator for old-image behaviour, and the right place to watch delivery-open
+behaviour and the Nominatim gate. It is **not** a like-for-like comparator for
+the pickup-only surface production actually serves, because delivery is open on
+it. Where that surface matters, the live site before cutover is the comparator
+for everything except the image.
 
 **What overturns this and makes the fix urgent again:**
 

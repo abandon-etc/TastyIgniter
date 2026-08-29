@@ -789,9 +789,14 @@ carried `DELIVERY_GEOCODER_DRIVER` or `DELIVERY_GEOCODER_PROVIDERS`** - the
 2026-08-29 read-back confirms neither is set. So a deployed production revision
 with no variables still runs the stored `chain` and still reaches Nominatim.
 
-1. Deploy an image containing #86.
-2. **Set `DELIVERY_GEOCODER_DRIVER` and `DELIVERY_GEOCODER_PROVIDERS` on the
-   production revision.**
+1. Deploy an image containing #86, **setting
+   `DELIVERY_GEOCODER_DRIVER` and `DELIVERY_GEOCODER_PROVIDERS` in the same
+   deploy command**. Cloud Run revisions are immutable, so the variables cannot
+   be added to a serving revision afterwards without deploying again and cutting
+   traffic a second time - which would leave a window where the live site runs
+   the new image unpinned.
+2. **Read those two variables back off the new revision before cutting traffic
+   to it.** A successful image deploy is not evidence that they are set.
 
 Step 2 is at risk precisely because step 1 gets described as "the deployment
 solves the geocoder". It does not. This is the same failure shape recorded for
