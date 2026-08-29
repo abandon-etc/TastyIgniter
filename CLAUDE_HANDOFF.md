@@ -760,6 +760,18 @@ Public Nominatim is not approved for production Delivery traffic for the
 identity, attribution, shared rate-limit, fallback fan-out, and autocomplete
 reasons documented above.
 
+**What satisfying this gate now requires, established 2026-08-29.** The
+main-traffic revision `d2fix-31821289` sets no geocoder environment variable,
+and its image was built at commit `31821289` (2026-07-19), five weeks before
+`App\Delivery\GeocoderChainOverride` existed (#86, 2026-08-21). It therefore
+runs the stored `chain` setting and **would reach Nominatim the moment Delivery
+is enabled on it**. It cannot be pinned by setting a variable, because nothing
+in that image reads one. Closing this gate needs either the deployment that
+carries #86 or a change to the shared stored setting - it is not a
+configuration flip. Delivery being closed today is what keeps the exposure
+latent rather than live. Detail in `DEPLOYMENT_IMPACT_TIMEZONE_FIX.md`
+section 7, and the per-copy picture in `D3C_PROGRESS.md`.
+
 ### Continuous integration: live since 2026-08-29
 
 The pipeline (PR #122) runs on every push and pull request: PHP 8.3, 8.4,

@@ -2920,3 +2920,34 @@ confirmation naming the job. Nothing else changed.
   jobs, so both are from today's other work. They are disposable-job shaped and
   are flagged for the user rather than touched: no job is deleted without being
   named.
+
+## 2026-08-29 - Both remaining disposable jobs deleted after their bodies were checked; region now holds none
+
+Environment: Cloud Run Jobs in `northamerica-northeast1`. Status: recorded.
+Level 2 destructive deletions on the user's explicit confirmation naming both
+jobs. Each was described and its body read **before** deletion, against the
+user's stated purpose, with instructions to stop and report on any mismatch.
+
+- **`qa-paymig-20260829`** - created 2026-08-29T13:12:46Z, execution count 1,
+  image tag `paymig-b229b38a`. Body verified against the claimed mission (the
+  payment step D transaction-layer migration rehearsal): `migrate:status`, then
+  `migrate --pretend`, then `migrate --force`, table and collation read-back,
+  `migrate:rollback --step=1`, then re-apply. **It does contain write
+  statements, which is what a migration rehearsal is**, and the decisive check
+  was where they land: `DB_DATABASE` is the *plain value*
+  `tastyigniter_paytest`, not the database secret, and every information_schema
+  query hard-codes `table_schema='tastyigniter_paytest'`. The shared database is
+  never named. Claim and body agree; deleted.
+- **`qa-tzread-20260829`** - created 2026-08-29T15:32:19Z, execution count 1,
+  built from the `d3c-min` image digest. Body is read-only: one `SELECT sort,
+  item, value FROM ti_settings` over three keys, a `COUNT(*)` on the timezone
+  row, then `date_default_timezone_get()`, `config('app.timezone')` and `now()`.
+  **No write statement.** It does point at the shared database through the
+  database secret, which is correct for a settings read. Claim and body agree;
+  deleted.
+- Both read back after deletion: describe answers "Cannot find job" for each.
+  **The region now holds no jobs.** Recoverability: the resources are gone;
+  execution logs remain under platform retention and carry stored settings,
+  schema names and counts only - no address, credential or geometry.
+- With `qa-toggle-20260829` earlier in the day, three disposable jobs were
+  created and three deleted today. None remains.

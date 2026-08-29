@@ -5028,3 +5028,38 @@ confirmation. No stored setting, revision, traffic split or code path changed.
   the region and are flagged rather than touched.
 
 Documentation only in this repository. Every changed path is `.md`.
+
+## 2026-08-29 - Probe declined on the evidence; the shared-database limit turns out to have been worked around; jobs all cleared
+
+Environment: repository documentation and Cloud Run Jobs. Status: recorded.
+Level 2 destructive deletions on named confirmation. No stored setting,
+revision, traffic split, image or code path changed.
+
+- **The geocoder runtime probe was decided against, and the reasoning is
+  recorded as a judgement about evidence rather than as convenience.** No
+  registered conclusion rests on metre-level accuracy: the out-of-area address
+  was downtown, the unrecognised address fails under either provider, the
+  incomplete-address row is really testing the checkout block, and the exact
+  boundary is already Deferred as unreachable from the storefront. A second
+  reason emerged from the copies table and is stronger: **no area-sensitive
+  reading was ever taken on a Chain-running copy** - `d3c-e9a4f7ca` never
+  started, `d3c-25f9813b` was only a log-redaction check, and `d3c-1f8f0c75` is
+  not an evidence copy. The Chain tier holds no evidence to re-qualify.
+- **The two conditions that would revive it are written down**, and the second
+  is cross-referenced into the Nominatim production gate in `CLAUDE_HANDOFF.md`
+  rather than left loose: main traffic, once Delivery is enabled, runs the
+  stored chain and cannot be pinned by a variable, because its image predates
+  the override entirely.
+- **A standing claim about the shared database is narrowed.** The "structural
+  limit" section said varying the address provider for one copy had been blocked
+  by the shared settings store. It was in fact worked around, at revision level:
+  `GeocoderChainOverride` honours an empty `DELIVERY_GEOCODER_PROVIDERS` as a
+  deliberate empty list, and `d3c-pu2-1f8f0c75` is built that way. That also
+  confirms the premise of the five provider-unavailable acceptance rows - the
+  copy genuinely had no usable provider, by construction rather than simulation,
+  with no shared setting touched. The limit still stands for opening hours,
+  which have no per-revision override.
+- **All three of today's disposable jobs are deleted**, each described and its
+  body read before deletion. The region holds none.
+
+Documentation only in this repository. Every changed path is `.md`.

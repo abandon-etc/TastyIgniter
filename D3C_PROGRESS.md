@@ -797,6 +797,41 @@ environment says nothing. #86 merged 2026-08-21 11:15 EDT as `1f8f0c75`.
   customer reaches the lookup. Its separate exposure is in
   `DEPLOYMENT_IMPACT_TIMEZONE_FIX.md` section 7.
 
+### The probe was not run, and why that is a judgement about evidence
+
+Decided 2026-08-29. **No recorded conclusion depends on metre-level coordinate
+accuracy**, so even under H2 nothing in the register would be overturned:
+
+- the out-of-area reading used a downtown address, far enough outside the polygon
+  that tens of metres cannot reverse it;
+- the unrecognised-address reading fails under either provider;
+- the incomplete-address reading is really testing the checkout page's block, not
+  a coordinate;
+- the exact boundary was already declared unreachable through the storefront and
+  is recorded as Deferred, covered by the D3B runtime self-check.
+
+A second reason reinforces it, found in the copies table: **no area-sensitive
+reading was ever taken on a Chain-running copy.** `d3c-e9a4f7ca` never started,
+`d3c-25f9813b` was only an earlier log-redaction check, and `d3c-1f8f0c75` is not
+one of the evidence copies at all. Every address reading in the register came
+from one of the three Google-pinned copies or from `d3c-pu2-1f8f0c75`, which is
+deliberately provider-less. So the Chain tier of the triage contains no evidence
+to re-qualify.
+
+**The two places where this stops being true, and both are live:**
+
+1. **Any future test that genuinely hugs the delivery-area boundary.** That is
+   exactly the case where Google and Nominatim disagreeing by tens of metres
+   decides the answer, so such a test must first establish which provider
+   resolved the coordinate. The deferred coordinate-level probe would inherit
+   this requirement.
+2. **Main traffic once Delivery is enabled.** That image contains no override
+   code at all, so it runs the stored `chain` setting and reaches Nominatim -
+   and it cannot be pinned by environment variable, because nothing there reads
+   one. This is a launch-gate item, not a D3C item: see the Nominatim production
+   gate in `CLAUDE_HANDOFF.md` section 10 and
+   `DEPLOYMENT_IMPACT_TIMEZONE_FIX.md` section 7.
+
 ## Known problem carried over
 
 The Google Maps key is visible in the public page source and has no restriction
@@ -810,8 +845,28 @@ fixed by splitting the key during the September upgrade.
 Every copy of the site shares one database. Settings stored there cannot be
 varied for one copy alone, and changing them would change the live site too.
 This has already blocked two things: making one copy use an invalid address-
-provider key, and giving one copy different opening hours. Anything resting on
-those settings can only be verified by waiting for real conditions. A separate
+provider key, and giving one copy different opening hours.
+
+**The first of those has since been worked around, and the limit is narrower
+than this section claimed.** The provider chain does not have to be varied in
+the shared settings at all: `App\Delivery\GeocoderChainOverride` (PR #86) lets a
+*revision* name its own driver and provider list, and an empty
+`DELIVERY_GEOCODER_PROVIDERS` is honoured as a deliberately empty list rather
+than as "unset". `d3c-pu2-1f8f0c75` is built exactly that way -
+`DELIVERY_GEOCODER_DRIVER=chain` with an empty provider list - so it runs a chain
+over no providers while every other copy and the live site keep the stored
+configuration untouched. Confirmed by reading that revision's environment on
+2026-08-29.
+
+**This is the premise of the provider-unavailable acceptance rows, and it
+holds.** Those five readings - order refused safely, nothing technical shown,
+logs clean, pickup still offered and reachable, basket kept - were taken on a
+copy that genuinely had no usable address provider, by construction rather than
+by simulation, and without touching a shared setting.
+
+The limit still stands for the second case, opening hours, which live in the
+shared row store with no per-revision override. Anything resting on those can
+only be verified by waiting for real conditions. A separate
 database for isolated testing would remove the limit; that is a future
 improvement, not part of this phase.
 
