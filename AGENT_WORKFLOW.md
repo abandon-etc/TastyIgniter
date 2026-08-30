@@ -520,3 +520,27 @@ Record only non-sensitive state such as `configured`, `not configured`,
 
 对照当日几次奏效的做法:先 grep 再决定要不要跑探针;先读镜像标签再谈构建点;
 先拿一次带对照的日志查询再谈根因。**代价最低的取证先做,结论后下。**
+
+
+## Quote other people's records; do not paraphrase them
+
+Recorded 2026-08-29 after a fifth error of the same family, distinct from the
+first four.
+
+The first four were *stating an assumption as a conclusion*. This one is
+different and needs its own rule: **a fact taken from someone else's record
+drifted in direction while being restated.** An entry reading "showing the whole
+site closed ... when pickup should run to 22:00" was carried forward as "the copy
+that reported delivery open", which is its opposite. The reversed version then
+propagated into a register, into instructions, and into a hypothesis built to
+explain a symptom that never happened.
+
+**Rule: when a fact comes from another record, quote it. Do not restate it.**
+This applies hardest to the words that invert - open/closed, pass/fail,
+present/absent, before/after, allowed/denied. A paraphrase that flips one of
+those is not a smaller error than inventing the fact, because it reads as
+sourced.
+
+Practically: cite the file and quote the line. If a quote is too long to carry,
+carry the file and line number instead of a summary, so the next reader resolves
+it against the original rather than against a retelling.

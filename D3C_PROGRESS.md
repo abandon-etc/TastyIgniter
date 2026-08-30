@@ -951,12 +951,70 @@ and name the next opening, and inside those hours it must offer the
 order type. Both copies were verified on Montreal time at 11:25 EDT on
 2026-08-29.
 
-Still to take: delivery's after-21:00 cut-off (which is also the open
-question about the copy that reported delivery open at 21:10 on
-2026-08-28); out-of-area and boundary addresses; unrecognised,
+Still to take: delivery's after-21:00 cut-off (which is **not** tied to any
+open anomaly - see "The 2026-08-28 21:10 symptom, corrected" below);
+out-of-area and boundary addresses; unrecognised,
 incomplete and changed addresses; pickup/delivery transitions in both
 directions; stale sessions, totals, spoof resistance and API policy; and
 the admin regression. The owner's delivery on/off switch stays out of the
 sweep: it writes a shared setting and needs approval first. The timezone
 fix, the 板块二 work and the tax implementation each wait on their own
 approvals.
+
+
+## The 2026-08-28 21:10 symptom, corrected
+
+This register described that reading as "the copy that reported delivery open at
+21:10". **That is backwards, and the error was this project's paraphrase rather
+than the original record.** Quoting `CHANGELOG_AI.md` verbatim:
+
+> `d3c-min-9a4c1bc8` showing the whole site closed and "Opening sam. 12:00 pm"
+> at 21:10 EDT Friday, when pickup should run to 22:00
+
+The symptom was **closed when it should have been open** - not open when it
+should have been closed. The same entry already resolves it: that copy's clock
+was on UTC, where the moment was Saturday 01:10, and the reading "is consistent
+with that copy's clock being UTC (Saturday 01:10) and is now explained".
+
+Two consequences:
+
+1. **The anomaly is closed and was closed on 2026-08-29 morning**, by the
+   timezone fail-open explanation. It does not need an evening reading, and any
+   note saying an evening reading "resolves the 2026-08-28 anomaly" should read
+   instead: *unrelated to that anomaly, which the timezone defect already
+   closed*. The after-21:00 cut-off leg is still worth taking on its own merits,
+   as an acceptance row - it simply is not answering an open defect.
+2. **A hypothesis built on the reversed premise is withdrawn and deliberately
+   not recorded**: that the Friday evening reading might have been a cached
+   pre-21:00 response rendered as "Delivery dans 25 minutes". The real symptom
+   was a *closed* page, so there is nothing for that explanation to explain. No
+   browser re-fetch is scheduled to test it.
+
+Unaffected by this correction: the Friday **16:58-17:00** readings, which
+genuinely did show "Delivery dans 25 minutes" inside opening hours and are the
+discriminating pair for the weekday fix. Those stand.
+
+## Undetermined: a delivery cart emptied across the 21:00 boundary
+
+Observed once, on 2026-08-29, in the user's session: a delivery cart holding
+CA$7.00 at 20:49 was **empty** when the page was reloaded at 21:05:31, with the
+order type fallen back to Cueillette.
+
+**Recorded as undetermined, not as a finding.** One observation, no controlled
+repeat, and no causal claim.
+
+What makes it worth chasing is that it does **not** match the behaviour measured
+this afternoon when the owner's delivery switch was turned off: there the items
+were kept and only the delivery fee line disappeared. Emptying the basket
+entirely is a different outcome, so either the closing-time path differs from the
+switch path or something else was in play.
+
+Customer impact if it is real: someone who fills a basket at 20:55 and returns to
+check out at 21:01 loses everything they chose.
+
+**Next window to characterise it:** any day, load a delivery cart at 20:5x and
+return to it at 21:0x. It needs an attended browser session; it cannot be a
+scheduled unattended task.
+
+A second reading taken the same evening from a clean session does not cover this
+leg - that session had no basket - so it neither confirms nor contradicts it.
