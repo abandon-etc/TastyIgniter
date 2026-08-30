@@ -234,7 +234,7 @@ preserved, or reachable is not passed on *rendered* alone.
 | Address provider unavailable: logs stay clean | Passed | Executed |
 | Address provider unavailable: pickup still offered **and reachable** | Passed | Executed: followed through from the basket to a working pickup checkout |
 | Address provider unavailable: basket kept | Passed | Executed: the item survived a failed address lookup, with no delivery fee added |
-| Delivery closed before 12:00 and after 21:00, every day | Partly passed | **Before-12:00 leg done 2026-08-29 11:37 EDT on `d3c-min-9a4c1bc8`, executed**: delivery selected with an in-area address on a now-open day (Saturday), the add was refused by the server with "outside our Delivery hours", basket empty, checkout CLOSED. The 2026-08-22 all-day-closed Saturday reading is kept. The **after-21:00 leg still needs its window** and is the subject of the separate evening-cut-off question below |
+| Delivery closed before 12:00 and after 21:00, every day | **PASS - both legs executed** | **Before-12:00 leg done 2026-08-29 11:37 EDT on `d3c-min-9a4c1bc8`, executed**: delivery selected with an in-area address on a now-open day (Saturday), the add was refused by the server with "outside our Delivery hours", basket empty, checkout CLOSED. The 2026-08-22 all-day-closed Saturday reading is kept. **After-21:00 leg done 2026-08-29 21:11-21:19 EDT, executed on both copies** (`d3c-fix-be6835a9` and `d3c-min-9a4c1bc8`), clock verified on Montreal time on each first: the restaurant's own address was accepted in-area on both (Delivery selected, CA$5.00 fee line, cart CA$5.00), and the add of SCOTCH EGG (Size Small) was **refused by the server on both** with the verbatim "Your selected order time is outside our Delivery hours". The cart stayed at CA$5.00 - the fee line alone, no item - and the dialog stayed open. The cut-off is enforced server-side, not merely displayed. See the evening-cut-off entry below |
 | Delivery open during its hours | Passed | Executed. Friday 2026-08-21 reading kept as history (taken under the setting "None"). Sunday 2026-08-23, both copies: unfixed accepts on a closed day, fixed refuses — the weekday correction confirmed deployed. Monday 2026-08-24 14:1x, the positive leg: delivery adds accepted on the weekday-fixed copies during the 12:00-21:00 window |
 | Address lookup works with one provider pinned | Passed | Executed: the home-page widget geocodes the typed address server-side and it works on both copies |
 | Address autocomplete on the Google-pinned copies | **Failed** | Executed: the suggestion call is refused by the provider, and the raw technical error is shown to the customer. See below |
@@ -565,13 +565,13 @@ test. Each check waits for its real window.
 | Delivery appears open on Sunday, confirming the cause | Done 2026-08-23 12:26-12:28, executed on both copies: unfixed accepted, fixed refused |
 | Friday reverse reading: fixed copy open, unfixed copy closed | Done 2026-08-28 16:58-17:00 EDT by the user's Cowork session (WebFetch, pinned hostnames, relayed): fix "Delivery dans 25 minutes", unfixed "Delivery is CLOSED" — mirror of Sunday; both directions closed |
 | Saturday delivery open under the new every-day hours | Saturday 2026-08-29, 12:00-21:00, on `d3c-min-9a4c1bc8`: delivery offered and an add accepted (before the write, Saturday was closed on the fixed copies) |
-| Delivery closed after 21:00 under the new hours | Any evening from 21:00 (the shop stays open to 22:00 for pickup); feeds the standing before-12:00/after-21:00 acceptance row |
+| Delivery closed after 21:00 under the new hours | **Done 2026-08-29 21:11-21:19 EDT, executed on both copies**: display read "Delivery is CLOSED" with "Cueillette dans 25 minutes" on both, and the server refused the delivery add with "Your selected order time is outside our Delivery hours". Pickup stayed open, which also closes the "Pickup still open after delivery has stopped" row below |
 | Delivery refused on a closed day | Done 2026-08-22 afternoon, executed on both copies: an order was attempted and refused |
 | Delivery minimum: a CA$20.00 to CA$80.00 basket finds the checkout button disabled | Done 2026-08-24 14:1x, executed on `d3c-fix-be6835a9` before the fix deployed: CA$23.99 basket, label $80.00, button disabled, `/checkout` refused |
 | Delivery minimum fix: the same basket checks out at the stored CA$20.00 minimum and the label reads CA$20.00 | Done 2026-08-24, executed on `d3c-min-9a4c1bc8`: label $20.00, checkout page reached, nothing submitted |
 | The 2026-08-23 parameter batch: below-CA$50.00 basket pays CA$5.00 and checks out, at/above CA$50.00 free, panel and label agree | Done 2026-08-24, executed after the write: 23.99 and 48.00 pay 5.00 and check out; 50.00 exactly and 62.00 free; panel lists Free above $50.00 first; no minimum label renders |
-| Delivery stops taking orders at 21:00 | Any evening, once delivery works |
-| Pickup still open after delivery has stopped | Any evening, once delivery works |
+| Delivery stops taking orders at 21:00 | **Done 2026-08-29 21:11-21:19 EDT, executed on both copies**: refused server-side, verbatim "Your selected order time is outside our Delivery hours" |
+| Pickup still open after delivery has stopped | **Done 2026-08-29 21:11-21:19 EDT, executed on both copies**: with delivery refusing, the info panel read "Cueillette dans 25 minutes" and `d3c-fix-be6835a9` in pickup mode read "We are open" - the deliberate 21:00-22:00 gap behaving as designed |
 | Pickup stops at 22:00 | Done 2026-08-21 22:31, executed: an order was attempted and refused |
 | Can a basket be filled while closed | Done 2026-08-21 22:31. See below |
 
@@ -581,6 +581,75 @@ until then, closed cannot be told apart from the defect.
 The one-hour gap between delivery stopping at 21:00 and the shop closing at
 22:00 is deliberate. It comes from the two schedules differing and should not be
 recorded as a missing cut-off.
+
+## Evening delivery cut-off, executed 2026-08-29 21:11-21:19 EDT
+
+The open question was raised by a reading of 2026-08-28 at 21:10 EDT in which
+`d3c-fix-be6835a9` showed "We are open" and Cueillette open - both correct -
+but **also** showed Delivery open, "dans 25 minutes", which after 21:00 is
+wrong. Two explanations had to be separated: (a) display-only staleness while
+the server still refuses delivery, or (b) a real regression in which the server
+accepts a delivery order after closing.
+
+**Answer: (b) is disproved on both copies. The cut-off is enforced by the
+server. The 2026-08-28 display anomaly did not reproduce.**
+
+Taken in a real browser on Saturday 2026-08-29 between 21:11 and 21:19 EDT,
+inside the one-hour window in which the shop is still open for pickup but
+delivery has stopped. Hostnames were verified on each page.
+
+**Clock check first, both copies passed.** `d3c-fix-be6835a9` in pickup mode
+read "We are open" with "Cueillette · dans 25 min"; its info panel read
+"Delivery is CLOSED", "Cueillette dans 25 minutes", Last Order Time
+"sam. 29 10:00 pm". `d3c-min-9a4c1bc8` read "Delivery is CLOSED",
+"Cueillette dans 25 minutes", Last Order Time "dim. 30 09:00 pm" - the next
+delivery window, correctly rolled to Sunday. Neither had drifted to UTC: an
+instance on UTC would have been at 01:1x on the 30th and would have shown
+everything closed with the next opening at noon. Both readings therefore count
+as evidence rather than VOID. The stored hours rendered identically on both:
+Delivery 12:00 pm-09:00 pm on all seven days, Opening and Cueillette
+12:00 pm-10:00 pm on all seven days.
+
+**Executed, not merely read.** On each copy the delivery address was set through
+the home-page widget to the restaurant's own address, 8407 Boul. Gouin E,
+Montreal, H1E 2P6, QC, Canada. The field is `wire:model.live.debounce.500ms`, so
+the value was set, an `input` event dispatched, and `searchQuery` confirmed in
+the component snapshot before `#location-search` was submitted with
+`requestSubmit()`. Both copies accepted the address as in-area: the order type
+became Delivery, the CA$5.00 fee line appeared, and the cart read CA$5.00 with
+no item. The header then read CLOSED on both, which is already the correct
+display for delivery at this hour.
+
+**The server's verbatim answer, identical on both copies:**
+
+> Your selected order time is outside our Delivery hours
+
+The attempt was the add of SCOTCH EGG (Size Small, CA$2.00), submitted through
+the dialog's own form. On both copies the add was **refused**, the cart stayed
+at CA$5.00 - the delivery fee line alone, no item - and the dialog stayed open
+carrying the message. `/checkout` was not visited: it is only called for when
+the basket is accepted, and loading it creates a draft order row. No order,
+customer or payment was created.
+
+**What this settles and what it does not.** The server leg is now positively
+established on both copies: after 21:00 a delivery add is refused, so the
+blocking form of (b) - a real regression accepting delivery orders after
+closing - does not exist tonight on either copy. What could not be separated is
+the display defect itself, because its precondition did not occur: tonight the
+panel read CLOSED correctly, so there was no stale display to test the server
+against. The 2026-08-28 anomaly is therefore **not reproduced, not explained,
+and not closed.**
+
+One hypothesis worth recording for whoever takes it next, offered as a
+hypothesis and not as a finding: the 2026-08-28 evening reading was taken the
+same way as that afternoon's 16:58-17:00 reverse reading, by WebFetch rather
+than a live browser. A cached response from before 21:00 would render exactly
+"Delivery dans 25 minutes" while the server behind it refused, which is the
+shape of (a) without any defect in the application at all. Tonight's reading was
+taken in a real browser and was correct. Re-taking the 21:00-22:00 reading on a
+Friday, in a browser, would test that; until then the anomaly stays open as a
+display-only question with no customer-facing consequence, since the server
+refuses either way.
 
 ## Test copies of the site currently deployed
 
@@ -656,9 +725,10 @@ and name the next opening, and inside those hours it must offer the
 order type. Both copies were verified on Montreal time at 11:25 EDT on
 2026-08-29.
 
-Still to take: delivery's after-21:00 cut-off (which is also the open
-question about the copy that reported delivery open at 21:10 on
-2026-08-28); out-of-area and boundary addresses; unrecognised,
+Delivery's after-21:00 cut-off was taken on 2026-08-29 21:11-21:19 EDT and
+passed on both copies; the 2026-08-28 21:10 display anomaly did not reproduce
+and stays open as a display-only question (see the evening-cut-off section
+above). Still to take: out-of-area and boundary addresses; unrecognised,
 incomplete and changed addresses; pickup/delivery transitions in both
 directions; stale sessions, totals, spoof resistance and API policy; and
 the admin regression. The owner's delivery on/off switch stays out of the
