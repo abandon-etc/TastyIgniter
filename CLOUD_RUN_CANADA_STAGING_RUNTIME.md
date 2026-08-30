@@ -178,7 +178,16 @@ Cloud Storage FUSE constraints to validate before production:
 - Mount startup and metadata operations can affect cold start behavior.
 - Read and write caching behavior must be tested with TastyIgniter thumbnails.
 - Media Manager upload, media URL serving, redeploy persistence, and concurrent
-  upload behavior must be validated in staging.
+  upload behavior must be validated in staging. (Redeploy persistence: closed
+  2026-08-30, see the acceptance checklist row below.)
+
+**The 12 broken dish images, disposition 2026-08-30:** classified as historical
+residue and **not repaired**. The bucket holds only 6 objects while all 12 test
+dishes reference images, so most referenced objects are simply absent -
+consistent with uploads that predate the bucket mount and died with an instance
+filesystem. No reconciliation job is run for them. They are dealt with together
+with the test-dish cleanup, where deleting the dishes removes the dangling
+references; the 60 real dish photos are unaffected.
 
 The current bucket role is Storage Object Admin for the runtime service account.
 After staging upload behavior is proven, consider whether it can be reduced to a
@@ -238,7 +247,22 @@ After the first Cloud Run staging deploy, validate:
 - admin CSS and JavaScript
 - Media Manager upload with a test image only
 - uploaded media URL returns 200
-- uploaded media still exists after redeploy
+- uploaded media still exists after redeploy - **closed 2026-08-30, read-only
+  verification.** The bucket `le-chateau-canada-staging-media` holds 6 file
+  objects (1 upload + 5 thumbnails) written 2026-07-10 to 2026-07-12; the
+  main-traffic revision `d2fix-31821289` was created 2026-07-19, so every one of
+  them has survived at least one revision replacement and seven weeks of
+  instance turnover. The thumbnail
+  `media/attachments/public/80e/e3f/338/thumb_80ee3f338f...__0x0_contain.png`
+  (50097 bytes) was fetched from the live site and compared with the bucket
+  object: **MD5 identical**
+  (`33e10c927bd132b6fbf3d62fe5dabafa`), so the running instance serves the
+  bucket's bytes verbatim. The revision mounts the bucket via
+  `gcsfuse.run.googleapis.com` at `/var/www/html/storage/app/media`, and FP-1's
+  `volume_mounts`/`volume_types` fields guard the mount against silently
+  disappearing in a future deploy. One leg remains open by design: a **new**
+  upload through the *current* revision will be confirmed incidentally when the
+  user uploads the first real dish photo.
 - PDO new connection timing
 - PDO same-connection `select 1` timing
 - Laravel first-query timing
