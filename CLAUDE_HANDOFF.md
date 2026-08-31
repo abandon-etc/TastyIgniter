@@ -115,6 +115,107 @@ The latest Ready revision is the retained 0%-traffic Q-011 revision. It is not
 the active/main-traffic revision. Traffic allocation, not latest-Ready order,
 defines the live staging runtime.
 
+### Custom domain: two things that are easy to get wrong
+
+Recorded 2026-08-29 as the domain work begins, because both are the kind of
+assumption that only surfaces after something is already pointed at the wrong
+place.
+
+1. **A Cloud Run domain mapping points at a *service*, not at a revision or a
+   revision tag.** Mapping `staging.lechateaudesenfants.ca` therefore sends that
+   name to whatever revision holds 100% of traffic - which is the live site
+   itself, not a test copy. It is a second name for production, not a route to a
+   tagged revision. Sending a hostname to a specific tag needs an external HTTP(S)
+   load balancer with a serverless NEG, which is a different mechanism and a
+   separate piece of work.
+2. **A subdomain is not a separate environment.** Every copy and every mapping
+   share the one database, so a new hostname renames the same site. It is
+   genuinely useful for verifying the things that are *about* the name - TLS
+   certificates, absolute links, redirects, third-party callbacks and webhooks -
+   and it isolates no data whatever. Anything written through the staging name is
+   written to the live data.
+
+### Domain onboarding: 1a now, 1b held on a stated trigger
+
+Split 2026-08-29 so the two halves stop sharing a schedule.
+
+**1a - Google domain ownership verification. Doing now.** It adds one TXT record
+and nothing else: no hostname is created, no certificate is issued, nothing
+enters the Certificate Transparency logs, and there is no new exposure. It is
+also the only step needing the owner's own Google account, so it is the one with
+human waiting time in it. Verify the **root** `lechateaudesenfants.ca`, which
+covers every subdomain and the bare domain at launch, using the same account
+gcloud authenticates as. The agent cannot mint the token: the Site Verification
+API rejects the gcloud credential with `ACCESS_TOKEN_SCOPE_INSUFFICIENT`. Note
+for whoever writes the record - a TXT record has no Cloudflare proxy toggle at
+all, only A, AAAA and CNAME do, so the grey-cloud requirement applies to the
+mapping CNAME later and not to this TXT.
+
+**1b - the `staging.` mapping and its certificate. Held.** Not because it would
+open an indexing window; that window is already open, see
+`DEPLOYMENT_IMPACT_TIMEZONE_FIX.md`. Held because **the hostname has no consumer
+yet**. Its real user is payment callbacks, and that work waits on the Snappy
+conversation. Creating it now buys nothing and adds a name to maintain.
+
+**Trigger to release 1b, whichever comes first**, recorded here so it does not
+quietly die:
+
+- the fail-safe indexing control ships with the Option C deployment; **or**
+- step E is about to start.
+
+Phase two of the domain work - setting `APP_URL` and `ASSET_URL` explicitly, so
+generated links stop falling back to `CLOUD_RUN_SERVICE_URL` and silently
+pointing at `run.app` - travels with 1b and still needs its own approval.
+
+Carried forward from the phase-one read: whether Cloud Run domain mappings are
+supported in `northamerica-northeast1` is **not yet proven**. Listing works
+(HTTP 200, no items), but creation is the test. If the region does not support
+them the fallback is an external HTTP(S) load balancer with a serverless NEG,
+which is the same mechanism needed to point a hostname at a tagged revision, so
+that work would not be wasted.
+
+### Carte key on Cloud Run: the start.sh change, archived from closed PR #142
+
+PR #142 carried a working fix for the Carte-key attach failure and was closed
+unmerged on 2026-08-30: the marketplace turned out to have no language-pack
+category, which removed the reason to bind a key from the running site, and the
+branch had gone stale. The change itself is correct and small; if binding is
+ever needed again, re-apply this block in `docker/cloudrun/start.sh`, before
+"Rendering Nginx configuration" (it was verified with `sh -n`; CI never ran to
+completion on that branch for unrelated reasons). Archived verbatim:
+
+```sh
+# TastyIgniter's Carte-key flow persists the key through
+# SystemHelper::replaceInEnv(), which reads and rewrites "${APP_ROOT}/.env" and
+# throws FileNotFoundException when that file does not exist. .env is excluded
+# from the image by .dockerignore, correctly, because configuration arrives here
+# as environment variables. Creating it empty makes that rewrite a harmless
+# no-op - the regex matches no line and the empty content is written back - so
+# the flow continues to its real persistence step, which stores the key in the
+# shared settings table.
+#
+# Only this one file is handed to www-data. Overwriting an existing file needs
+# write permission on the file, not on its directory, so the application root
+# stays root-owned and composer.json, auth.json and lang/ remain unwritable at
+# runtime. That is deliberate: language packs must be committed and baked into
+# the image, never written at runtime, because the container filesystem is
+# per-instance and does not survive the instance.
+#
+# The file is left empty on purpose. An IGNITER_CARTE_KEY= line here would put
+# the key in a per-instance file that disappears with the instance, for no gain.
+if [ ! -f "${APP_ROOT}/.env" ]; then
+    log "Creating empty ${APP_ROOT}/.env so the Carte-key rewrite does not fail"
+    : > "${APP_ROOT}/.env"
+fi
+chown www-data:www-data "${APP_ROOT}/.env" || true
+chmod 600 "${APP_ROOT}/.env" || true
+```
+
+Two facts to carry with it: `clearCarte()` walks the same `replaceInEnv()`
+path, so a site without this block can bind a key it then cannot unbind; and
+what the fix unblocks is *seeing* the hub catalogue (`hasValidCarte()`), never
+installing packs at runtime, which an immutable image rules out regardless.
+
 That fingerprint is **void**. The freeze described it as a SHA-256 of
 normalized, redacted service metadata but never recorded the normalized field
 list or the algorithm, and neither can be reconstructed from anything still
@@ -447,6 +548,68 @@ proposing it: anything else that rests on week boundaries, such as weekly
 reporting or period statistics, moves with it. Do not change it globally without
 that assessment.
 
+### The application timezone fails open to UTC, per container instance
+
+Found on 2026-08-29 while characterising a copy that reported the shop
+closed at 21:10 Friday. It is not a deployment mistake and not specific
+to one revision: it is a latent fail-open on the live path of every
+revision, including the one serving main traffic.
+
+The chain, each link read from source and confirmed by a read-only job:
+
+1. `config/app.php:72` is `'timezone' => 'UTC'` — **hardcoded, with no
+   `env()` call**. `APP_TIMEZONE=America/Toronto` is set on every
+   revision and is read by nothing in `app/`, `config/`, `bootstrap/`, or
+   `vendor/tastyigniter`: it is inert.
+2. The only thing that makes the application run on Montreal time is
+   `Igniter\System\ServiceProvider::updateTimezone()`, called on
+   `app.booted`:
+   `date_default_timezone_set(Settings::get('timezone', Config::get('app.timezone', 'UTC')))`.
+   The stored setting is correct — the `timezone` row reads
+   `America/Toronto`, one row, verified 2026-08-29.
+3. `Settings::getFieldValues()` returns `[]` when `Igniter::hasDatabase()`
+   is false, and `hasDatabase()` wraps its schema probe in
+   `catch (Exception) { $this->hasDatabase = false; }`. **Any database
+   hiccup at boot** — a cold start racing Cloud SQL, a connection limit,
+   a transient socket failure — therefore yields no settings at all.
+4. With no settings, the default applies: `config('app.timezone')` =
+   `UTC`. Both `hasDatabase` and `fieldValues` are memoised on singletons,
+   so the instance **stays on UTC for its entire life**, serving every
+   request four or five hours ahead.
+
+What that looks like: the storefront shows the shop closed while it is
+open (or open while closed), the opening panel names tomorrow's date, and
+the order-time check refuses adds — all with correct data and a correct
+stored setting. It is invisible in the afternoon, when UTC and Montreal
+fall on the same side of every boundary, and appears after 20:00 local,
+when UTC has crossed midnight.
+
+Evidence for the two states, same copies:
+
+| When | `d3c-min-9a4c1bc8` | `d3c-fix-be6835a9` |
+| --- | --- | --- |
+| 2026-08-28 21:10 EDT (01:10 UTC) | Closed, "Opening sam. 12:00 pm" — a UTC clock | "We are open" — a Montreal clock |
+| 2026-08-29 11:25 EDT (15:25 UTC) | Closed, "starts sam. 12:00 pm", server refused an add: "outside our Cueillette hours" — a Montreal clock | identical |
+
+The 11:25 pair is executed evidence, not rendering: a UTC instance would
+have been at 15:25, inside 12:00-22:00, and would have accepted the add.
+
+**Proposed fix, not yet applied** (Level 1, awaiting approval):
+
+1. `config/app.php` reads `env('APP_TIMEZONE', 'UTC')`, which makes the
+   variable already deployed on every revision the fallback, so a
+   settings-read failure lands on Montreal instead of UTC.
+2. `docker/render/php-production.ini` sets `date.timezone` as a second
+   line of defence for code that runs before the framework boots.
+3. A test pinning that `config('app.timezone')` follows `APP_TIMEZONE`,
+   so the hardcoded value cannot come back unnoticed.
+
+That removes the blast radius but not the mechanism: the settings read
+can still fail silently, and the app would then run on the env fallback
+rather than the stored setting. Making that visible — a logged warning
+when the settings-backed timezone is unavailable — is a separate,
+smaller change to consider with it.
+
 #### Hours live in two stores, and they use different day indexing
 
 Found on 2026-08-28 while applying the every-day Delivery hours. The vendor
@@ -698,6 +861,75 @@ Public Nominatim is not approved for production Delivery traffic for the
 identity, attribution, shared rate-limit, fallback fan-out, and autocomplete
 reasons documented above.
 
+**What satisfying this gate now requires, established 2026-08-29.** The
+main-traffic revision `d2fix-31821289` sets no geocoder environment variable,
+and its image was built at commit `31821289` (2026-07-19), five weeks before
+`App\Delivery\GeocoderChainOverride` existed (#86, 2026-08-21). It therefore
+runs the stored `chain` setting and **would reach Nominatim the moment Delivery
+is enabled on it**. It cannot be pinned by setting a variable, because nothing
+in that image reads one. Closing this gate needs either the deployment that
+carries #86 or a change to the shared stored setting - it is not a
+configuration flip. Delivery being closed today is what keeps the exposure
+latent rather than live. Detail in `DEPLOYMENT_IMPACT_TIMEZONE_FIX.md`
+section 7, and the per-copy picture in `D3C_PROGRESS.md`.
+
+**Where this can be observed before launch.** `d3c-a2ee559c` runs the same image
+digest as main traffic and differs from it in exactly one variable -
+`DELIVERY_ENABLED=true` against `false` - with no geocoder variable on either. It
+is therefore main traffic with Delivery already open, and the gate's condition
+can be watched there on 0% traffic instead of being reasoned about. It shares the
+live database, so read-only. That copy is held out of the test-copy cleanup until
+the deployment rehearsal; see "The main-traffic twin" in `D3C_PROGRESS.md`.
+
+#### Closing this gate takes two steps, and the second is the one that gets lost
+
+Deploying a current image gives the production revision the **capability** to
+pin the chain. It does not pin it. `App\Delivery\GeocoderChainOverride` returns
+early when the environment says nothing, and **the production revision has never
+carried `DELIVERY_GEOCODER_DRIVER` or `DELIVERY_GEOCODER_PROVIDERS`** - the
+2026-08-29 read-back confirms neither is set. So a deployed production revision
+with no variables still runs the stored `chain` and still reaches Nominatim.
+
+1. Deploy an image containing #86, **setting
+   `DELIVERY_GEOCODER_DRIVER` and `DELIVERY_GEOCODER_PROVIDERS` in the same
+   deploy command**. Cloud Run revisions are immutable, so the variables cannot
+   be added to a serving revision afterwards without deploying again and cutting
+   traffic a second time - which would leave a window where the live site runs
+   the new image unpinned.
+2. **Read those two variables back off the new revision before cutting traffic
+   to it.** A successful image deploy is not evidence that they are set.
+
+Step 2 is at risk precisely because step 1 gets described as "the deployment
+solves the geocoder". It does not. This is the same failure shape recorded for
+the week-start fix, where a merged and deployed correction was explicitly noted
+as *not* releasing the hours change that depended on it (`D3C_PROGRESS.md`,
+"This Done does not release the hours change two rows below"). Marking the
+deployment Done must not be read as releasing this gate.
+
+#### An alternative that takes one step and no deployment
+
+Change the shared stored setting `default_geocoder` from `chain` to `google`.
+TastyIgniter reads it into `igniter-geocoder.default` on every geocoder
+resolution (`System/ServiceProvider.php`), so it takes effect on **every
+revision at once, including today's production image**, with nothing deployed.
+Checked for side effects: the front-end map library is chosen by that same
+stored value - Leaflet only when it reads `nominatim`, Google Maps JS otherwise
+- and both `chain` and `google` take the same branch, so the map assets do not
+change.
+
+Cost of each path, one line each:
+
+- **Deploy then set variables:** two steps, no shared-setting write, and the
+  live site is unaffected until the deployment itself; the risk is step 2 being
+  dropped.
+- **Change the stored setting:** one step and no deployment, but it is a
+  shared-settings write that takes effect on the live site immediately, so it
+  needs its own approval, the prior value recorded, a read-back after, and a
+  stated way back.
+
+Neither is executed. At launch this is a **choice between two paths**, not a
+side effect of deploying.
+
 ### Continuous integration: live since 2026-08-29
 
 The pipeline (PR #122) runs on every push and pull request: PHP 8.3, 8.4,
@@ -793,6 +1025,20 @@ production launch, separately approve and verify at least:
   implementation is project-owned; enabling tax changes live Pickup totals
   and is separately approved with owner-agreed timing; the restaurant
   WEB-SRM mandatory-billing question is open for the accountant.
+- **Timezone integrity on a cold-started production instance.** The
+  timezone fail-open recorded in section 10 affects the live path of
+  every revision, production included: an instance that cannot read the
+  stored setting at boot keeps the configured fallback for its whole
+  life, and the storefront then shows the shop closed while it is open,
+  or open while it is closed, with every stored value correct. The fix
+  makes the fallback correct and audible, but the check belongs on this
+  list because it is a property of a running instance, not of the code:
+  **after a forced cold start, read the storefront's open/closed state
+  against the wall clock**, at an hour where Montreal and UTC fall on
+  opposite sides of a boundary — before noon, or after 20:00 local — so
+  the two answers are distinguishable. Also confirm no
+  "Timezone setting unavailable at boot" warning is in the log for that
+  instance.
 - Payment, webhook, refund, authentication, email verification, and outbound
   notification architecture.
 - Real domain/DNS, TLS, production environment variables, backups, restore

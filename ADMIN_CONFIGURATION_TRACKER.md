@@ -2755,3 +2755,199 @@ Live-site effect: none. The main-traffic revision serves
 values are Delivery-only. The FP-1 pair above is the evidence the live path
 never moved. No schema, Order, Customer, Reservation, Birthday, payment,
 mail, secret, production, Render, or DigitalOcean change.
+
+## 2026-08-29 - Payment ledger migration rehearsed on the payment test database
+
+Environment: Cloud Build, and disposable Cloud Run Job `qa-paymig-20260829`
+against the `tastyigniter_paytest` database on the shared instance.
+Status: recorded. Level 2 on the user's 2026-08-29 approval of step D,
+which specified the rehearsal; the shared database was not touched and its
+execution remains separately gated.
+
+- Image `tastyigniter:paymig-b229b38a` built from
+  `feat/payments-shared-layer` at `b229b38a` (Cloud Build
+  `f165454f-22db-465e-9207-81ba0a5fd9ca`, 5m22s), i.e. the branch with the
+  independent review's fixes already applied.
+- The Job carried `DB_DATABASE=tastyigniter_paytest` as a plain
+  environment value with the other four credentials by secret reference,
+  so the target database is visible in the spec rather than inferred.
+- `migrate --pretend` first: the printed DDL is exactly the three tables,
+  with `collate 'utf8mb4_bin'` on `idempotency_key`,
+  `external_payment_id`, `external_event_id` and `external_refund_id`,
+  the two provider-scoped unique indexes, the payable index, and two
+  restrict foreign keys that reference `payment_transactions` only.
+- `migrate` then applied that one migration (300ms); nothing else was
+  pending in the copy. Read-back: `ti_payment_transactions`,
+  `ti_payment_events`, `ti_payment_refunds` sit beside the vendor's
+  `ti_payments`, `ti_payment_logs`, `ti_payment_profiles` with no name
+  collision, and the two identifier collations read back `utf8mb4_bin`.
+- **Rollback rehearsed, not assumed:** `migrate:rollback --step=1`
+  dropped exactly the three new tables (payment-table count back to the
+  vendor's three), and a re-apply restored all six.
+- The Job resource `qa-paymig-20260829` remains and awaits the user's
+  named confirmation for deletion; its logs carry DDL and table names
+  only.
+
+No change to any Cloud Run service, revision, traffic, secret, or stored
+setting, and none to the `tastyigniter_staging` database.
+
+## 2026-08-29 - Admin regression executed 10/10; row store cross-checked; geocoder on main traffic identified as live exposure
+
+Environment: the `d3c-min-9a4c1bc8` admin (read-only, user-driven sign-in), the
+shared database through disposable Job `qa-toggle-20260829`, and Cloud Run
+revision metadata. Status: recorded. Level 0/2 reads only. **No stored setting,
+schema, revision, traffic split, environment variable or secret was changed.**
+
+- **Admin regression: PASS, 10 of 10.** The user signed in themselves in the
+  browser panel; no password passed through any agent. All ten steps driven
+  read-only, no form submitted, nothing saved. Full per-step results and the five
+  step-10 observations are in `D3C_PROGRESS.md`. Acceptance row marked PASS,
+  evidence type executed.
+- **Draft-order baseline updated: 9 rows, highest #12** (#2-#5 and #8-#12; 6 and 7
+  were deleted 2026-08-23). Supersedes the eight-row / #11 figure. Every row is
+  status Incomplete with Customer Name empty; #12 renders its totals correctly
+  (SCOTCH EGG $2.00 + Delivery $5.00 = $7.00). The count rises whenever /checkout
+  is loaded, so it is re-read at cleanup time rather than trusted from a document.
+- **Disposable Job `qa-toggle-20260829` created** from the `d3c-min` image and
+  spec, same pattern as `qa-hours`. One execution so far, `-9gmzw`, **read-only -
+  the job body contains no write statement**. It awaits the user's named
+  confirmation for deletion. Note for future runs: `gcloud run jobs replace`
+  needs the Cloud Resource Manager API, which is disabled on this project and was
+  deliberately not enabled; `jobs create` with flags works. Under Git Bash the
+  `--command=/bin/sh` argument is silently rewritten to a Windows path by MSYS
+  path conversion, producing a container that fails to start; the job was created
+  from PowerShell instead.
+- **Toggle baseline cross-verified, two independent sources agree.** Admin showed
+  Offer Delivery = Enabled and Offer Pick-up = Enabled; the job read
+  `ti_location_settings` directly and returned, for location 2,
+  `delivery.is_enabled = 1` and `collection.is_enabled = 1`.
+- **Row store of the working hours agrees with the admin JSON display.**
+  `ti_working_hours`: collection, delivery and opening each 7 rows, **0 rows with
+  status 0**, **1 distinct time window each** - 12:00-22:00, 12:00-21:00,
+  12:00-22:00. No day disabled, no two days different.
+- **Geocoder on main traffic, read-only:** the main-traffic revision sets no
+  geocoder environment variable, and `app/Delivery/GeocoderChainOverride.php` does
+  not exist at its build commit `31821289` - the pinning mechanism arrived in #86,
+  five weeks later. Main traffic therefore runs the stored **Chain** setting and
+  can fall through to OpenStreetMap Nominatim today. It cannot be pinned by
+  environment variable there, because nothing in that image reads the variable.
+  This crosses the standing boundary that public Nominatim is not approved for
+  production Delivery traffic; recorded, not changed.
+- **Admin Save scope established from vendor source**, before any write:
+  `Igniter\Local\FormWidgets\SettingsEditor::onSaveRecord()` resolves
+  `LocationSettings::instance($location, $definition->code)` and saves that single
+  `item` row. `delivery` and `collection` are separate rows, so saving the
+  Delivery section cannot write the Pickup toggle. The before/after read-back of
+  both toggles is still performed as proof rather than relying on this.
+
+## 2026-08-29 - Owner's delivery switch: four checks executed through the admin, all pass; stale sessions closed with them
+
+Environment: the `d3c-min-9a4c1bc8` admin and storefront, the shared database
+through disposable Job `qa-toggle-20260829`, and the main-traffic revision for
+FP-1. Status: recorded. Level 2 shared-settings write on the user's explicit
+2026-08-29 approval. Pickup/Collection untouched and proved so.
+
+- **Write path deliberately not the job.** The switch was thrown through the
+  admin screen, because two of the four checks measure propagation and cache
+  behaviour and writing the row directly would have measured a path the owner
+  never takes. The job was used only for the before/after read-backs.
+- **Before**: admin Offer Delivery Enabled, Offer Pick-up Enabled; job read of
+  `ti_location_settings` for location 2 gave `delivery.is_enabled = 1`,
+  `collection.is_enabled = 1`. Two sources agreed.
+- **After** (execution `-9s4bv`): `delivery.is_enabled = 1`,
+  `collection.is_enabled = 1` - both restored, agreeing with the admin
+  read-back. `ti_working_hours` re-read in the same execution and unchanged: 21
+  rows, all status 1, one window per type.
+- **Four results**: propagation carries no cache delay, the setting is read per
+  request (the on direction landed inside a 2-second sampling window, 14:30:20
+  to 14:30:22; the off direction was seen within 100 seconds, not tightly
+  sampled) - reported per instance, not as a service-wide figure; a part-way
+  delivery basket degrades to pickup by itself with items kept and no error;
+  delivery disappears from the storefront entirely rather than blocking at
+  checkout; switching back on needs no cache clear or redeploy.
+- **Pickup untouched, proved three ways**: unchanged read-back; the Delivery
+  form carries only its own ten delivery fields and no `collection` field; each
+  section loads only its own form. This matches the source reading of
+  `SettingsEditor::onSaveRecord()`.
+- **FP-1** on the main-traffic revision before the first action and after the
+  last: `2127efd6d63de53e6d9fbc5388f9db3fee72d0575eec25a09b9f99e9ad8565d3` both
+  times, identical. The live storefront home page read word-for-word the same
+  pickup-only page on both sides of the window, and the order table still holds
+  9 rows, highest #12, with no new row.
+- **Method note**: the item add and some switch clicks were driven by in-page
+  script because the controls carry no accessible name and the switch is a
+  style-covered checkbox. Every verdict rests on server-rendered output.
+- **Job `qa-toggle-20260829` remains and awaits the user's named confirmation
+  for deletion.** Two executions, `-9gmzw` and `-9s4bv`, both read-only; the job
+  body contains no write statement.
+- **Open and unresolved**: a storefront reading reported the local-search
+  geocoder as `chain` on a copy recorded as pinned to Google. Recorded in
+  `D3C_PROGRESS.md` with the two hypotheses and the read-only runtime probe that
+  would settle it. Nothing was changed.
+
+## 2026-08-29 - Geocoder contradiction resolved by source reading; qa-toggle job deleted; two other jobs found undeleted
+
+Environment: repository source, Cloud Run revision metadata and Cloud Run Jobs.
+Status: recorded. Level 2 destructive deletion on the user's explicit
+confirmation naming the job. Nothing else changed.
+
+- **The `geocoder: "chain"` observation is explained and carries no information
+  about the pin.** `Igniter\Orange\Livewire\Concerns\SearchesNearby` fills its
+  public `$geocoder` property in `mountSearchesNearby()` from
+  `setting('default_geocoder', 'nominatim')` - the stored setting, read directly.
+  It never reads `config('igniter-geocoder.default')`, the key
+  `GeocoderChainOverride` writes, so it reports `chain` whether or not the pin
+  works. The reading also had `placesSuggestions = []`, confirming it was not the
+  `updateDeliveryLocationMap` event. No probe was needed to reach this.
+- **Per-copy triage recorded** in `D3C_PROGRESS.md`, using code presence rather
+  than date as the test. Pinned to Google: `d3c-fix-be6835a9`,
+  `d3c-g2-1f8f0c75`, `d3c-min-9a4c1bc8`. Ran Chain with certainty:
+  `d3c-e9a4f7ca` and `d3c-25f9813b` (no override code in image) and
+  `d3c-1f8f0c75` (code present, no variables set, so the override no-ops).
+  `d3c-pu2-1f8f0c75` is its own case: `DELIVERY_GEOCODER_DRIVER=chain` with an
+  empty `DELIVERY_GEOCODER_PROVIDERS`, i.e. a chain over a deliberately empty
+  provider list.
+- **Disposable Job `qa-toggle-20260829` deleted** on the user's confirmation
+  naming it. Described before: created 2026-08-29T17:54:55Z, execution count 3
+  (one failed container start caused by Git Bash rewriting `/bin/sh`, then two
+  successful read-only executions `-9gmzw` and `-9s4bv`). Deleted, then read
+  back: describe answers "Cannot find job". Recoverability: the resource is
+  gone; its execution logs remain under platform retention and hold stored
+  toggle and schedule values only - no address, credential or geometry.
+- **Noted, not acted on: the region holds two other jobs**, `qa-paymig-20260829`
+  (created 13:12 UTC) and `qa-tzread-20260829` (created 15:32 UTC), neither
+  created in this session. The 2026-08-28 record says the region then held no
+  jobs, so both are from today's other work. They are disposable-job shaped and
+  are flagged for the user rather than touched: no job is deleted without being
+  named.
+
+## 2026-08-29 - Both remaining disposable jobs deleted after their bodies were checked; region now holds none
+
+Environment: Cloud Run Jobs in `northamerica-northeast1`. Status: recorded.
+Level 2 destructive deletions on the user's explicit confirmation naming both
+jobs. Each was described and its body read **before** deletion, against the
+user's stated purpose, with instructions to stop and report on any mismatch.
+
+- **`qa-paymig-20260829`** - created 2026-08-29T13:12:46Z, execution count 1,
+  image tag `paymig-b229b38a`. Body verified against the claimed mission (the
+  payment step D transaction-layer migration rehearsal): `migrate:status`, then
+  `migrate --pretend`, then `migrate --force`, table and collation read-back,
+  `migrate:rollback --step=1`, then re-apply. **It does contain write
+  statements, which is what a migration rehearsal is**, and the decisive check
+  was where they land: `DB_DATABASE` is the *plain value*
+  `tastyigniter_paytest`, not the database secret, and every information_schema
+  query hard-codes `table_schema='tastyigniter_paytest'`. The shared database is
+  never named. Claim and body agree; deleted.
+- **`qa-tzread-20260829`** - created 2026-08-29T15:32:19Z, execution count 1,
+  built from the `d3c-min` image digest. Body is read-only: one `SELECT sort,
+  item, value FROM ti_settings` over three keys, a `COUNT(*)` on the timezone
+  row, then `date_default_timezone_get()`, `config('app.timezone')` and `now()`.
+  **No write statement.** It does point at the shared database through the
+  database secret, which is correct for a settings read. Claim and body agree;
+  deleted.
+- Both read back after deletion: describe answers "Cannot find job" for each.
+  **The region now holds no jobs.** Recoverability: the resources are gone;
+  execution logs remain under platform retention and carry stored settings,
+  schema names and counts only - no address, credential or geometry.
+- With `qa-toggle-20260829` earlier in the day, three disposable jobs were
+  created and three deleted today. None remains.

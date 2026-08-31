@@ -67,9 +67,18 @@ return [
     | will be used by the PHP date and date-time functions. We have gone
     | ahead and set this to a sensible default for you out of the box.
     |
+    | This is not merely a default. TastyIgniter sets the running timezone
+    | from the stored admin setting at boot, and falls back to this value
+    | whenever that read is unavailable — a database hiccup at container
+    | start is enough. While this said 'UTC', such an instance served every
+    | request four or five hours off, for its whole life, with correct data
+    | and a correct stored setting. It now follows APP_TIMEZONE, which every
+    | deployment already sets to the restaurant's timezone, so the fallback
+    | lands where the business is. See CLAUDE_HANDOFF.md section 10.
+    |
     */
 
-    'timezone' => 'UTC',
+    'timezone' => env('APP_TIMEZONE', 'UTC'),
 
     /*
     |--------------------------------------------------------------------------

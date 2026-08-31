@@ -290,7 +290,16 @@ real keyboard settled it in a minute: it works.
 Before recording a negative result, confirm the stimulus actually arrived —
 an event probe, a log line, a network trace. "The page did not react" is
 evidence only once it is established that the page was given something to
-react to. Both browser-automation toolsets available here share the keypress
+react to.
+
+The same rule caught a third case on 2026-08-29, and this one had already
+produced a wrong entry. A script set a debounced Livewire field and
+submitted immediately, so the server received the *previous* value and
+answered with a genuine-looking "we couldn't locate that address"; a
+retry then succeeded because the value had synchronised by then. It had
+been recorded as a transient provider failure. When driving a bound
+field, read the component's own state back and confirm it holds the value
+before submitting — the input's DOM value is not the thing being sent. Both browser-automation toolsets available here share the keypress
 limitation, so keyboard-activation checks are settled by a person or recorded
 as not run.
 
@@ -487,3 +496,51 @@ Record only non-sensitive state such as `configured`, `not configured`,
 - Do not run `migrate:fresh`, `migrate:refresh`, or `db:seed` without an
   explicitly approved, verified disposable environment—and never on staging or
   production as routine troubleshooting.
+
+
+## 方法教训:供应商的功能描述不是事实依据
+
+记于 2026-08-29,当日三例。
+
+**规则:供应商的产品页、市场条目、官方文档所述的功能,不作为事实依据。以源码,
+或一次实测,为准。** 在两者之一到手之前,基于宣称的功能所做的排期与设计都是待定的。
+
+当日三例:
+
+1. **市场页面**称 igniter-translate 自带"前台与后台 locale 选择器"。源码里
+   `Extension.php` 只注册了后台表单控件,**没有任何路由、没有前台组件**。若照页面
+   描述排期,会以为它顺带解决了切换器问题。
+2. **Carte Key 文档**回避了绑定流程要写 `.env` 这件事,于是在容器化部署上必然
+   失败,而失败信息只有一句 `{"message":"Server Error"}`。
+3. **本方自己**把"composer.json 里没有这类扩展"升级成了"系统装不了一道菜两个
+   语言"。**没装不等于装不了。**
+
+三例同型:**把观察或宣称当成了结论。** 第三例尤其要记住,因为它说明这条规则不只
+约束外部信息源——同一个跳跃在自己身上同样会犯。
+
+对照当日几次奏效的做法:先 grep 再决定要不要跑探针;先读镜像标签再谈构建点;
+先拿一次带对照的日志查询再谈根因。**代价最低的取证先做,结论后下。**
+
+
+## Quote other people's records; do not paraphrase them
+
+Recorded 2026-08-29 after a fifth error of the same family, distinct from the
+first four.
+
+The first four were *stating an assumption as a conclusion*. This one is
+different and needs its own rule: **a fact taken from someone else's record
+drifted in direction while being restated.** An entry reading "showing the whole
+site closed ... when pickup should run to 22:00" was carried forward as "the copy
+that reported delivery open", which is its opposite. The reversed version then
+propagated into a register, into instructions, and into a hypothesis built to
+explain a symptom that never happened.
+
+**Rule: when a fact comes from another record, quote it. Do not restate it.**
+This applies hardest to the words that invert - open/closed, pass/fail,
+present/absent, before/after, allowed/denied. A paraphrase that flips one of
+those is not a smaller error than inventing the fact, because it reads as
+sourced.
+
+Practically: cite the file and quote the line. If a quote is too long to carry,
+carry the file and line number instead of a summary, so the next reader resolves
+it against the original rather than against a retelling.
