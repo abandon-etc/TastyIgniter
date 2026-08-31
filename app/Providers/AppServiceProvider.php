@@ -19,6 +19,7 @@ use App\Livewire\DeliveryLocalSearch;
 use App\Mail\MailTestRedirect;
 use App\Support\DefaultLocaleIntegrity;
 use App\Support\TimezoneIntegrity;
+use Igniter\Flame\Support\Facades\Igniter;
 use Igniter\System\Models\Language;
 use Igniter\System\Models\Settings;
 use Igniter\Cart\OrderTypes\Delivery as VendorDeliveryOrderType;
@@ -102,7 +103,16 @@ class AppServiceProvider extends ServiceProvider
             // The default language is what gives untagged model columns
             // their meaning, so changing it reinterprets existing menu
             // content instead of failing. See App\Support\DefaultLocaleIntegrity.
-            DefaultLocaleIntegrity::report(Language::getDefault()?->code);
+            //
+            // Gated on hasDatabase(), the same guard Settings::get() sits
+            // behind: Defaultable::getDefault() runs an unguarded query and,
+            // on a table with no default flagged, even writes one
+            // (makeDefault()). Unguarded, this call broke `artisan
+            // config:clear` in composer's post-autoload-dump - the app boots
+            // there before any database exists.
+            DefaultLocaleIntegrity::report(
+                Igniter::hasDatabase() ? Language::getDefault()?->code : null,
+            );
         });
 
         LocationModel::implement(LocationDeliveryAction::class);

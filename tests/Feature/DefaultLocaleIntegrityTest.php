@@ -57,15 +57,17 @@ final class DefaultLocaleIntegrityTest extends TestCase
         );
     }
 
-    public function test_an_unreadable_default_is_reported_and_logged(): void
+    public function test_a_missing_default_passes_silently(): void
     {
         Log::spy();
 
-        $this->assertFalse(DefaultLocaleIntegrity::report(null));
+        // A fresh or absent database has no content whose meaning depends on
+        // the default language, so there is nothing to guard: CI's throwaway
+        // schema and composer's pre-database boot must not be failed for
+        // being fresh. Only a *different* stored default is a finding.
+        $this->assertTrue(DefaultLocaleIntegrity::report(null));
 
-        Log::shouldHaveReceived('warning')->once()->withArgs(
-            fn(string $message): bool => str_contains($message, 'unreadable'),
-        );
+        Log::shouldNotHaveReceived('warning');
     }
 
     public function test_the_guard_is_wired_into_the_boot_sequence(): void

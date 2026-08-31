@@ -45,13 +45,21 @@ final class DefaultLocaleIntegrity
 
     /**
      * @param string|null $storedDefault the code of the default Language record,
-     *                                   or null when no default could be read
+     *                                   or null when there is no readable
+     *                                   default - a fresh or absent database
      *
-     * @return bool whether the stored default is the expected one
+     * @return bool whether the invariant holds (null holds vacuously)
      */
     public static function report(?string $storedDefault): bool
     {
-        if ($storedDefault === self::EXPECTED) {
+        // No default at all is a database with no content to misinterpret:
+        // CI's throwaway schema, a fresh install, or a boot before any
+        // database exists (composer's config:clear boots the app that way).
+        // There is nothing to guard yet, so this passes silently - warning
+        // here would fail every fresh environment for its freshness. A
+        // *different* default is the dangerous case: content exists and is
+        // now labelled as another language.
+        if ($storedDefault === null || $storedDefault === self::EXPECTED) {
             return true;
         }
 
@@ -61,10 +69,10 @@ final class DefaultLocaleIntegrity
             .'is in force at read time. While this mismatch persists, content '
             .'entered as [%s] is served as [%s] and used as the fallback for every '
             .'untranslated language. Nothing else will report this.',
-            $storedDefault ?? 'unreadable',
+            $storedDefault,
             self::EXPECTED,
             self::EXPECTED,
-            $storedDefault ?? 'an unknown language',
+            $storedDefault,
         ));
 
         return false;
