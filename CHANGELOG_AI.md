@@ -5345,3 +5345,62 @@ code, setting, revision or key was changed. **No key value is recorded here.**
   therefore not free.
 
 Documentation only. Every changed path is `.md`.
+## 2026-08-29 - Evening delivery cut-off executed on both copies: the server refuses after 21:00; the 2026-08-28 display anomaly did not reproduce
+
+The one reading that could only be taken inside its own window was taken:
+Saturday 2026-08-29 between 21:11 and 21:19 EDT, in a real browser, on both
+`d3c-fix-be6835a9` and `d3c-min-9a4c1bc8`, with the hostname verified on each
+page. It closes the after-21:00 leg of the standing acceptance row "Delivery
+closed before 12:00 and after 21:00, every day", which now reads PASS on both
+legs.
+
+- **Clock verified first on each copy, both on Montreal time, so both readings
+  count.** `d3c-fix-be6835a9` read "We are open" with "Cueillette · dans
+  25 min" in pickup mode; both copies' info panels read "Delivery is CLOSED"
+  and "Cueillette dans 25 minutes". Last Order Time was "sam. 29 10:00 pm" on
+  the first copy and "dim. 30 09:00 pm" on the second - the next delivery
+  window, correctly rolled to Sunday. An instance drifted to UTC would have
+  been at 01:1x on the 30th and shown everything closed with the next opening
+  at noon, so neither reading is VOID. Stored hours rendered identically on
+  both: Delivery 12:00 pm-09:00 pm every day, Opening and Cueillette
+  12:00 pm-10:00 pm every day.
+- **Executed, not read off the panel.** On each copy the delivery address was
+  set through the home-page widget to the restaurant's own address, 8407 Boul.
+  Gouin E, Montreal, H1E 2P6, QC, Canada. Because the field is
+  `wire:model.live.debounce.500ms`, the value was set, an `input` event
+  dispatched, and `searchQuery` confirmed in the Livewire snapshot before
+  `#location-search` was submitted with `requestSubmit()` - the debounce
+  discipline recorded here on 2026-08-29 after it once faked an address
+  failure. Both copies accepted the address as in-area: order type Delivery,
+  CA$5.00 fee line, cart CA$5.00, header CLOSED.
+- **Both copies refused the add, with the same verbatim message:** "Your
+  selected order time is outside our Delivery hours". The attempt was SCOTCH
+  EGG (Size Small, CA$2.00) submitted through the dialog's own form. The cart
+  stayed at CA$5.00 - the fee line alone, no item - and the dialog stayed open
+  carrying the message. `/checkout` was not visited: it is only called for when
+  the basket is accepted, and loading it creates a draft order row. No order,
+  customer or payment was created.
+- **What this settles.** The blocking explanation is disproved: there is no
+  regression in which the server accepts a delivery order after closing. The
+  cut-off is enforced server-side on both copies. Pickup remained open
+  throughout, so the deliberate 21:00-22:00 gap also behaved as designed.
+- **What it does not settle.** The 2026-08-28 21:10 display anomaly on
+  `d3c-fix-be6835a9` **did not reproduce** - tonight the panel correctly read
+  CLOSED - so its precondition never occurred and the display question stays
+  open, not explained and not closed. Recorded as a hypothesis only, for
+  whoever takes it next: that evening's reading was taken the same way as the
+  16:58-17:00 reverse reading that afternoon, by WebFetch rather than a
+  browser, and a cached response from before 21:00 would render exactly
+  "Delivery dans 25 minutes" while the server behind it refused. Re-taking the
+  21:00-22:00 reading on a Friday, in a browser, would test that. Either way it
+  has no customer-facing consequence, because the server refuses.
+
+Method note: this run was scheduled as an unattended task but deliberately did
+not execute itself. The reading needs a browser driving the Livewire widget, a
+plain HTTP fetch cannot reach the gated delivery offer, and browser navigation
+raises per-URL permission prompts that an unattended session cannot answer -
+the failure mode that lost the 2026-08-23 automated A/B run. The task printed
+its runbook and waited; the user started it and approved the prompts.
+
+Nothing was deployed, no setting, revision or code was changed, no PR was
+merged, and no Cloud Run Job was touched.
