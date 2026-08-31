@@ -4885,6 +4885,466 @@ Next on this thread: the timezone fix awaits approval; the delivery
 evening cut-off anomaly on `d3c-fix-be6835a9` is a separate question and
 needs its own executed reading after 21:00 local.
 
+## 2026-08-29 - Deployment impact assessed before any deploy; the admin checklist stops quoting a figure that drifts
+
+Environment: the repository, Cloud Run and Artifact Registry in
+`le-chateau-canada-staging`. Status: assessment and documentation only. Nothing
+was deployed, built, scheduled, or written to any stored setting.
+
+- **The live build point was established, not assumed.** The 100%-traffic
+  revision `d2fix-31821289` was created 2026-07-19 and runs digest
+  `sha256:72371b61...689102`, which carries the Artifact Registry tag
+  `31821289df9ae4a162cabd0cac7a3ac6fb04cd0c` - commit `31821289`. Revision name,
+  image tag and commit agree.
+- **The gap is six weeks, not two.** 71 first-parent commits to `e8fe12c1`; 15
+  touch anything outside `.md`; 8 change runtime behaviour. Recorded in
+  `DEPLOYMENT_IMPACT_TIMEZONE_FIX.md` with a per-change customer-impact verdict.
+- **The item that moves live behaviour is not the timezone fix.**
+  `WeekdayScheduleCorrection` (#90) is registered unconditionally and rebuilds
+  every working schedule, opening and pickup included - not only delivery. Main
+  traffic runs without it today, so its opening and pickup days are currently
+  shifted one day from what is stored, and deploying changes which days the shop
+  appears open. A fix, but a visible one, and it would land in the same event as
+  the timezone fix.
+- **A deploy is schema-neutral.** `start.sh` runs `package:discover`,
+  `config:cache`, `route:cache`, `view:cache` and no migration. The relocated
+  Birthday migration (#124) is guarded and no-ops on an initialized database.
+  Two residues recorded: the ledger row written under `abandon.birthday` when
+  migrations are next run survives an image rollback, and the relocated `down()`
+  is now a data-loss path against real reservation columns that did not exist
+  before.
+- **Two options compared, neither executed.** Deploy HEAD, or build a two-line
+  timezone-only branch from `31821289` that drops `TimezoneIntegrity` because
+  cherry-picking #135 whole would conflict in `AppServiceProvider`. The minimal
+  build is recommended first, so that a misbehaving storefront afterwards has one
+  candidate cause instead of six weeks of them.
+- **Admin checklist step 3 no longer quotes a row count.** It had said "8 rows,
+  newest #11". Loading `/checkout` creates a draft order row, so any figure
+  written there is stale by the time the owner reaches the step - including from
+  their own walk through the list. Step 3 now asks the owner to report the count
+  and the highest order number and to confirm every row is a draft, which also
+  makes their answer the current baseline for the pre-launch draft-row cleanup.
+  No order table read was performed: the user declined both a disposable Job and
+  the use of an admin account for it.
+- **FP-1 on the main-traffic revision:**
+  `2127efd6d63de53e6d9fbc5388f9db3fee72d0575eec25a09b9f99e9ad8565d3`, identical
+  to the 2026-08-28 recording, so nothing has drifted in its configuration.
+
+Documentation only. Every changed path is `.md`.
+
+## 2026-08-29 - Admin regression passes 10/10; a rating this project got wrong is withdrawn; deployment settles on Option C
+
+Environment: the repository, the `d3c-min` admin read-only, the shared database
+through disposable Job `qa-toggle-20260829`, and Cloud Run metadata. Status:
+documentation, plus one disposable read-only job resource created. No stored
+setting, schema, revision, traffic split, image, or code path was changed.
+
+- **Admin regression PASS 10/10**, executed on `d3c-min-9a4c1bc8` with the user
+  signing in themselves. Acceptance row marked PASS, evidence executed. Draft-row
+  baseline moves to 9 rows, highest #12.
+- **The weekday-correction risk rating is withdrawn.** An earlier version of
+  `DEPLOYMENT_IMPACT_TIMEZONE_FIX.md` called `WeekdayScheduleCorrection` the
+  largest customer-visible risk of a deployment. That was reasoned from code and
+  never checked against the stored schedule. The row store was then read: all 21
+  `ti_working_hours` rows enabled, one distinct window per type, every day
+  identical. Shifting the weekday mapping permutes identical elements, so nothing
+  a customer sees can change. The rating is withdrawn and the condition that
+  restores it is written down - any day disabled or given different hours, which
+  is exactly what decision 6's holiday plan does.
+- **Deployment settles on Option C**, folding the timezone fix into the pre-launch
+  deployment. The evidence that made it safe: the live site has never taken an
+  order. All copies share one database, so the admin order table is the live one -
+  Total Sales $0.00, nine rows all draft, and #4 from 2026-07-18 is a draft with
+  no customer information. Stated boundary: this proves no order was ever
+  completed, not that no customer was ever turned away. Options A and B are kept
+  as alternates against two named conditions, and Option B's unbuilt-branch risk
+  is now recorded - its build point has never been exercised by CI, which only
+  began running the suite six weeks later.
+- **Geocoder exposure found on main traffic** and reclassified from
+  handle-before-launch to needing its own schedule: no geocoder variable is set
+  there, and the override that would pin it to Google does not exist in that
+  image, so it runs the stored Chain setting and can fall through to Nominatim -
+  against the standing production boundary.
+
+Documentation only in this repository. Every changed path is `.md`.
+
+## 2026-08-29 - The owner's switch passes all four checks; stale sessions close with them; a geocoder contradiction is left open rather than argued away
+
+Environment: the `d3c-min` admin and storefront, the shared database through
+disposable Job `qa-toggle-20260829`, and the main-traffic revision for FP-1.
+Status: recorded. Level 2 write on explicit approval, restored and read back.
+
+- **Four owner's-switch checks executed and passed**, with the switch thrown
+  through the admin rather than by writing the row, because two of them measure
+  propagation and cache behaviour and a direct write would have measured a path
+  the owner never takes. No cache delay - the setting is read per request; a
+  part-way delivery basket degrades to pickup intact; delivery disappears from
+  the storefront rather than blocking at checkout; switching back on needs
+  nothing further.
+- **Stale-session cleanup closed as a by-product** and marked PASS, executed.
+  It had been blocked on precisely this write.
+- **Pickup proved untouched** three ways, matching the earlier source reading of
+  `SettingsEditor::onSaveRecord()`. Both toggles read back at 1.
+- **FP-1 identical across the pair**, the live home page word-for-word
+  unchanged, and no new order row.
+- **A contradiction is recorded unresolved rather than reasoned away.** A
+  storefront reading reported the geocoder as `chain` on a copy recorded as
+  pinned to Google. The environment variables are set and the override code is
+  in that image, and the container's ordering argument says the pin should win -
+  but the project's own test file states that this path is verified on a
+  deployed revision by reading back which provider answered, not asserted, and
+  the reading that was meant to be that verification is the one now
+  disagreeing. Both hypotheses are written down, together with the point that
+  the driver pin and the provider narrowing come from the same call, so there is
+  no independent safety net to fall back on. A claim in
+  `DEPLOYMENT_IMPACT_TIMEZONE_FIX.md` that depended on the copies being pinned
+  has been corrected in the same commit.
+
+Documentation only in this repository. Every changed path is `.md`.
+
+## 2026-08-29 - The geocoder contradiction dissolves on a source reading; per-copy triage replaces a blanket doubt
+
+Environment: repository source, Cloud Run revision metadata, Cloud Run Jobs.
+Status: documentation, plus one disposable job deleted on explicit named
+confirmation. No stored setting, revision, traffic split or code path changed.
+
+- **Resolved without the probe.** The component property that reported `chain` is
+  filled from `setting('default_geocoder')` at mount and never reads the config
+  key the override writes, so it says `chain` on every copy regardless. The two
+  observations were never measuring the same quantity. The instruction to read
+  the code before spending a job was the right call and cost one grep.
+- **The blanket doubt is replaced by a per-copy triage** keyed on whether the
+  override code is in the image and whether the variables are set, which is
+  stronger than keying on the merge date of #86. Three copies are pinned to
+  Google; three certainly ran Chain, one of them because it carries the code but
+  sets no variable and therefore no-ops; one is pinned to chain over an
+  empty provider list. Area-sensitive readings taken on the three Chain copies
+  are Chain-sourced and need no probe to say so.
+- **A previous claim in `DEPLOYMENT_IMPACT_TIMEZONE_FIX.md`** that "the test
+  copies are pinned to Google by revision" was too broad and is corrected to the
+  per-copy split.
+- **Job `qa-toggle-20260829` deleted** on named confirmation, described before
+  and read back absent afterwards. Two other disposable-shaped jobs were found in
+  the region and are flagged rather than touched.
+
+Documentation only in this repository. Every changed path is `.md`.
+
+## 2026-08-29 - Probe declined on the evidence; the shared-database limit turns out to have been worked around; jobs all cleared
+
+Environment: repository documentation and Cloud Run Jobs. Status: recorded.
+Level 2 destructive deletions on named confirmation. No stored setting,
+revision, traffic split, image or code path changed.
+
+- **The geocoder runtime probe was decided against, and the reasoning is
+  recorded as a judgement about evidence rather than as convenience.** No
+  registered conclusion rests on metre-level accuracy: the out-of-area address
+  was downtown, the unrecognised address fails under either provider, the
+  incomplete-address row is really testing the checkout block, and the exact
+  boundary is already Deferred as unreachable from the storefront. A second
+  reason emerged from the copies table and is stronger: **no area-sensitive
+  reading was ever taken on a Chain-running copy** - `d3c-e9a4f7ca` never
+  started, `d3c-25f9813b` was only a log-redaction check, and `d3c-1f8f0c75` is
+  not an evidence copy. The Chain tier holds no evidence to re-qualify.
+- **The two conditions that would revive it are written down**, and the second
+  is cross-referenced into the Nominatim production gate in `CLAUDE_HANDOFF.md`
+  rather than left loose: main traffic, once Delivery is enabled, runs the
+  stored chain and cannot be pinned by a variable, because its image predates
+  the override entirely.
+- **A standing claim about the shared database is narrowed.** The "structural
+  limit" section said varying the address provider for one copy had been blocked
+  by the shared settings store. It was in fact worked around, at revision level:
+  `GeocoderChainOverride` honours an empty `DELIVERY_GEOCODER_PROVIDERS` as a
+  deliberate empty list, and `d3c-pu2-1f8f0c75` is built that way. That also
+  confirms the premise of the five provider-unavailable acceptance rows - the
+  copy genuinely had no usable provider, by construction rather than simulation,
+  with no shared setting touched. The limit still stands for opening hours,
+  which have no per-revision override.
+- **All three of today's disposable jobs are deleted**, each described and its
+  body read before deletion. The region holds none.
+
+Documentation only in this repository. Every changed path is `.md`.
+
+## 2026-08-29 - The per-copy geocoder table is corrected: it was incomplete and carried one invented row
+
+Environment: Cloud Run revision metadata. Status: documentation correction. No
+stored setting, revision, traffic split, image or code path changed.
+
+- **The correction.** The first version of the per-copy table listed seven
+  entries against ten real copies, and one of its rows, `d3c-1f8f0c75`, was for a
+  revision **that does not exist**: that string is an Artifact Registry image
+  tag, shared by the four `1f8f0c75` copies, and it was mistaken for a revision
+  name. Its "carries the code but sets no variable" row came from a `describe`
+  whose stderr had been suppressed, so a "Cannot find revision" failure was
+  printed as a finding. A second pass then wrongly reported `d3c-e9a4f7ca` as
+  non-existent, because the existence test matched the word ERROR inside that
+  revision's own status conditions - it is the copy that failed to start. Both
+  were settled by re-running against the service's revision list with errors
+  shown.
+- **Two omitted copies were not Chain copies.** `d3c-g-1f8f0c75` carries
+  `google`/`google`, the same pin as `g2`; `d3c-pu-1f8f0c75` carries
+  `chain`/empty, the same construction as `pu2`. Being marked "superseded" in the
+  copies table says nothing about the geocoder configuration, which the first
+  table had implicitly assumed.
+- **A simpler and more reliable rule replaces the code-presence reasoning:** a
+  revision with no geocoder variables runs the stored `chain` setting whether or
+  not the override is in its image, because `GeocoderChainOverride` returns early
+  when the environment says nothing. Code presence explains; it does not decide.
+- **The conclusion survives, and now on complete coverage.** The Chain copies are
+  `d3c-a2ee559c`, `d3c-25f9813b`, `d3c-e9a4f7ca` (Ready=False,
+  `HealthCheckContainerError` - it never served a request) and `mail-3a603e53`.
+  The copies table marks the first three unusable for multi-step flows and the
+  fourth did no address work, so no area-sensitive reading was taken on any of
+  them. "That tier holds no evidence to re-qualify" is now a statement about all
+  ten copies rather than about the seven the first table happened to list.
+- The summary of the split in `DEPLOYMENT_IMPACT_TIMEZONE_FIX.md` section 7
+  repeated the same bad grouping and is corrected with it.
+- **Tonight's cut-off reading moves to direct execution on the user's side**,
+  with a comparison leg at 20:45 before closing and the cut-off reading at 21:05,
+  including the clock pre-check. The 21:05 scheduled task is left armed and
+  unchanged: it only pushes a notification and starts nothing, so it serves as an
+  independent cross-check rather than a second runner. Results will be handed
+  back for recording.
+
+Documentation only. Every changed path is `.md`.
+
+## 2026-08-29 - The main-traffic twin is recorded as an asset, and it couples the cleanup plan to the deployment plan
+
+Environment: Cloud Run revision metadata. Status: documentation. Nothing
+deployed, deleted or changed.
+
+- **`d3c-a2ee559c` runs the same image digest as the main-traffic revision** -
+  `sha256:72371b61...689102`, commit `31821289` - is Ready, and serves 0% of
+  traffic. A key-by-key environment comparison against main traffic returns **30
+  variables identical and exactly one difference**: `DELIVERY_ENABLED`, `false`
+  live and `true` there. `APP_TIMEZONE`, `RUN_CONFIG_CACHE`, the absence of any
+  geocoder variable and every secret reference all match. It had been mentioned
+  only in passing as background; it is an asset and now has its own section.
+- **Three uses recorded**: the comparison baseline for the Option C deployment,
+  so that day's readings separate what the deployment changed from what the site
+  already did without using the live site as comparator; a reproduction site for
+  the timezone fail-open, the live image containing no fix and this being that
+  image; and - following from the single variable difference - **a preview of
+  main traffic with Delivery switched on**, which makes it the one place the
+  Nominatim production gate can be observed rather than argued.
+- **A scheduling constraint is written into both plans.** `d3c-a2ee559c` is on
+  the test-copy cleanup list and **must not be deleted before the deployment
+  rehearsal**. Cleanup on its own schedule would destroy the deployment's only
+  baseline; a deployment scheduled on the assumption that the baseline exists
+  fails if cleanup ran first. Recorded in the cleanup row and the copies table in
+  `D3C_PROGRESS.md`, in Option C and section 7 of
+  `DEPLOYMENT_IMPACT_TIMEZONE_FIX.md`, and in the Nominatim production gate in
+  `CLAUDE_HANDOFF.md`.
+- It shares the one live database, so it is fit for read-only behavioural
+  comparison only. No write on it would be isolated.
+
+Documentation only. Every changed path is `.md`.
+
+## 2026-08-29 - The Nominatim gate is written as two steps, with a one-step alternative recorded beside it
+
+Environment: repository documentation. Status: documentation. Nothing deployed,
+written to any setting, or executed.
+
+- **Deploying does not close the Nominatim gate, and the gate now says so.** A
+  current image gives the production revision the *capability* to pin the
+  provider chain; it does not pin it. `GeocoderChainOverride` returns early when
+  the environment says nothing, and the production revision **has never carried
+  `DELIVERY_GEOCODER_DRIVER` or `DELIVERY_GEOCODER_PROVIDERS`** - confirmed by
+  the 2026-08-29 read-back. A deployed production revision with no variables
+  still runs the stored `chain` and still reaches Nominatim. The gate is
+  therefore stated as two steps: deploy, then set the variables.
+- **The second step is called out as the one at risk**, because the first gets
+  described as "the deployment solves the geocoder". This is the same failure
+  shape already recorded for the week-start fix, where a merged and deployed
+  correction was explicitly noted as *not* releasing the hours change that
+  depended on it. The gate cross-references that row so the pattern is named
+  rather than rediscovered.
+- **The deployment-day checklist in Option C now lists "set the geocoder
+  variables on the production revision" as its own numbered line**, separate
+  from the deploy step, with a note that step 2 does not complete it.
+- **A one-step alternative is recorded, not executed**: change the shared stored
+  setting `default_geocoder` from `chain` to `google`. TastyIgniter reads that
+  value into `igniter-geocoder.default` on every geocoder resolution, so it takes
+  effect on every revision at once, **including today's production image, with
+  nothing deployed**. Checked for side effects: the front-end map library
+  branches on `nominatim` versus anything else, and `chain` and `google` fall on
+  the same side, so the map assets do not change.
+- **Cost of each path recorded in one line each.** Deploy-then-set: two steps, no
+  shared-settings write, live site untouched until the deployment; risk is the
+  second step being dropped. Stored-setting change: one step, no deployment, but
+  a shared-settings write effective on the live site immediately, needing its own
+  approval, the prior value recorded, a read-back, and a way back.
+- At launch this is a **choice between two paths**, not a side effect of
+  deploying.
+
+Documentation only. Every changed path is `.md`.
+
+## 2026-08-29 - Deployment checklist ordering corrected: immutable revisions would have forced two cutovers and an unpinned window
+
+Environment: repository documentation. Status: documentation correction. Nothing
+deployed or executed.
+
+- **The ordering error.** The checklist written earlier today placed "set the
+  geocoder variables on the production revision" *after* the traffic cutover.
+  **Cloud Run revisions are immutable**: setting an environment variable produces
+  a new revision and cannot be applied to a serving one. That order therefore
+  meant deploy revision A, cut traffic to A, deploy revision B (same image plus
+  variables), cut traffic again - two cutovers, with a window in between during
+  which the live site ran the new image **unpinned**, on the stored `chain`, with
+  Delivery open. Exactly the state the gate exists to prevent.
+- **Corrected**: the variables now ride with the image in the deploy step, so
+  there is one cutover and no unpinned window. The visibility they had been split
+  out for is kept as a separate numbered check, 2b, which reads the two variables
+  back off the new revision and is explicitly excluded from the deploy step's
+  completion test - a successful image deploy is not evidence that the variables
+  are set. The same correction is applied to the two-step statement in the
+  Nominatim production gate.
+- **An expected-difference list was added ahead of the side-by-side read, and it
+  has three entries rather than two.** Against the *new* revision the twin
+  `d3c-a2ee559c` is no longer one variable away: image, geocoder variables, and
+  `DELIVERY_ENABLED`. The third is pre-existing - the twin has always run with
+  Delivery open - and if the new revision is set to `false` to match production
+  then the home page Livraison block and the three-part heading will differ
+  between them. That is the flag, not a regression, and today's owner's-switch
+  checks recorded precisely what that difference looks like.
+- **This also bounds what the twin is a baseline for**, which the earlier
+  write-up did not state: it is like-for-like for old-image behaviour and is the
+  right place to watch delivery-open behaviour and the Nominatim gate, but it is
+  **not** like-for-like for the pickup-only surface production actually serves.
+  For that surface the live site before cutover is the comparator on everything
+  except the image.
+
+Documentation only. Every changed path is `.md`.
+
+## 2026-08-29 - Domain onboarding, phase one: current state read, nothing changed
+
+Environment: Google Cloud domain verification and Cloud Run domain mappings,
+plus read-only HTTP against the live service. Status: read-only investigation.
+**No service configuration was changed and no revision was produced.**
+
+- **The domain is not verified with Google.** `gcloud domains list-user-verified`
+  returns `[]` with exit status 0 - checked explicitly rather than inferred from
+  empty output. The Brevo TXT record added on 2026-08-23 is Brevo's own and has
+  no bearing on Google ownership verification; they are separate systems.
+- **No domain mapping exists.** The `beta` command group is not installed and
+  installing it needs administrator rights on the SDK directory, so the Cloud Run
+  Admin API was queried directly instead:
+  `GET .../apis/domains.cloudrun.com/v1/namespaces/.../domainmappings` returns
+  HTTP 200 with no `items`. Zero mappings in `northamerica-northeast1`.
+- **The verification token cannot be fetched from here.** The Site Verification
+  API answers HTTP 403 `ACCESS_TOKEN_SCOPE_INSUFFICIENT` to the gcloud access
+  token, which carries the cloud-platform scope and not the site-verification
+  one. The token is issued per Google account through the browser flow, so
+  producing it is the user's step, not the agent's.
+- **Nothing prevents indexing today.** The live service returns no
+  `X-Robots-Tag` header and its home page carries no robots `<meta>`;
+  `public/robots.txt` is a two-line file in the repository disallowing only
+  `/admin/`. The storefront is crawlable. A plan was written and **not applied**.
+- Side note, checked so it is not mistaken for a defect later: a `HEAD` on the
+  home page reports `content-type: application/octet-stream` while a `GET`
+  correctly reports `text/html; charset=utf-8`. A HEAD-request quirk, not a
+  content-type bug.
+- Two structural facts about domain mappings were written into
+  `CLAUDE_HANDOFF.md`: a mapping points at a service rather than a revision tag,
+  so the staging name resolves to the live 100%-traffic revision; and a subdomain
+  is not an isolated environment, because every mapping shares the one database.
+
+Documentation only. Every changed path is `.md`.
+
+## 2026-08-29 - Indexing control inverted to a whitelist; domain phase one split into 1a now, 1b held
+
+Environment: repository documentation, plus read-only HTTP against the live
+service. Status: documentation. Nothing deployed, mapped, verified or changed.
+
+- **A premise this thread had wrong is corrected.** Mapping a staging hostname
+  was described as opening an indexing window. The window is already open: the
+  `run.app` address serves the storefront with no `X-Robots-Tag`, no robots or
+  googlebot `<meta>`, **no canonical link anywhere in the theme**, and a
+  `robots.txt` disallowing only `/admin/` - and its certificate has been in the
+  public Certificate Transparency logs for weeks. A new hostname adds a door to
+  an unlocked house. A search found no trace of the site, only an unrelated
+  clothing brand of the same name; that is recorded as weak, suggestive
+  evidence and explicitly not as proof of non-indexing.
+- **The indexing rule is inverted from blacklist to whitelist.** Sending
+  `noindex` to a staging hostname alone would leave `run.app` and every future
+  tagged-revision URL indexable, and would leave each new hostname indexable by
+  default. The rule is now: **only `lechateaudesenfants.ca` may be indexed;
+  every other Host gets `X-Robots-Tag: noindex, nofollow`.** New hostnames are
+  safe by default and must be deliberately allowed.
+- **Two implementation traps recorded with it.** A `map $host $robots_tag` must
+  sit at http scope, which the rendered template provides. And `add_header` does
+  **not** inherit into a location that declares its own: six locations in
+  `nginx.conf.template` set `Cache-Control` and would silently drop a
+  server-level `X-Robots-Tag`, so it has to be repeated in each. The HTML paths
+  declare no `add_header` and do inherit.
+- **Canonical is placed on the allowed host, not the blocked ones.** `noindex`
+  combined with a canonical pointing elsewhere is contradictory signalling.
+  Recommended as an HTTP `Link: <...>; rel="canonical"` header emitted only where
+  indexing is allowed, which avoids modifying the vendor theme - forbidden - and
+  avoids depending on `APP_URL`, which would couple it to phase two.
+- **Phase one is split.** 1a, the Google ownership verification, proceeds now: it
+  adds one TXT record, creates no hostname, issues no certificate, enters no CT
+  log, and is the only step gated on the owner's own Google account. 1b, the
+  `staging.` mapping and certificate, is held - not for exposure reasons but
+  because the hostname has no consumer until payment callbacks need it. Its
+  release trigger is recorded so it cannot lapse silently: the fail-safe indexing
+  control shipping with Option C, or step E starting, whichever is first. Phase
+  two travels with 1b.
+
+Documentation only. Every changed path is `.md`.
+
+## 2026-08-29 - Carte Key attach fails on a missing .env, not on a hostname mismatch
+
+Environment: Cloud Logging and vendor source, read-only. Status: diagnosis. No
+code, setting, revision or key was changed. **No key value is recorded here.**
+
+- **The exception.** `Illuminate\Contracts\Filesystem\FileNotFoundException:
+  File does not exist at path /var/www/html/.env`, thrown from
+  `SystemHelper::replaceInEnv()` (`SystemHelper.php:130`), reached through
+  `UpdateManager::setCarte()` (`:269`) from `UpdateManager::applyCarte()`
+  (`:246`) from `Updates->onApplyCarte()`.
+- **The hostname hypothesis is refuted, twice.** First, `applyCarte()` calls
+  `setCarte($key)` **before** `getSiteDetail()`, so the throw happens before any
+  request leaves the server - the remote validation never runs. Second, when hub
+  calls do happen, `HubManager::prepareHeaders()` sends
+  `X-Igniter-Host: gethostname()`, the container's own hostname, and never
+  `APP_URL` or the request host. Which admin the button was pressed in, and what
+  `APP_URL` holds, are both irrelevant to this failure. This is consistent with
+  the observation that "Check Updates" succeeds: that path makes its network call
+  without going through `setCarte()`.
+- **Why the file is absent, by design.** `.dockerignore` excludes `.env` and
+  `.env.*`, which is correct for Cloud Run, where configuration arrives as
+  environment variables. The vendor's attach flow assumes a writable `.env` and
+  has no fallback. It fails on any containerised deployment of this shape.
+- **Nothing was persisted.** `setCarte()` throws on its first statement, so the
+  `setting()->setPref(['carte_key' => ..., 'carte_info' => ...])` on the next line
+  never ran. There is no partial state in the settings store.
+- **Two fix shapes, neither applied.** (1) Setting `IGNITER_CARTE_KEY` as a Cloud
+  Run variable populates `config('igniter-system.carteKey')`, which
+  `HubManager::prepareHeaders()` does read - **but it is not sufficient**:
+  `hasValidCarte()` requires `params('carte_info')` as well, and
+  `ManagesUpdates.php` lines 43 and 81 `throw_unless(hasValidCarte(), ...)` on the
+  browse and install paths, which is exactly what a language pack needs. (2)
+  Making `/var/www/html/.env` merely *exist*, even empty, lets `replaceInEnv()`
+  no-op harmlessly - `preg_replace` finds no line to replace and writes the empty
+  content back - so execution continues to `setPref()`, which persists both
+  `carte_key` and `carte_info` to the shared settings database where `params()`
+  reads them. **Corrected 2026-08-29 the same day: that unblocks *seeing* the
+  catalogue, not installing.** `LanguageManager::installLanguagePack()` writes
+  into `App::langPath()`, i.e. `/var/www/html/lang/vendor/...`, which is
+  root-owned and, more fundamentally, per-instance and ephemeral - so installing
+  at runtime does not work under an immutable image and the `.env` fix does not
+  change that. Language packs do not go through composer at all. The application
+  root is confirmed not writable by php-fpm, so the fix must `chown` that single
+  `.env` file to www-data and must not open up the directory. Full plan in
+  `LOCALIZATION_WORKSTREAM_PLAN.md`.
+- **Two consequences worth stating.** The persisted key would land in the
+  **shared settings database**, visible to every revision including production -
+  inherent to the vendor design, not to the fix. And a 15-character prefix of the
+  key now sits in Cloud Logging inside the stack trace's argument list, under
+  platform retention; each retry of the button adds another. Retrying is
+  therefore not free.
+
+Documentation only. Every changed path is `.md`.
 ## 2026-08-29 - Evening delivery cut-off executed on both copies: the server refuses after 21:00; the 2026-08-28 display anomaly did not reproduce
 
 The one reading that could only be taken inside its own window was taken:
@@ -4944,3 +5404,60 @@ its runbook and waited; the user started it and approved the prompts.
 
 Nothing was deployed, no setting, revision or code was changed, no PR was
 merged, and no Cloud Run Job was touched.
+
+<!-- The entry below is folded in from PR #140, closed unmerged on 2026-08-30:
+its branch had gone stale against the register and merging it would have
+regressed the evening cut-off row. It sits out of chronological order; its
+heading date is authoritative. -->
+
+## 2026-08-29 - Timezone fix merged after the main-traffic precondition was read back; boundary probe deferred; the 21:05 task becomes a reminder
+
+Environment: the repository, GitHub, Cloud Run in `le-chateau-canada-staging`,
+and the local scheduled task on the user's machine. Status: PR #135 merged on
+the user's explicit approval (Level 1, CI green on 8.3/8.4/8.5). No stored
+setting, revision, traffic split, environment variable, or secret was changed.
+
+- **The main-traffic revision was read back before the merge, and it carries
+  the variable.** `le-chateau-canada-staging-d2fix-31821289`, which holds 100%
+  of traffic, has `APP_TIMEZONE=America/Toronto` and `RUN_CONFIG_CACHE=true`.
+  This had never been read on that revision — the 2026-08-29 investigation had
+  only confirmed it on three tagged delivery copies — and the fix is worth
+  nothing on a revision that does not set it. It does set it, so `config/app.php`
+  following `APP_TIMEZONE` lands on `America/Toronto` there at the next deploy.
+  Recorded because the read, not the assumption, is the evidence.
+- **PR #135 merged** as `e8fe12c1`. Its description was corrected first: the
+  `php.ini` `date.timezone` line had been described as "a second line of
+  defence", which overstates it.
+  `Illuminate\Foundation\Bootstrap\LoadConfiguration` line 65 calls
+  `date_default_timezone_set($config->get('app.timezone', 'UTC'))`
+  **unconditionally**, so from bootstrap onward the ini value is always
+  overwritten by `config('app.timezone')`. The ini line covers a bare `php`
+  process and pre-bootstrap code and nothing else; it would not have saved a
+  single request on the drifted instance, and it would not save one if
+  `APP_TIMEZONE` were ever unset. `config/app.php` is the only part of that PR
+  that reaches a customer request. The PR body now says so, so that a later
+  reader does not bank on the ini line.
+- **Not deployed.** The merge changes the repository. Every running revision
+  still serves the old image, so the defect remains live on main traffic and on
+  every D3C copy until a deploy, and the clock check before each reading stays
+  mandatory.
+- **The warning still has no subscriber.** `TimezoneIntegrity` logs at warning
+  level to `stderr` and stops in Cloud Logging, where nothing is watching — the
+  same silence that let the incident run four days. A log-based alert policy is
+  costed in the handoff thread and is not built.
+- **Coordinate-level boundary probe: Deferred**, on the user's decision. The
+  inclusive-boundary property was proven at D3B by a runtime self-check against
+  an exact first vertex and that record stands; the storefront path cannot
+  re-prove it, because no street address geocodes onto a polygon edge. Opening a
+  write operation for a re-proof is not worth it before launch.
+- **The 21:05 scheduled task is now a reminder, not an executed check.** The
+  reading needs a real browser: the delivery offer sits behind a Livewire
+  component driven through `window.Livewire.all()` and `form.requestSubmit()`,
+  which no plain HTTP fetch reproduces. Browser navigation raises per-URL
+  permission prompts, no permission allowlist exists in this project or in the
+  user's settings, and an unattended session cannot answer them — which is how
+  the Sunday 2026-08-23 automated run lost all four of its fetches. The task now
+  sends a push notification at 21:05 and prints the runbook, and starts nothing
+  on its own.
+
+Documentation and one merged code PR. The changed paths in this entry are `.md`.

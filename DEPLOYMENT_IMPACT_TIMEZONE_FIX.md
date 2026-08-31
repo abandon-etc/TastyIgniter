@@ -1,0 +1,384 @@
+# Deployment impact: what reaches the live site if the main-traffic revision is redeployed
+
+Status: **assessment only, nothing executed.** Produced 2026-08-29 on the
+user's instruction.
+
+**Decision, 2026-08-29: Option C is adopted** - the timezone fix rides along
+with the single pre-launch deployment, and nothing is deployed now. Options A
+and B are retained as alternates, with the two conditions that reopen them
+stated in section 5. Sections 1 to 4 are the evidence behind that choice, and
+section 3 records a rating this document previously got wrong and has
+withdrawn.
+
+## 1. The build point, established rather than assumed
+
+The revision holding 100% of traffic is
+`le-chateau-canada-staging-d2fix-31821289`, created **2026-07-19T15:08:14Z**,
+running image digest `sha256:72371b61...689102`. That digest carries the
+Artifact Registry tag `31821289df9ae4a162cabd0cac7a3ac6fb04cd0c`, which is
+commit `31821289` — "Merge pull request #65", 2026-07-19 09:53 -0400. The
+revision name, the image tag, and the commit all agree, so the build point is
+not a guess.
+
+Main HEAD is `e8fe12c1`, the timezone fix merged today.
+
+**The gap is six weeks, not two: 71 first-parent commits.** Of those, **15
+touch anything outside `.md`, and only 8 change runtime behaviour.** The rest
+are documentation, tests, CI, and local tooling.
+
+Main traffic's relevant environment, read back today: `DELIVERY_ENABLED=false`,
+`MAIL_MAILER=log`, no `MAIL_TEST_REDIRECT_TO`, no geocoder variables,
+`APP_TIMEZONE=America/Toronto`, `RUN_CONFIG_CACHE=true`. Several impacts below
+are neutralised by those values, and that is *why* they are neutral — change the
+variable and the impact comes back.
+
+## 2. Every code-bearing change, with its effect on a live customer
+
+| Change | Customer-visible on main traffic? |
+| --- | --- |
+| #69 `3fc841d1` — `DeliveryLocalSearch` Livewire component | **No** — reachable only through the delivery path, which `DELIVERY_ENABLED=false` closes |
+| #76 `a26897fb`, #78 `8a91b5cb` — `tools/fp1.py`, `.gitattributes`, `.gitignore` | **No** — local tooling, never in the image |
+| #79 `e9a4f7ca` — URL redaction in log records, `config/logging.php` | **No** — changes only what is written to logs |
+| #82 `879ed5c7` — pin shell scripts to LF | **No** to a customer, but it changes how `start.sh` lands in the image. Build hygiene; if anything it removes a latent CRLF startup hazard |
+| #85 `70d65cc5`, #98 `f4ce8f93`, #126 `7673cee4` — tests only | **No** |
+| #86 `1f8f0c75` — `GeocoderChainOverride`, `config/delivery.php` | **No, conditionally** — `DELIVERY_GEOCODER_DRIVER`/`_PROVIDERS` are unset on main traffic, and null is documented as "use the stored configuration unchanged". Set those variables and it stops being neutral |
+| #90 `be6835a9` — `WeekdayScheduleCorrection` | **No, under the configuration actually stored** — rating withdrawn on evidence, see section 3 |
+| #101 `de3f6dd3` — Delivery minimum read from the stored setting | **No** — delivery-gated |
+| #104 `f02f5e30` — `MailTestRedirect`, `config/mail.php` | **No** — `MAIL_TEST_REDIRECT_TO` is unset, and `MAIL_MAILER=log` sends nothing anyway. **Footgun:** setting that variable on a traffic-serving revision silently redirects every customer e-mail to one inbox. The config comment says to leave it unset; nothing enforces it |
+| #124 `443b250c` — Birthday migration relocation | **No** on deploy; a hazard only when migrations are run. See section 4 |
+| #122 `491365b2` — `.github/workflows/pipeline.yml` | **No** — CI, not in the image |
+| #135 `e8fe12c1` — timezone fix | **YES, and intentionally** — a drifted instance stops serving hours four or five hours off |
+
+## 3. The weekday correction: rating withdrawn on evidence
+
+`App\Delivery\WeekdayScheduleCorrection` (#90) is registered **unconditionally**
+in `AppServiceProvider`, with no delivery gate, and it rebuilds **every** working
+schedule: delivery, collection/pickup, and the general opening schedule. It fixes
+`WorkingHour::getDay()` resolving weekday indices through `Carbon::startOfWeek()`,
+which under this site's `fr_CA` locale starts on Sunday, so a stored Monday-Friday
+schedule is applied Sunday-Thursday.
+
+An earlier draft of this document called that the largest customer-visible risk of
+the deployment. **That rating is withdrawn.** It was reasoned from the code alone
+and never checked against the schedule actually stored.
+
+The row store was then read directly from `ti_working_hours` (job
+`qa-toggle-20260829`, read-only), because the admin screen renders the JSON display
+store and the two could in principle disagree:
+
+| type | rows | rows with status=0 | distinct time windows | window |
+| --- | --- | --- | --- | --- |
+| collection | 7 | **0** | **1** | 12:00:00-22:00:00 |
+| delivery | 7 | **0** | **1** | 12:00:00-21:00:00 |
+| opening | 7 | **0** | **1** | 12:00:00-22:00:00 |
+
+All 21 rows are enabled, and within each type all seven days carry identical
+times. The row store agrees exactly with the admin. **Shifting the weekday
+mapping by one day therefore permutes seven identical elements, and no
+customer-visible behaviour can change.** The correction is still correct; it
+simply has nothing to correct here today.
+
+**The condition that brings the rating back**, and it is not hypothetical: the
+moment any single day is disabled or given different hours, the shift becomes
+visible again. The holiday plan of decision 6 is precisely to disable a day. So
+this stays a real consideration for any deploy that happens *after* the hours
+stop being uniform - it is just not a reason to hesitate over the deploy being
+weighed today.
+
+## 4. Shared database, migrations, and what a rollback cannot undo
+
+**Nothing in this range writes to the shared database on deploy.**
+`docker/cloudrun/start.sh` runs only `package:discover`, `config:cache`,
+`route:cache` and `view:cache` — **it does not run migrations.** A deploy is
+therefore schema-neutral by itself.
+
+The one migration change (#124) moved
+`2026_07_10_000000_add_birthday_booking_fields_to_reservations_table.php` out of
+the root `database/migrations/` and into the `abandon.birthday` extension group,
+rewriting it to be guarded: on an already-initialized database `up()` sees the
+`birthday_booking` column and returns a no-op. That is correct, and it was
+clearly thought through.
+
+Two things still deserve stating plainly:
+
+- **The ledger row survives an image rollback.** Whenever migrations are next
+  run, a new row is recorded under the `abandon.birthday` group. Rolling the
+  image back to `31821289` does not remove it. It is benign — no schema change
+  on an initialized database — but it is the only part of this deploy that
+  redeploying the old image does not undo.
+- **The relocated `down()` is now a live data-loss path that did not exist
+  before.** Rolling that migration group back drops `birthday_booking`,
+  `birthday_slot_code`, `birthday_slot_key` and the unique index — real
+  reservation columns. Nothing in a deploy triggers it. It is a hazard worth
+  knowing about before anyone reaches for a migration rollback.
+
+Everything else in the range is code and configuration baked into the image, and
+is fully reverted by redeploying the previous image.
+
+## 5. Three ways to do it
+
+### Option A — deploy main HEAD
+
+One build, one revision, everything in one step. CI is green on exactly this
+tree, on 8.3, 8.4 and 8.5.
+
+- **Cost:** six weeks of change reach the live site at once. With the weekday
+  rating withdrawn (section 3) the known customer-visible surface is now small,
+  but "small and known" is not "none": if the storefront misbehaves afterwards,
+  eight runtime changes landed together and separating them costs a second
+  deploy.
+- **Risk concentration:** every "neutral because unset" item in section 2 stays
+  neutral only while those variables stay unset.
+
+### Option B — a minimal timezone-only build from the existing build point
+
+Branch from `31821289`, the exact commit the live image was built from, and
+apply only what the incident needs:
+
+- `config/app.php`: `'timezone' => 'UTC'` becomes `env('APP_TIMEZONE', 'UTC')`;
+- `docker/render/php-production.ini`: add `date.timezone=America/Toronto`.
+
+Two lines. No `AppServiceProvider` change, and therefore **no schedule
+correction, no geocoder override, no mail redirect, no migration relocation**.
+The blast radius is the timezone and nothing else.
+
+- **Deliberately dropped:** `TimezoneIntegrity`, the warning class.
+  Cherry-picking #135 whole would touch `AppServiceProvider`, which #86, #90,
+  #101, #104 and #124 have all since edited — the pick would conflict, and
+  dragging in the resolution defeats the point of a minimal build. Dropping it
+  costs little today: the warning has no subscriber, so it changes nothing
+  operationally until the alert policy exists.
+- **Cost:** the deployed tree then matches no branch anyone maintains, and CI's
+  green is on HEAD rather than on this ad-hoc branch, so it would need its own CI
+  run. It is also work done twice, since HEAD gets deployed eventually anyway.
+
+### Option C — fold the timezone fix into the pre-launch deployment (ADOPTED)
+
+Do not deploy anything now. The timezone fix rides along with the single
+deployment already planned before launch.
+
+**Why this is now the default.** The question underneath the urgency was whether
+the live site is currently serving real customers badly. It has been answered
+with evidence rather than assumption: **no order has ever been placed on it.**
+All copies share one database, so the admin's order table *is* the live site's
+order table, and it shows Total Sales $0.00 with all nine rows in draft (status
+Incomplete, Customer Name empty). Order #4, dated 2026-07-18 and predating the
+local environment, is a draft too, with no customer information and a plain
+Windows Chrome/150 user agent, its IP still the proxy address 169.254.169.126,
+consistent with real visitor IPs never having been captured.
+
+**The honest boundary of that evidence:** it proves no order has ever been
+completed. It does not prove no customer was ever turned away - a drifted clock
+would have shown the shop closed, and someone who left would leave no row behind.
+
+So the defect is real but its demonstrated cost so far is zero, and a deployment
+carries its own risk. Waiting for the deployment that must happen anyway is the
+cheaper trade.
+
+**The comparison baseline this plan depends on.** `d3c-a2ee559c` runs the
+**same image digest as the main-traffic revision** and differs from it in exactly
+one environment variable (`DELIVERY_ENABLED`, `false` live and `true` there);
+all 30 others match. On deployment day it is the reference the new tagged
+revision is read against, which is what separates "this deployment changed it"
+from "it already did that" without using the live site as the comparator. It is
+also a preview of main traffic once Delivery is switched on, and therefore the
+place where the Nominatim production gate can be observed rather than argued.
+
+**This couples the deployment plan to the cleanup plan.** `d3c-a2ee559c` is on
+the test-copy cleanup list, and it **must not be deleted before the deployment
+rehearsal**. Cleaning up on its own schedule would destroy this plan's only
+baseline; scheduling the deployment while assuming the baseline exists fails if
+cleanup ran first. Neither side may pass this copy without checking the other.
+It shares the live database, so it is a read-only comparator.
+
+**Deployment-day checklist.** Corrected 2026-08-29 after an ordering error: an
+earlier draft put "set the geocoder variables" *after* the traffic cutover.
+**Cloud Run revisions are immutable** - setting an environment variable creates a
+new revision, it cannot be added to a serving one - so that order would have
+meant deploying revision A, cutting traffic to A, deploying revision B (same
+image plus variables), and cutting traffic a second time, with a window in
+between where the live site ran the new image **unpinned**. The variables
+therefore ride with the image in step 2, and the visibility they were split out
+for is preserved by the separate check at 2b.
+
+1. Record FP-1 on the main-traffic revision before anything.
+2. Build and deploy the new image to a **tagged 0%-traffic revision**, setting
+   `DELIVERY_GEOCODER_DRIVER` and `DELIVERY_GEOCODER_PROVIDERS` **in the same
+   deploy command** - unless the stored-setting path in section 7 is taken
+   instead.
+2b. **Read those two variables back off the new revision and confirm they are
+   set.** This line is not part of step 2's completion test: a successful image
+   deploy is not evidence that the variables are set. Miss it and the site runs
+   the stored `chain`, reaching Nominatim, with Delivery open.
+3. Read the tagged revision side by side against `d3c-a2ee559c`, not against the
+   live site - **against the expected-difference list below**.
+4. Cut traffic over, under its own gate.
+5. Verify the storefront open/closed state against Montreal time on a
+   cold-started instance.
+6. Record FP-1 again.
+
+**Expected differences for step 3, so none of them is read as a regression.**
+The twin was a one-variable copy of main traffic; against the *new* revision it
+is no longer one difference but three, and all three are intended:
+
+| # | Difference | Why it is expected |
+| --- | --- | --- |
+| 1 | **Image**: `31821289` on the twin, HEAD on the new revision | The point of the deployment |
+| 2 | **Geocoder variables**: absent on the twin, `google`/`google` on the new revision | Deliberately introduced at step 2 |
+| 3 | **`DELIVERY_ENABLED`**: `true` on the twin, whatever the new revision is given | Pre-existing. The twin has always differed from main traffic here. If the new revision is set to `false` to match production, the home page's Livraison block and the three-part heading will differ between the two - that is the flag, not a regression, and today's owner's-switch checks recorded exactly what that difference looks like |
+
+Difference 3 also bounds what the twin is a baseline *for*. It is a like-for-like
+comparator for old-image behaviour, and the right place to watch delivery-open
+behaviour and the Nominatim gate. It is **not** a like-for-like comparator for
+the pickup-only surface production actually serves, because delivery is open on
+it. Where that surface matters, the live site before cutover is the comparator
+for everything except the image.
+
+### Also riding with this deployment: fail-safe indexing control
+
+Added 2026-08-29. Independent of the domain work and worth doing regardless.
+
+**The premise correction first.** An earlier draft of this thread treated mapping
+a staging hostname as *opening* an indexing window. It is not: the window is
+already open. The `run.app` address serves the storefront with no
+`X-Robots-Tag`, no robots or googlebot `<meta>`, no `<link rel="canonical">`
+anywhere in the theme, and a `public/robots.txt` that disallows only `/admin/`.
+Its certificate has been in the public Certificate Transparency logs for weeks.
+A new hostname adds a door to a house that is already unlocked. (A search turned
+up no trace of the site, only an unrelated clothing brand of the same name. That
+is weak evidence - it is not Google's own index - and is recorded as suggestive,
+not as proof of non-indexing.)
+
+**The design is a whitelist, not a blacklist.** Sending `noindex` only to a
+staging hostname would leave `run.app` and every future tagged-revision URL
+indexable, and would leave each new hostname indexable by default. Inverted:
+
+> **Only `lechateaudesenfants.ca` may be indexed. Every other Host gets
+> `X-Robots-Tag: noindex, nofollow`.**
+
+New hostnames are then safe by default and have to be deliberately allowed.
+
+**Implementation in `docker/render/nginx.conf.template`**, with two details that
+would otherwise make the fail-safe leak:
+
+1. A `map $host $robots_tag` at http scope - the template is rendered into
+   `conf.d`, which is inside `http {}`, so a `map` can sit above the `server`
+   block. Default `"noindex, nofollow"`; `lechateaudesenfants.ca` maps to the
+   empty string, and nginx omits an `add_header` whose value is empty.
+2. **`add_header` does not inherit into a location that declares its own.** Six
+   locations in this template set `Cache-Control` (`/_assets/`,
+   `/admin/_assets/`, `@tastyigniter_combined_assets`, the static-extension
+   block, `/storage/`, `/media/`) and would therefore **drop** a server-level
+   `X-Robots-Tag`. The header must be repeated in each of those six. The HTML
+   paths - `location = /`, `location /`, `/robots.txt`, `/favicon.ico` - declare
+   no `add_header` and do inherit, so pages are covered by the server-level
+   directive alone.
+
+**Canonical, with one correction to where it belongs.** There is no canonical
+link anywhere today. It should be added, but **not on the noindexed hosts**:
+`noindex` together with a canonical pointing elsewhere is contradictory
+signalling and Google advises against combining them. Canonical belongs on the
+allowed host, pointing at itself, where it earns its keep on trailing-slash and
+query-string variants.
+
+The cheapest correct mechanism is an HTTP header rather than a template edit:
+
+    Link: <https://lechateaudesenfants.ca$request_uri>; rel="canonical"
+
+emitted only where `$robots_tag` is empty. Google honours the `Link` form. It
+also sidesteps two problems: the theme is `vendor/tastyigniter/ti-theme-orange`
+and **vendor must not be modified**, so an in-page `<link rel="canonical">`
+would need a project-level theme override; and a page-generated canonical would
+depend on `APP_URL`, coupling it to phase two of the domain work. The header
+form depends on neither.
+
+**What overturns this and makes the fix urgent again:**
+
+- the live site begins taking real orders; or
+- the owner wants to accept orders publicly before a deployment window is
+  scheduled.
+
+Either condition should reopen Option A or B immediately.
+
+### Recommendation
+
+**Option C, adopted 2026-08-29.** Options A and B are retained as alternates
+against the conditions above.
+
+Between them, if the fix ever does need to ship on its own: **Option B**, with
+one risk recorded that its brevity hides. A two-line branch from `31821289` has
+never been built, and that build point has not been exercised by CI since - the
+CI pipeline only began genuinely running the suite on 2026-08-28 (#122), six
+weeks after that commit. So Option B's trial build is not a formality: it could
+fail, or worse, succeed into an image that no test run has ever covered. Budget
+for a build that needs debugging, and run the suite against that branch before
+deploying it. Option A at least has a green CI run on exactly its tree.
+
+If Option A is chosen, the minimum that should accompany it is a storefront open
+and closed reading against the stored hours, before and after, on the same day of
+the week.
+
+## 7. Geocoder on main traffic, checked 2026-08-29
+
+Separate from the deployment question, and live today.
+
+The shared setting is **Chain (Recommended)**, which the admin's own description
+says runs Google and OpenStreetMap together and takes the first valid result.
+`CLAUDE_HANDOFF.md` section 10 records that Nominatim must not be used in
+production.
+
+Two reads settle what main traffic actually does:
+
+- the main-traffic revision `d2fix-31821289` sets **no** geocoder environment
+  variable - neither `DELIVERY_GEOCODER_DRIVER` nor `DELIVERY_GEOCODER_PROVIDERS`;
+- `app/Delivery/GeocoderChainOverride.php` **does not exist at commit
+  `31821289`**. The pinning mechanism was added in #86 on 2026-08-21, five weeks
+  after the live image was built.
+
+So main traffic is not pinned to Google and cannot be: the code that would pin it
+is not in its image. It runs the stored Chain configuration, and **can therefore
+fall through to OpenStreetMap Nominatim today**.
+
+An earlier version of this section added that "the test copies are pinned to
+Google by revision", which was too broad and is corrected here. **Three copies
+are pinned** to Google - `d3c-fix-be6835a9`, `d3c-g2-1f8f0c75` and
+`d3c-min-9a4c1bc8` - and so is a fourth, `d3c-g-1f8f0c75`. **Two** are pinned to
+chain over a deliberately empty provider list, `d3c-pu-1f8f0c75` and
+`d3c-pu2-1f8f0c75`. **Three D3C copies plus the mail copy set no geocoder
+variable at all and therefore ran the stored Chain**: `d3c-a2ee559c`,
+`d3c-25f9813b`, `d3c-e9a4f7ca` (which never started) and `mail-3a603e53`.
+The per-copy table is in `D3C_PROGRESS.md`. None of this changes main traffic,
+which sets no variable and has no override code at all.
+
+This is not fixable by setting an environment variable on the live revision - the
+variable has no reader there. It can, however, be **observed** before launch:
+`d3c-a2ee559c` is the same image with `DELIVERY_ENABLED=true` and no geocoder
+variable, so it shows what main traffic will do the moment Delivery opens. That
+is another reason it must survive until the deployment rehearsal.
+
+**Two ways to close this gate, and the deployment alone is not one of them.**
+After a deployment the production revision can pin the chain but will not,
+because `GeocoderChainOverride` returns early with the variables unset and that
+revision has never carried them. So either **deploy and then set the two
+variables** (two steps; no shared-setting write; the risk is the second step
+being dropped once the first is marked done), or **change the shared stored
+setting `default_geocoder` from `chain` to `google`** (one step; effective on
+every revision immediately including today's production image, with no
+deployment at all; but it is a shared-settings write hitting the live site at
+once, so it needs separate approval, the prior value recorded, a read-back, and
+a way back). The stored-setting path has no front-end side effect: the map
+library branches on `nominatim` versus anything else, and both `chain` and
+`google` fall on the same side. Neither path is executed here. The full
+statement is in the Nominatim production gate in `CLAUDE_HANDOFF.md`. It needs either the deployment (which brings #86)
+or a change to the shared stored setting. It is therefore reclassified from
+"handle before launch" to **an item needing its own schedule**, and it is one more
+thing the pre-launch deployment of Option C would resolve.
+
+Read-only. Nothing was changed.
+
+## 6. Not decided here
+
+Nothing is deployed, built, or scheduled by this document. The log-based alert
+policy waits on deployment, because the code that emits the warning does not
+exist on the live revision until then; its notification channel will be the
+address already receiving the budget alert, and not a new one.
