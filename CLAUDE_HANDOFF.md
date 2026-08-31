@@ -174,6 +174,48 @@ them the fallback is an external HTTP(S) load balancer with a serverless NEG,
 which is the same mechanism needed to point a hostname at a tagged revision, so
 that work would not be wasted.
 
+### Carte key on Cloud Run: the start.sh change, archived from closed PR #142
+
+PR #142 carried a working fix for the Carte-key attach failure and was closed
+unmerged on 2026-08-30: the marketplace turned out to have no language-pack
+category, which removed the reason to bind a key from the running site, and the
+branch had gone stale. The change itself is correct and small; if binding is
+ever needed again, re-apply this block in `docker/cloudrun/start.sh`, before
+"Rendering Nginx configuration" (it was verified with `sh -n`; CI never ran to
+completion on that branch for unrelated reasons). Archived verbatim:
+
+```sh
+# TastyIgniter's Carte-key flow persists the key through
+# SystemHelper::replaceInEnv(), which reads and rewrites "${APP_ROOT}/.env" and
+# throws FileNotFoundException when that file does not exist. .env is excluded
+# from the image by .dockerignore, correctly, because configuration arrives here
+# as environment variables. Creating it empty makes that rewrite a harmless
+# no-op - the regex matches no line and the empty content is written back - so
+# the flow continues to its real persistence step, which stores the key in the
+# shared settings table.
+#
+# Only this one file is handed to www-data. Overwriting an existing file needs
+# write permission on the file, not on its directory, so the application root
+# stays root-owned and composer.json, auth.json and lang/ remain unwritable at
+# runtime. That is deliberate: language packs must be committed and baked into
+# the image, never written at runtime, because the container filesystem is
+# per-instance and does not survive the instance.
+#
+# The file is left empty on purpose. An IGNITER_CARTE_KEY= line here would put
+# the key in a per-instance file that disappears with the instance, for no gain.
+if [ ! -f "${APP_ROOT}/.env" ]; then
+    log "Creating empty ${APP_ROOT}/.env so the Carte-key rewrite does not fail"
+    : > "${APP_ROOT}/.env"
+fi
+chown www-data:www-data "${APP_ROOT}/.env" || true
+chmod 600 "${APP_ROOT}/.env" || true
+```
+
+Two facts to carry with it: `clearCarte()` walks the same `replaceInEnv()`
+path, so a site without this block can bind a key it then cannot unbind; and
+what the fix unblocks is *seeing* the hub catalogue (`hasValidCarte()`), never
+installing packs at runtime, which an immutable image rules out regardless.
+
 That fingerprint is **void**. The freeze described it as a SHA-256 of
 normalized, redacted service metadata but never recorded the normalized field
 list or the algorithm, and neither can be reconstructed from anything still

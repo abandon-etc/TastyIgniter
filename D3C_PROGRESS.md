@@ -617,15 +617,20 @@ recorded as a missing cut-off.
 
 ## Evening delivery cut-off, executed 2026-08-29 21:11-21:19 EDT
 
-The open question was raised by a reading of 2026-08-28 at 21:10 EDT in which
-`d3c-fix-be6835a9` showed "We are open" and Cueillette open - both correct -
-but **also** showed Delivery open, "dans 25 minutes", which after 21:00 is
-wrong. Two explanations had to be separated: (a) display-only staleness while
-the server still refuses delivery, or (b) a real regression in which the server
-accepts a delivery order after closing.
+This section originally opened by tying the reading to "a reading of
+2026-08-28 at 21:10 EDT in which `d3c-fix-be6835a9` ... showed Delivery open".
+**That premise was backwards** - a paraphrase drift corrected in "The
+2026-08-28 21:10 symptom, corrected" below. The original record reads, verbatim:
+"showing the whole site closed and 'Opening sam. 12:00 pm' at 21:10 EDT Friday,
+when pickup should run to 22:00" - closed when it should have been open, on
+`d3c-min-9a4c1bc8`, and already explained and closed by the timezone fail-open
+(that instance was on UTC, where it was Saturday 01:10). No open display anomaly
+existed for this reading to reproduce or answer.
 
-**Answer: (b) is disproved on both copies. The cut-off is enforced by the
-server. The 2026-08-28 display anomaly did not reproduce.**
+What the reading does settle, on its own merits as the after-21:00 acceptance
+leg: whether the server refuses a delivery order after closing, or accepts it.
+
+**Answer: the cut-off is enforced by the server, on both copies.**
 
 Taken in a real browser on Saturday 2026-08-29 between 21:11 and 21:19 EDT,
 inside the one-hour window in which the shop is still open for pickup but
@@ -664,25 +669,19 @@ carrying the message. `/checkout` was not visited: it is only called for when
 the basket is accepted, and loading it creates a draft order row. No order,
 customer or payment was created.
 
-**What this settles and what it does not.** The server leg is now positively
-established on both copies: after 21:00 a delivery add is refused, so the
-blocking form of (b) - a real regression accepting delivery orders after
-closing - does not exist tonight on either copy. What could not be separated is
-the display defect itself, because its precondition did not occur: tonight the
-panel read CLOSED correctly, so there was no stale display to test the server
-against. The 2026-08-28 anomaly is therefore **not reproduced, not explained,
-and not closed.**
+**What this settles.** The server leg is now positively established on both
+copies: after 21:00 a delivery add is refused. The after-21:00 acceptance leg is
+closed on that evidence.
 
-One hypothesis worth recording for whoever takes it next, offered as a
-hypothesis and not as a finding: the 2026-08-28 evening reading was taken the
-same way as that afternoon's 16:58-17:00 reverse reading, by WebFetch rather
-than a live browser. A cached response from before 21:00 would render exactly
-"Delivery dans 25 minutes" while the server behind it refused, which is the
-shape of (a) without any defect in the application at all. Tonight's reading was
-taken in a real browser and was correct. Re-taking the 21:00-22:00 reading on a
-Friday, in a browser, would test that; until then the anomaly stays open as a
-display-only question with no customer-facing consequence, since the server
-refuses either way.
+This section originally went on to say the 2026-08-28 anomaly was "not
+reproduced, not explained, and not closed", and to offer a WebFetch-cache
+hypothesis with a Friday browser re-take to test it. **Both are withdrawn with
+the reversed premise they stood on** (see "The 2026-08-28 21:10 symptom,
+corrected" below): the real 2026-08-28 21:10 symptom was a page showing
+*closed* when it should have been open, explained and closed that same week by
+the timezone fail-open. There was never an open "showed delivery open" display
+anomaly for a cached response to explain, so nothing here waits on a Friday
+re-take and no such reading is scheduled.
 
 ## Test copies of the site currently deployed
 
