@@ -5404,3 +5404,60 @@ its runbook and waited; the user started it and approved the prompts.
 
 Nothing was deployed, no setting, revision or code was changed, no PR was
 merged, and no Cloud Run Job was touched.
+
+<!-- The entry below is folded in from PR #140, closed unmerged on 2026-08-30:
+its branch had gone stale against the register and merging it would have
+regressed the evening cut-off row. It sits out of chronological order; its
+heading date is authoritative. -->
+
+## 2026-08-29 - Timezone fix merged after the main-traffic precondition was read back; boundary probe deferred; the 21:05 task becomes a reminder
+
+Environment: the repository, GitHub, Cloud Run in `le-chateau-canada-staging`,
+and the local scheduled task on the user's machine. Status: PR #135 merged on
+the user's explicit approval (Level 1, CI green on 8.3/8.4/8.5). No stored
+setting, revision, traffic split, environment variable, or secret was changed.
+
+- **The main-traffic revision was read back before the merge, and it carries
+  the variable.** `le-chateau-canada-staging-d2fix-31821289`, which holds 100%
+  of traffic, has `APP_TIMEZONE=America/Toronto` and `RUN_CONFIG_CACHE=true`.
+  This had never been read on that revision — the 2026-08-29 investigation had
+  only confirmed it on three tagged delivery copies — and the fix is worth
+  nothing on a revision that does not set it. It does set it, so `config/app.php`
+  following `APP_TIMEZONE` lands on `America/Toronto` there at the next deploy.
+  Recorded because the read, not the assumption, is the evidence.
+- **PR #135 merged** as `e8fe12c1`. Its description was corrected first: the
+  `php.ini` `date.timezone` line had been described as "a second line of
+  defence", which overstates it.
+  `Illuminate\Foundation\Bootstrap\LoadConfiguration` line 65 calls
+  `date_default_timezone_set($config->get('app.timezone', 'UTC'))`
+  **unconditionally**, so from bootstrap onward the ini value is always
+  overwritten by `config('app.timezone')`. The ini line covers a bare `php`
+  process and pre-bootstrap code and nothing else; it would not have saved a
+  single request on the drifted instance, and it would not save one if
+  `APP_TIMEZONE` were ever unset. `config/app.php` is the only part of that PR
+  that reaches a customer request. The PR body now says so, so that a later
+  reader does not bank on the ini line.
+- **Not deployed.** The merge changes the repository. Every running revision
+  still serves the old image, so the defect remains live on main traffic and on
+  every D3C copy until a deploy, and the clock check before each reading stays
+  mandatory.
+- **The warning still has no subscriber.** `TimezoneIntegrity` logs at warning
+  level to `stderr` and stops in Cloud Logging, where nothing is watching — the
+  same silence that let the incident run four days. A log-based alert policy is
+  costed in the handoff thread and is not built.
+- **Coordinate-level boundary probe: Deferred**, on the user's decision. The
+  inclusive-boundary property was proven at D3B by a runtime self-check against
+  an exact first vertex and that record stands; the storefront path cannot
+  re-prove it, because no street address geocodes onto a polygon edge. Opening a
+  write operation for a re-proof is not worth it before launch.
+- **The 21:05 scheduled task is now a reminder, not an executed check.** The
+  reading needs a real browser: the delivery offer sits behind a Livewire
+  component driven through `window.Livewire.all()` and `form.requestSubmit()`,
+  which no plain HTTP fetch reproduces. Browser navigation raises per-URL
+  permission prompts, no permission allowlist exists in this project or in the
+  user's settings, and an unattended session cannot answer them — which is how
+  the Sunday 2026-08-23 automated run lost all four of its fetches. The task now
+  sends a push notification at 21:05 and prints the runbook, and starts nothing
+  on its own.
+
+Documentation and one merged code PR. The changed paths in this entry are `.md`.
